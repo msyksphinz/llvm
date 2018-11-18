@@ -1,0 +1,14 @@
+add_llvm_library(LLVMRISCV64Desc
+  RISCV64ABIInfo.cpp
+  RISCV64ABIFlagsSection.cpp
+  RISCV64AsmBackend.cpp
+  RISCV64ELFObjectWriter.cpp
+  RISCV64ELFStreamer.cpp
+  RISCV64MCAsmInfo.cpp
+  RISCV64MCCodeEmitter.cpp
+  RISCV64MCExpr.cpp
+  RISCV64MCTargetDesc.cpp
+  RISCV64NaClELFStreamer.cpp
+  RISCV64OptionRecord.cpp
+  RISCV64TargetStreamer.cpp
+  )

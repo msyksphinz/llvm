@@ -33,6 +33,7 @@ subdirectories =
  Nios2
  PowerPC
  RISCV
+ RISCV64
  Sparc
  SystemZ
  WebAssembly
