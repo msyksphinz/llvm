@@ -128,7 +128,8 @@ public:
     KalimbaSubArch_v4,
     KalimbaSubArch_v5,
 
-    MipsSubArch_r6
+    MipsSubArch_r6,
+    RISCV64SubArch_r6,
   };
   enum VendorType {
     UnknownVendor,

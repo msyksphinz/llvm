@@ -170,6 +170,12 @@ public:
     return false;
   }
 
+
+  /// Check whether a given symbol has been flagged with MICROMIPS flag.
+  virtual bool isMicroRISCV64(const MCSymbol *Sym) const {
+    return false;
+  }
+  
   /// Handles all target related code padding when starting to write a new
   /// basic block to an object file.
   ///

@@ -387,6 +387,7 @@ protected:
   // If true, then the lexer and expression parser will support %neg(),
   // %hi(), and similar unary operators.
   bool HasMipsExpressions = false;
+  bool HasRISCV64Expressions = false;
 
 public:
   explicit MCAsmInfo();
