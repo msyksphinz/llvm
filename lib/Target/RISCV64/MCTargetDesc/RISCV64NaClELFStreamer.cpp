@@ -208,57 +208,57 @@ public:
 
 namespace llvm {
 
-bool isBasePlusOffsetMemoryAccess(unsigned Opcode, unsigned *AddrIdx,
-                                  bool *IsStore) {
-  if (IsStore)
-    *IsStore = false;
+// bool isBasePlusOffsetMemoryAccess(unsigned Opcode, unsigned *AddrIdx,
+//                                   bool *IsStore) {
+//   if (IsStore)
+//     *IsStore = false;
+// 
+//   switch (Opcode) {
+//   default:
+//     return false;
+// 
+//   // Load instructions with base address register in position 1.
+//   case RISCV64::LB:
+//   case RISCV64::LBu:
+//   case RISCV64::LH:
+//   case RISCV64::LHu:
+//   case RISCV64::LW:
+//   case RISCV64::LWC1:
+//   case RISCV64::LDC1:
+//   case RISCV64::LL:
+//   case RISCV64::LL_R6:
+//   case RISCV64::LWL:
+//   case RISCV64::LWR:
+//     *AddrIdx = 1;
+//     return true;
+// 
+//   // Store instructions with base address register in position 1.
+//   case RISCV64::SB:
+//   case RISCV64::SH:
+//   case RISCV64::SW:
+//   case RISCV64::SWC1:
+//   case RISCV64::SDC1:
+//   case RISCV64::SWL:
+//   case RISCV64::SWR:
+//     *AddrIdx = 1;
+//     if (IsStore)
+//       *IsStore = true;
+//     return true;
+// 
+//   // Store instructions with base address register in position 2.
+//   case RISCV64::SC:
+//   case RISCV64::SC_R6:
+//     *AddrIdx = 2;
+//     if (IsStore)
+//       *IsStore = true;
+//     return true;
+//   }
+// }
 
-  switch (Opcode) {
-  default:
-    return false;
-
-  // Load instructions with base address register in position 1.
-  case RISCV64::LB:
-  case RISCV64::LBu:
-  case RISCV64::LH:
-  case RISCV64::LHu:
-  case RISCV64::LW:
-  case RISCV64::LWC1:
-  case RISCV64::LDC1:
-  case RISCV64::LL:
-  case RISCV64::LL_R6:
-  case RISCV64::LWL:
-  case RISCV64::LWR:
-    *AddrIdx = 1;
-    return true;
-
-  // Store instructions with base address register in position 1.
-  case RISCV64::SB:
-  case RISCV64::SH:
-  case RISCV64::SW:
-  case RISCV64::SWC1:
-  case RISCV64::SDC1:
-  case RISCV64::SWL:
-  case RISCV64::SWR:
-    *AddrIdx = 1;
-    if (IsStore)
-      *IsStore = true;
-    return true;
-
-  // Store instructions with base address register in position 2.
-  case RISCV64::SC:
-  case RISCV64::SC_R6:
-    *AddrIdx = 2;
-    if (IsStore)
-      *IsStore = true;
-    return true;
-  }
-}
-
-bool baseRegNeedsLoadStoreMask(unsigned Reg) {
-  // The contents of SP and thread pointer register do not require masking.
-  return Reg != RISCV64::SP && Reg != RISCV64::T8;
-}
+// bool baseRegNeedsLoadStoreMask(unsigned Reg) {
+//   // The contents of SP and thread pointer register do not require masking.
+//   return Reg != RISCV64::SP && Reg != RISCV64::T8;
+// }
 
 MCELFStreamer *createRISCV64NaClELFStreamer(MCContext &Context,
                                          std::unique_ptr<MCAsmBackend> TAB,
