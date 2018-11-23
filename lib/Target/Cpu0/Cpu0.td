@@ -16,6 +16,14 @@ include "Cpu0InstrInfo.td"
 
 def Cpu0InstrInfo : InstrInfo;
 
+def FeatureCpu0       : SubtargetFeature<"cpu0", "Cpu0ArchVersion", "cpu0",
+                                        "Cpu0 Support [highly experimental]">;
+
+class Proc<string Name, list<SubtargetFeature> Features>
+ : Processor<Name, NoItineraries, Features>;
+
+def : Proc<"cpu0", [FeatureCpu0]>;
+
 // Will generate Cpu0GenAsmWrite.inc included by Cpu0InstPrinter.cpp, contents 
 //  as follows,
 // void Cpu0InstPrinter::printInstruction(const MCInst *MI, raw_ostream &O) {...}
