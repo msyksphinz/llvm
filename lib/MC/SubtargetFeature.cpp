@@ -150,6 +150,9 @@ void ClearImpliedBits(FeatureBitset &Bits,
   }
 }
 
+extern bool Cpu0DisableUnreconginizedMessage; // For Cpu0
+
+
 void
 SubtargetFeatures::ToggleFeature(FeatureBitset &Bits, StringRef Feature,
                                  ArrayRef<SubtargetFeatureKV> FeatureTable) {
@@ -169,8 +172,9 @@ SubtargetFeatures::ToggleFeature(FeatureBitset &Bits, StringRef Feature,
       SetImpliedBits(Bits, *FeatureEntry, FeatureTable);
     }
   } else {
-    errs() << "'" << Feature << "' is not a recognized feature for this target"
-           << " (ignoring feature)\n";
+    if (!Cpu0DisableUnreconginizedMessage) // For Cpu0
+      errs() << "'" << Feature << "' is not a recognized feature for this target"
+             << " (ignoring feature)\n";
   }
 }
 
@@ -196,8 +200,9 @@ void SubtargetFeatures::ApplyFeatureFlag(FeatureBitset &Bits, StringRef Feature,
       ClearImpliedBits(Bits, *FeatureEntry, FeatureTable);
     }
   } else {
-    errs() << "'" << Feature << "' is not a recognized feature for this target"
-           << " (ignoring feature)\n";
+    if (!Cpu0DisableUnreconginizedMessage) // For Cpu0
+      errs() << "'" << Feature << "' is not a recognized feature for this target"
+             << " (ignoring feature)\n";
   }
 }
 
@@ -234,8 +239,9 @@ SubtargetFeatures::getFeatureBits(StringRef CPU,
           SetImpliedBits(Bits, FE, FeatureTable);
       }
     } else {
-      errs() << "'" << CPU << "' is not a recognized processor for this target"
-             << " (ignoring processor)\n";
+      if (!Cpu0DisableUnreconginizedMessage) // For Cpu0
+        errs() << "'" << CPU << "' is not a recognized processor for this target"
+               << " (ignoring processor)\n";
     }
   }
 

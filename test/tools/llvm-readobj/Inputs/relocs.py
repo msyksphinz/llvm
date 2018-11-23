@@ -991,6 +991,33 @@ class Relocs_Elf_Mips(Enum):
   R_MIPS_JUMP_SLOT         = 127
   R_MIPS_NUM               = 218
 
+class Relocs_Elf_Cpu0(Enum):
+  R_CPU0_NONE             =  0
+  R_CPU0_32               =  2
+  R_CPU0_HI16             =  5
+  R_CPU0_LO16             =  6
+  R_CPU0_GPREL16          =  7
+  R_CPU0_LITERAL          =  8
+  R_CPU0_GOT16            =  9
+  R_CPU0_PC16             = 10
+  R_CPU0_CALL16           = 11
+  R_CPU0_GPREL32          = 12
+  R_CPU0_PC24             = 13
+  R_CPU0_GOT_HI16         = 22
+  R_CPU0_GOT_LO16         = 23
+  R_CPU0_RELGOT           = 36
+  R_CPU0_TLS_GD           = 42
+  R_CPU0_TLS_LDM          = 43
+  R_CPU0_TLS_DTP_HI16     = 44
+  R_CPU0_TLS_DTP_LO16     = 45
+  R_CPU0_TLS_GOTTPREL     = 46
+  R_CPU0_TLS_TPREL32      = 47
+  R_CPU0_TLS_TP_HI16      = 49
+  R_CPU0_TLS_TP_LO16      = 50
+  R_CPU0_GLOB_DAT         = 51
+  R_CPU0_JUMP_SLOT        = 127
+
+
 class Relocs_Elf_Hexagon(Enum):
   R_HEX_NONE              =  0
   R_HEX_B22_PCREL         =  1
@@ -1203,6 +1230,8 @@ craftElf("relocs.obj.elf-mips",     "mips-unknown-linux",          Relocs_Elf_Mi
 craftElf("relocs.obj.elf-mips64el", "mips64el-unknown-linux",        Relocs_Elf_Mips.entries(), "lui $2, %hi(sym)")
 #craftElf("relocs.obj.elf-hexagon",  "hexagon-unknown-unknown",     Relocs_Elf_Hexagon.entries(), ...)
 #craftElf("relocs.obj.elf-lanai",   "lanai-unknown-unknown",   Relocs_Elf_Lanai.entries(), "mov hi(x), %r4")
+craftElf("relocs.obj.elf-cpu0", "cpu0-unknown-linux",        Relocs_Elf_Cpu0.entries(), "lui $2, %hi(sym)")
+craftElf("relocs.obj.elf-cpu0el", "cpu0el-unknown-linux",        Relocs_Elf_Cpu0.entries(), "lui $2, %hi(sym)")
 
 craftCoff("relocs.obj.coff-i386",   "i386-pc-win32",   Relocs_Coff_i386.entries(),   "mov foo@imgrel(%ebx, %ecx, 4), %eax")
 craftCoff("relocs.obj.coff-x86_64", "x86_64-pc-win32", Relocs_Coff_X86_64.entries(), "mov foo@imgrel(%ebx, %ecx, 4), %eax")

@@ -16,6 +16,7 @@
 // this file.  Undefine them here.
 #undef NetBSD
 #undef mips
+#undef cpu0
 #undef sparc
 
 namespace llvm {
@@ -59,6 +60,8 @@ public:
     mipsel,         // MIPSEL: mipsel, mipsallegrexel
     mips64,         // MIPS64: mips64
     mips64el,       // MIPS64EL: mips64el
+    cpu0,           // For Tutorial Backend Cpu0
+    cpu0el,
     msp430,         // MSP430: msp430
     nios2,          // NIOSII: nios2
     ppc,            // PPC: powerpc
