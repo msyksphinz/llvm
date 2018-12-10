@@ -9,6 +9,7 @@
 
 #include "Cpu0MachineFunction.h"
 
+#include "MCTargetDesc/Cpu0BaseInfo.h"
 #include "Cpu0InstrInfo.h"
 #include "Cpu0Subtarget.h"
 #include "llvm/IR/Function.h"

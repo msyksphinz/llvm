@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 #include "Cpu0ISelLowering.h"
 
+#include "MCTargetDesc/Cpu0BaseInfo.h"
 #include "Cpu0MachineFunction.h"
 #include "Cpu0TargetMachine.h"
 #include "Cpu0TargetObjectFile.h"
@@ -59,6 +60,14 @@ const char *Cpu0TargetLowering::getTargetNodeName(unsigned Opcode) const {
 Cpu0TargetLowering::Cpu0TargetLowering(const Cpu0TargetMachine &TM,
                                        const Cpu0Subtarget &STI)
     : TargetLowering(TM), Subtarget(STI), ABI(TM.getABI()) {
+
+  // Cpu0 Custom Operations
+
+  // Operations not directly supported by Cpu0.
+
+//- Set .align 2
+// It will emit .align 2 later
+  setMinFunctionAlignment(2);
 
 }
 

@@ -18,8 +18,18 @@
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
+class MCAsmBackend;
+class MCCodeEmitter;
+class MCContext;
+class MCInstrInfo;
+class MCObjectWriter;
+class MCRegisterInfo;
+class MCSubtargetInfo;
+class StringRef;
 class Target;
 class Triple;
+class raw_ostream;
+class raw_pwrite_stream;
 
 extern Target TheCpu0Target;
 extern Target TheCpu0elTarget;

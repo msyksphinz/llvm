@@ -13,6 +13,7 @@
 
 #include "Cpu0SEInstrInfo.h"
 
+#include "InstPrinter/Cpu0InstPrinter.h"
 #include "Cpu0MachineFunction.h"
 #include "Cpu0TargetMachine.h"
 #include "llvm/ADT/STLExtras.h"

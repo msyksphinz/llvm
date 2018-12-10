@@ -17,6 +17,7 @@
 
 #include "Cpu0Config.h"
 
+#include "MCTargetDesc/Cpu0BaseInfo.h"
 #include "MCTargetDesc/Cpu0ABIInfo.h"
 #include "Cpu0.h"
 #include "llvm/CodeGen/CallingConvLower.h"
