@@ -388,7 +388,7 @@ generates this code in the ``X86GenRegisterInfo.inc`` file:
 
 From the register info file, TableGen generates a ``TargetRegisterDesc`` object
 for each register.  ``TargetRegisterDesc`` is defined in
-``include/llvm/Target/TargetRegisterInfo.h`` with the following fields:
+``include/llvm/CodeGen/TargetRegisterInfo.h`` with the following fields:
 
 .. code-block:: c++
 
