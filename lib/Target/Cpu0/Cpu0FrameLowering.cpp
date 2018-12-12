@@ -13,6 +13,7 @@
 
 #include "Cpu0FrameLowering.h"
 
+#include "Cpu0AnalyzeImmediate.h"
 #include "Cpu0InstrInfo.h"
 #include "Cpu0MachineFunction.h"
 #include "Cpu0Subtarget.h"

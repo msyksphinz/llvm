@@ -15,6 +15,7 @@
 
 #include "MCTargetDesc/Cpu0BaseInfo.h"
 #include "Cpu0.h"
+#include "Cpu0AnalyzeImmediate.h"
 #include "Cpu0MachineFunction.h"
 #include "Cpu0RegisterInfo.h"
 #include "llvm/CodeGen/MachineConstantPool.h"

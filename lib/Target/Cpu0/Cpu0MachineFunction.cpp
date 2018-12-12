@@ -22,5 +22,13 @@ bool FixGlobalBaseReg;
 
 Cpu0FunctionInfo::~Cpu0FunctionInfo() {}
 
-void Cpu0FunctionInfo::anchor() { }
+void Cpu0FunctionInfo::createEhDataRegsFI() {
+  for (int I = 0; I < 2; ++I) {
+    const TargetRegisterClass *RC = &Cpu0::CPURegsRegClass;
 
+    EhDataRegFI[I] = MF.getFrameInfo().CreateStackObject(RC->getSize(),
+        RC->getAlignment(), false);
+  }
+}
+
+void Cpu0FunctionInfo::anchor() { }

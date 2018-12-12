@@ -29,6 +29,10 @@ public:
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
+  bool hasReservedCallFrame(const MachineFunction &MF) const override;
+
+  void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
+                            RegScavenger *RS) const override;
 };
 
 } // End llvm namespace

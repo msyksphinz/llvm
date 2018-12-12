@@ -30,11 +30,23 @@ void Cpu0InstrInfo::anchor() {}
 
 //@Cpu0InstrInfo {
 Cpu0InstrInfo::Cpu0InstrInfo(const Cpu0Subtarget &STI)
-    : 
+    :
       Subtarget(STI) {}
 
 const Cpu0InstrInfo *Cpu0InstrInfo::create(Cpu0Subtarget &STI) {
   return llvm::createCpu0SEInstrInfo(STI);
+}
+
+MachineMemOperand *
+Cpu0InstrInfo::GetMemOperand(MachineBasicBlock &MBB, int FI,
+                             MachineMemOperand::Flags Flags) const {
+
+  MachineFunction &MF = *MBB.getParent();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  unsigned Align = MFI.getObjectAlignment(FI);
+
+  return MF.getMachineMemOperand(MachinePointerInfo::getFixedStack(MF, FI),
+                                 Flags, MFI.getObjectSize(FI), Align);
 }
 
 //@GetInstSizeInBytes {
@@ -46,4 +58,3 @@ unsigned Cpu0InstrInfo::GetInstSizeInBytes(const MachineInstr &MI) const {
     return MI.getDesc().getSize();
   }
 }
-
