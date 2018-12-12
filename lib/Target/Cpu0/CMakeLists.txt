@@ -34,6 +34,8 @@ add_llvm_target(Cpu0CodeGen
   Cpu0SERegisterInfo.cpp
   Cpu0Subtarget.cpp
   Cpu0TargetObjectFile.cpp
+  Cpu0ISelDAGToDAG.cpp
+  Cpu0SEISelDAGToDAG.cpp
   Cpu0TargetMachine.cpp
   )
 
