@@ -218,6 +218,11 @@ def ADDiu   : ArithLogicI<0x09, "addiu", add, simm16, immSExt16, CPURegs>;
 
 def JR      : JumpFR<0x3c, "jr", GPROut>;
 
+let Predicates = [Ch3_4] in {
+let isReturn=1, isTerminator=1, hasDelaySlot=1, isBarrier=1, hasCtrlDep=1 in
+  def RetLR : Cpu0Pseudo<(outs), (ins), "", [(Cpu0Ret)]>;
+}
+
 def RET     : RetBase<GPROut>;
 
 /// No operation
