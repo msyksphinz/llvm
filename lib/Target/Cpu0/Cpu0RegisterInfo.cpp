@@ -49,7 +49,7 @@ Cpu0RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 const uint32_t *
 Cpu0RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const {
-  return CSR_O32_RegMask; 
+  return CSR_O32_RegMask;
 }
 
 // pure virtual method
@@ -69,7 +69,7 @@ getReservedRegs(const MachineFunction &MF) const {
 }
 
 //@eliminateFrameIndex {
-//- If no eliminateFrameIndex(), it will hang on run. 
+//- If no eliminateFrameIndex(), it will hang on run.
 // pure virtual method
 // FrameIndex represent objects inside a abstract stack.
 // We must replace FrameIndex with an stack/frame pointer
@@ -79,7 +79,7 @@ eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
                     unsigned FIOperandNum, RegScavenger *RS) const {
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo MFI = MF.getFrameInfo();
   Cpu0FunctionInfo *Cpu0FI = MF.getInfo<Cpu0FunctionInfo>();
 
   unsigned i = 0;
@@ -89,18 +89,18 @@ eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
            "Instr doesn't have FrameIndex operand!");
   }
 
-  DEBUG(errs() << "\nFunction : " << MF.getFunction()->getName() << "\n";
+  LLVM_DEBUG(errs() << "\nFunction : " << MF.getFunction().getName() << "\n";
         errs() << "<--------->\n" << MI);
 
   int FrameIndex = MI.getOperand(i).getIndex();
-  uint64_t stackSize = MF.getFrameInfo()->getStackSize();
-  int64_t spOffset = MF.getFrameInfo()->getObjectOffset(FrameIndex);
+  uint64_t stackSize = MF.getFrameInfo().getStackSize();
+  int64_t spOffset = MF.getFrameInfo().getObjectOffset(FrameIndex);
 
-  DEBUG(errs() << "FrameIndex : " << FrameIndex << "\n"
+  LLVM_DEBUG(errs() << "FrameIndex : " << FrameIndex << "\n"
                << "spOffset   : " << spOffset << "\n"
                << "stackSize  : " << stackSize << "\n");
 
-  const std::vector<CalleeSavedInfo> &CSI = MFI->getCalleeSavedInfo();
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   int MinCSFI = 0;
   int MaxCSFI = -1;
 
@@ -131,7 +131,7 @@ eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
 
   Offset    += MI.getOperand(i+1).getImm();
 
-  DEBUG(errs() << "Offset     : " << Offset << "\n" << "<--------->\n");
+  LLVM_DEBUG(errs() << "Offset     : " << Offset << "\n" << "<--------->\n");
 
   // If MI is not a debug value, make sure Offset fits in the 16-bit immediate
   // field.
@@ -161,4 +161,3 @@ getFrameRegister(const MachineFunction &MF) const {
   return TFI->hasFP(MF) ? (Cpu0::FP) :
                           (Cpu0::SP);
 }
-
