@@ -38,6 +38,10 @@ private:
   // first MBB of the function.
 //  void initGlobalBaseReg(MachineFunction &MF);
 
+  std::pair<SDNode *, SDNode *> selectMULT(SDNode *N, unsigned Opc,
+                                           const SDLoc &DL, EVT Ty, bool HasLo,
+                                           bool HasHi);
+
 };
 
 FunctionPass *createCpu0SEISelDag(Cpu0TargetMachine &TM,
