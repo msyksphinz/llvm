@@ -17,14 +17,17 @@
 #include "Cpu0Config.h"
 #include "llvm/Support/DataTypes.h"
 
+#include <memory>
+
 namespace llvm {
 class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
-class MCObjectWriter;
+class MCObjectTargetWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
+class MCTargetOptions;
 class StringRef;
 class Target;
 class Triple;
@@ -41,16 +44,16 @@ MCCodeEmitter *createCpu0MCCodeEmitterEL(const MCInstrInfo &MCII,
                                          const MCRegisterInfo &MRI,
                                          MCContext &Ctx);
 
-MCAsmBackend *createCpu0AsmBackendEB32(const Target &T,
+MCAsmBackend *createCpu0AsmBackendEB32(const Target &T, const MCSubtargetInfo &STI,
                                        const MCRegisterInfo &MRI,
-                                       const Triple &TT, StringRef CPU);
-MCAsmBackend *createCpu0AsmBackendEL32(const Target &T,
+                                       const MCTargetOptions &Options);
+MCAsmBackend *createCpu0AsmBackendEL32(const Target &T, const MCSubtargetInfo &STI,
                                        const MCRegisterInfo &MRI,
-                                       const Triple &TT, StringRef CPU);
+                                       const MCTargetOptions &Options);
 
-MCObjectWriter *createCpu0ELFObjectWriter(raw_pwrite_stream &OS,
-                                          uint8_t OSABI,
-                                          bool IsLittleEndian);
+std::unique_ptr<MCObjectTargetWriter>
+createCpu0ELFObjectWriter(const Triple &TT, bool IsN32);
+
 } // End llvm namespace
 
 // Defines symbolic names for Cpu0 registers.  This defines a mapping from
@@ -66,4 +69,3 @@ MCObjectWriter *createCpu0ELFObjectWriter(raw_pwrite_stream &OS,
 #include "Cpu0GenSubtargetInfo.inc"
 
 #endif
-

@@ -20,7 +20,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ELF.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 
@@ -33,4 +33,3 @@ Cpu0TargetStreamer::Cpu0TargetStreamer(MCStreamer &S)
 Cpu0TargetAsmStreamer::Cpu0TargetAsmStreamer(MCStreamer &S,
                                              formatted_raw_ostream &OS)
     : Cpu0TargetStreamer(S), OS(OS) {}
-

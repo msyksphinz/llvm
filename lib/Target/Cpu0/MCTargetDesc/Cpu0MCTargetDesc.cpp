@@ -116,10 +116,13 @@ static MCInstrAnalysis *createCpu0MCInstrAnalysis(const MCInstrInfo *Info) {
   return new Cpu0MCInstrAnalysis(Info);
 }
 
-static MCStreamer *createMCStreamer(const Triple &TT, MCContext &Context, 
-                                    MCAsmBackend &MAB, raw_pwrite_stream &OS, 
-                                    MCCodeEmitter *Emitter, bool RelaxAll) {
-  return createELFStreamer(Context, MAB, OS, Emitter, RelaxAll);
+static MCStreamer *createMCStreamer(const Triple &TT, MCContext &Context,
+                                    std::unique_ptr<MCAsmBackend> &&MAB,
+                                    std::unique_ptr<MCObjectWriter> &&OW,
+                                    std::unique_ptr<MCCodeEmitter> &&Emitter,
+                                    bool RelaxAll) {
+  return createELFStreamer(Context, std::move(MAB), std::move(OW),
+                           std::move(Emitter), RelaxAll);
 }
 
 static MCTargetStreamer *createCpu0AsmTargetStreamer(MCStreamer &S,
@@ -170,4 +173,3 @@ extern "C" void LLVMInitializeCpu0TargetMC() {
                                        createCpu0AsmBackendEL32);
 }
 //@2 }
-

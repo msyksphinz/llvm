@@ -54,18 +54,19 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
 }
 //@adjustFixupValue }
 
-MCObjectWriter *
-Cpu0AsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
-  return createCpu0ELFObjectWriter(OS,
-    MCELFObjectTargetWriter::getOSABI(OSType), IsLittle);
+std::unique_ptr<MCObjectTargetWriter>
+Cpu0AsmBackend::createObjectTargetWriter() const {
+  return createCpu0ELFObjectWriter(TheTriple, IsN32);
 }
 
 /// ApplyFixup - Apply the \p Value for given \p Fixup into the provided
 /// data fragment, at the offset specified by the fixup and following the
 /// fixup kind as appropriate.
-void Cpu0AsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
-                                unsigned DataSize, uint64_t Value,
-                                bool IsPCRel) const {
+void Cpu0AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                                const MCValue &Target,
+                                MutableArrayRef<char> Data, uint64_t Value,
+                                bool IsResolved,
+                                const MCSubtargetInfo *STI) const {
   MCFixupKind Kind = Fixup.getKind();
   Value = adjustFixupValue(Fixup, Value);
 
@@ -89,7 +90,7 @@ void Cpu0AsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
   uint64_t CurVal = 0;
 
   for (unsigned i = 0; i != NumBytes; ++i) {
-    unsigned Idx = IsLittle ? i : (FullSize - 1 - i);
+    unsigned Idx = Endian == support::little ? i : (FullSize - 1 - i);
     CurVal |= (uint64_t)((uint8_t)Data[Offset + Idx]) << (i*8);
   }
 
@@ -99,7 +100,7 @@ void Cpu0AsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
 
   // Write out the fixed up bytes back to the code/data bits.
   for (unsigned i = 0; i != NumBytes; ++i) {
-    unsigned Idx = IsLittle ? i : (FullSize - 1 - i);
+    unsigned Idx = Endian == support::little ? i : (FullSize - 1 - i);
     Data[Offset + Idx] = (uint8_t)((CurVal >> (i*8)) & 0xff);
   }
 }
@@ -135,20 +136,23 @@ getFixupKindInfo(MCFixupKind Kind) const {
 /// it should return an error.
 ///
 /// \return - True on success.
-bool Cpu0AsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
+bool Cpu0AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
   return true;
 }
 
 // MCAsmBackend
 MCAsmBackend *llvm::createCpu0AsmBackendEL32(const Target &T,
+                                             const MCSubtargetInfo &STI,
                                              const MCRegisterInfo &MRI,
-                                             const Triple &TT, StringRef CPU) {
-  return new Cpu0AsmBackend(T, TT.getOS(), /*IsLittle*/true);
+                                             const MCTargetOptions &Options) {
+  return new Cpu0AsmBackend(T, MRI, STI.getTargetTriple(), STI.getCPU(),
+                            /*IsLittle*/true);
 }
 
 MCAsmBackend *llvm::createCpu0AsmBackendEB32(const Target &T,
+                                             const MCSubtargetInfo &STI,
                                              const MCRegisterInfo &MRI,
-                                             const Triple &TT, StringRef CPU) {
-  return new Cpu0AsmBackend(T, TT.getOS(), /*IsLittle*/false);
+                                             const MCTargetOptions &Options) {
+  return new Cpu0AsmBackend(T, MRI, STI.getTargetTriple(), STI.getCPU(),
+                            /*IsLittle*/false);
 }
-

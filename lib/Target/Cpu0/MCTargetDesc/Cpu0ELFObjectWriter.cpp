@@ -106,7 +106,7 @@ Cpu0ELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
   // points to a symbol.
   case ELF::R_CPU0_HI16:
   case ELF::R_CPU0_LO16:
-  // R_CPU0_32 should be a relocation record, I don't know why Mips set it to 
+  // R_CPU0_32 should be a relocation record, I don't know why Mips set it to
   // false.
   case ELF::R_CPU0_32:
     return true;
@@ -116,10 +116,10 @@ Cpu0ELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
   }
 }
 
-MCObjectWriter *llvm::createCpu0ELFObjectWriter(raw_pwrite_stream &OS,
-                                                uint8_t OSABI,
-                                                bool IsLittleEndian) {
-  MCELFObjectTargetWriter *MOTW = new Cpu0ELFObjectWriter(OSABI);
-  return createELFObjectWriter(MOTW, OS, IsLittleEndian);
+std::unique_ptr<MCObjectTargetWriter>
+llvm::createCpu0ELFObjectWriter(const Triple &TT, bool IsN32) {
+  uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
+  bool IsN64 = TT.isArch64Bit() && !IsN32;
+  bool HasRelocationAddend = TT.isArch64Bit();
+  return llvm::make_unique<Cpu0ELFObjectWriter>(OSABI);
 }
-

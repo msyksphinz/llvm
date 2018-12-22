@@ -15,7 +15,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/Support/ELF.h"
+#include "llvm/BinaryFormat/ELF.h"
 
 using namespace llvm;
 
@@ -141,4 +141,3 @@ bool Cpu0MCExpr::isGpOff(Cpu0ExprKind &Kind) const {
   }
   return false;
 }
-
