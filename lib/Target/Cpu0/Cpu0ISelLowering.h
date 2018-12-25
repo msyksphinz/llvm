@@ -89,6 +89,10 @@ namespace llvm {
     //  DAG node.
     const char *getTargetNodeName(unsigned Opcode) const override;
 
+    /// getSetCCResultType - get the ISD::SETCC result ValueType
+    EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
+                           EVT VT) const override;
+
     SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
   protected:
@@ -243,6 +247,10 @@ namespace llvm {
     // Lower Operand specifics
     SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
 
+    SDValue lowerShiftLeftParts(SDValue Op, SelectionDAG& DAG) const;
+    SDValue lowerShiftRightParts(SDValue Op, SelectionDAG& DAG,
+                                 bool IsSRA) const;
+
 	//- must be exist even without function all
     SDValue
       LowerFormalArguments(SDValue Chain,
@@ -256,6 +264,8 @@ namespace llvm {
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
                         const SmallVectorImpl<SDValue> &OutVals,
                         const SDLoc &dl, SelectionDAG &DAG) const override;
+
+    bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
   };
   const Cpu0TargetLowering *
