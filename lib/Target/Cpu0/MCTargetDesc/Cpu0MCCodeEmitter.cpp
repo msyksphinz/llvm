@@ -98,6 +98,15 @@ unsigned Cpu0MCCodeEmitter::
 getBranch16TargetOpValue(const MCInst &MI, unsigned OpNo,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  // If the destination is an immediate, we have nothing to do.
+  if (MO.isImm()) return MO.getImm();
+  assert(MO.isExpr() && "getBranch16TargetOpValue expects only expressions");
+
+  const MCExpr *Expr = MO.getExpr();
+  Fixups.push_back(MCFixup::create(0, Expr,
+                                   MCFixupKind(Cpu0::fixup_Cpu0_PC16)));
   return 0;
 }
 
@@ -108,6 +117,15 @@ unsigned Cpu0MCCodeEmitter::
 getBranch24TargetOpValue(const MCInst &MI, unsigned OpNo,
                        SmallVectorImpl<MCFixup> &Fixups,
                        const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  // If the destination is an immediate, we have nothing to do.
+  if (MO.isImm()) return MO.getImm();
+  assert(MO.isExpr() && "getBranch24TargetOpValue expects only expressions");
+
+  const MCExpr *Expr = MO.getExpr();
+  Fixups.push_back(MCFixup::create(0, Expr,
+                                   MCFixupKind(Cpu0::fixup_Cpu0_PC24)));
   return 0;
 }
 
@@ -120,6 +138,18 @@ unsigned Cpu0MCCodeEmitter::
 getJumpTargetOpValue(const MCInst &MI, unsigned OpNo,
                      SmallVectorImpl<MCFixup> &Fixups,
                      const MCSubtargetInfo &STI) const {
+  unsigned Opcode = MI.getOpcode();
+  const MCOperand &MO = MI.getOperand(OpNo);
+  // If the destination is an immediate, we have nothing to do.
+  if (MO.isImm()) return MO.getImm();
+  assert(MO.isExpr() && "getJumpTargetOpValue expects only expressions");
+
+  const MCExpr *Expr = MO.getExpr();
+  if (Opcode == Cpu0::JMP)
+    Fixups.push_back(MCFixup::create(0, Expr,
+                                     MCFixupKind(Cpu0::fixup_Cpu0_PC24)));
+  else
+    llvm_unreachable("unexpect opcode in getJumpAbsoluteTargetOpValue()");
   return 0;
 }
 //@CH8_1 }

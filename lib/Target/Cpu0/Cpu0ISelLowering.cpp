@@ -57,6 +57,18 @@ SDValue Cpu0TargetLowering::getTargetNode(ExternalSymbolSDNode *N, EVT Ty,
   return DAG.getTargetExternalSymbol(N->getSymbol(), Ty, Flag);
 }
 
+SDValue Cpu0TargetLowering::getTargetNode(BlockAddressSDNode *N, EVT Ty,
+                                          SelectionDAG &DAG,
+                                          unsigned Flag) const {
+  return DAG.getTargetBlockAddress(N->getBlockAddress(), Ty, 0, Flag);
+}
+
+SDValue Cpu0TargetLowering::getTargetNode(JumpTableSDNode *N, EVT Ty,
+                                          SelectionDAG &DAG,
+                                          unsigned Flag) const {
+  return DAG.getTargetJumpTable(N->getIndex(), Ty, Flag);
+}
+
 //@3_1 1 {
 const char *Cpu0TargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch (Opcode) {
@@ -92,8 +104,17 @@ Cpu0TargetLowering::Cpu0TargetLowering(const Cpu0TargetMachine &TM,
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1,  Promote);
   }
 
+  // Used by legalize types to correctly generate the setcc result.
+  // Without this, every float setcc comes with a AND/OR with the result,
+  // we don't want this, since the fpcmp result goes to a flag register,
+  // which is used implicitly by brcond and select operations.
+  AddPromotedToType(ISD::SETCC, MVT::i1, MVT::i32);
+
   // Cpu0 Custom Operations
   setOperationAction(ISD::GlobalAddress,      MVT::i32,   Custom);
+  setOperationAction(ISD::BlockAddress,       MVT::i32,   Custom);
+  setOperationAction(ISD::JumpTable,          MVT::i32,   Custom);
+  setOperationAction(ISD::BRCOND,             MVT::Other, Custom);
 
   // Handle i64 shl
   setOperationAction(ISD::SHL_PARTS,          MVT::i32,   Expand);
@@ -106,6 +127,8 @@ Cpu0TargetLowering::Cpu0TargetLowering(const Cpu0TargetMachine &TM,
   setOperationAction(ISD::UREM, MVT::i32, Expand);
 
   // Operations not directly supported by Cpu0.
+  setOperationAction(ISD::BR_JT,             MVT::Other, Expand);
+  setOperationAction(ISD::BR_CC,             MVT::i32, Expand);
   setOperationAction(ISD::CTPOP,             MVT::i32,   Expand);
   setOperationAction(ISD::CTTZ,              MVT::i32,   Expand);
   setOperationAction(ISD::CTTZ_ZERO_UNDEF,   MVT::i32,   Expand);
@@ -195,7 +218,10 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
 {
   switch (Op.getOpcode())
   {
+  case ISD::BRCOND:             return lowerBRCOND(Op, DAG);
   case ISD::GlobalAddress:      return lowerGlobalAddress(Op, DAG);
+  case ISD::BlockAddress:       return lowerBlockAddress(Op, DAG);
+  case ISD::JumpTable:          return lowerJumpTable(Op, DAG);
   }
   return SDValue();
 }
@@ -207,6 +233,11 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
 //===----------------------------------------------------------------------===//
 //  Misc Lower Operation implementation
 //===----------------------------------------------------------------------===//
+SDValue Cpu0TargetLowering::
+lowerBRCOND(SDValue Op, SelectionDAG &DAG) const
+{
+  return Op;
+}
 
 SDValue Cpu0TargetLowering::lowerGlobalAddress(SDValue Op,
                                                SelectionDAG &DAG) const {
@@ -249,6 +280,29 @@ SDValue Cpu0TargetLowering::lowerGlobalAddress(SDValue Op,
   return getAddrGlobal(
       N, Ty, DAG, Cpu0II::MO_GOT, DAG.getEntryNode(),
       MachinePointerInfo::getGOT(DAG.getMachineFunction()));
+}
+
+SDValue Cpu0TargetLowering::lowerBlockAddress(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  BlockAddressSDNode *N = cast<BlockAddressSDNode>(Op);
+  EVT Ty = Op.getValueType();
+
+  if (!isPositionIndependent())
+    return getAddrNonPIC(N, Ty, DAG);
+
+  return getAddrLocal(N, Ty, DAG);
+}
+
+SDValue Cpu0TargetLowering::
+lowerJumpTable(SDValue Op, SelectionDAG &DAG) const
+{
+  JumpTableSDNode *N = cast<JumpTableSDNode>(Op);
+  EVT Ty = Op.getValueType();
+
+  if (!isPositionIndependent())
+    return getAddrNonPIC(N, Ty, DAG);
+
+  return getAddrLocal(N, Ty, DAG);
 }
 
 #include "Cpu0GenCallingConv.inc"
