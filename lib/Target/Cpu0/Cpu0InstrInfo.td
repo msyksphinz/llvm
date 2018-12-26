@@ -510,6 +510,19 @@ class EffectiveAddress<string instr_asm, RegisterClass RC, Operand Mem> :
      instr_asm, [(set RC:$ra, addr:$addr)], IIAlu>;
 }
 
+let Predicates = [Ch8_2] in {
+// We need these two pseudo instructions to avoid offset calculation for long
+// branches.  See the comment in file Cpu0LongBranch.cpp for detailed
+// explanation.
+
+// Expands to: lui $dst, %hi($tgt - $baltgt)
+def LONG_BRANCH_LUi : Cpu0Pseudo<(outs GPROut:$dst),
+  (ins jmptarget:$tgt, jmptarget:$baltgt), "", []>;
+
+// Expands to: addiu $dst, $src, %lo($tgt - $baltgt)
+def LONG_BRANCH_ADDiu : Cpu0Pseudo<(outs GPROut:$dst),
+  (ins GPROut:$src, jmptarget:$tgt, jmptarget:$baltgt), "", []>;
+}
   
 //===----------------------------------------------------------------------===//
 // Instruction definition
@@ -966,4 +979,8 @@ defm : SetgtPatsCmp<CPURegs>;
 defm : SetgePatsCmp<CPURegs>;
 }
 } // let Predicates = [Ch4_2]
+
+let Predicates = [Ch8_2] in {
+include "Cpu0CondMov.td"
+} // let Predicates = [Ch8_2]
 

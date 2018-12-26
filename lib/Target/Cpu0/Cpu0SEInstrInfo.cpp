@@ -180,6 +180,16 @@ void Cpu0SEInstrInfo::expandRetLR(MachineBasicBlock &MBB,
   BuildMI(MBB, I, I->getDebugLoc(), get(Cpu0::RET)).addReg(Cpu0::LR);
 }
 
+/// getOppositeBranchOpc - Return the inverse of the specified
+/// opcode, e.g. turning BEQ to BNE.
+unsigned Cpu0SEInstrInfo::getOppositeBranchOpc(unsigned Opc) const {
+  switch (Opc) {
+  default:           llvm_unreachable("Illegal opcode!");
+  case Cpu0::BEQ:    return Cpu0::BNE;
+  case Cpu0::BNE:    return Cpu0::BEQ;
+  }
+}
+
 const Cpu0InstrInfo *llvm::createCpu0SEInstrInfo(const Cpu0Subtarget &STI) {
   return new Cpu0SEInstrInfo(STI);
 }

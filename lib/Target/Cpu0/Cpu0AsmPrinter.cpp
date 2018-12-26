@@ -67,7 +67,7 @@ void Cpu0AsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
   do {
 
-    if (I->isPseudo())
+    if (I->isPseudo() && !isLongBranchPseudo(I->getOpcode()))
       llvm_unreachable("Pseudo opcode found in EmitInstruction()");
 
     MCInst TmpInst0;
@@ -266,6 +266,11 @@ void Cpu0AsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
                                            raw_ostream &OS) {
   // TODO: implement
   OS << "PrintDebugValueComment()";
+}
+
+bool Cpu0AsmPrinter::isLongBranchPseudo(int Opcode) const {
+  return (Opcode == Cpu0::LONG_BRANCH_LUi
+          || Opcode == Cpu0::LONG_BRANCH_ADDiu);
 }
 
 // Force static initialization.
