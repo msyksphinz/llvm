@@ -21,6 +21,17 @@ def SDT_Cpu0DivRem       : SDTypeProfile<0, 2,
                                          [SDTCisInt<0>,
                                           SDTCisSameAs<0, 1>]>;
 
+def SDT_Cpu0JmpLink      : SDTypeProfile<0, 1, [SDTCisVT<0, iPTR>]>;
+
+// Call
+def Cpu0JmpLink : SDNode<"Cpu0ISD::JmpLink",SDT_Cpu0JmpLink,
+                         [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
+                          SDNPVariadic]>;
+
+// Tail call
+def Cpu0TailCall : SDNode<"Cpu0ISD::TailCall", SDT_Cpu0JmpLink,
+                          [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
 // Hi and Lo nodes are used to handle global addresses. Used on
 // Cpu0ISelLowering to lower stuff like GlobalAddress, ExternalSymbol
 // static model. (nothing to do with Cpu0 Registers Hi and Lo)
@@ -96,6 +107,15 @@ def RelocPIC    :     Predicate<"TM.getRelocationModel() == Reloc::PIC_">;
 class Cpu0InstAlias<string Asm, dag Result, bit Emit = 0b1> :
   InstAlias<Asm, Result, Emit>;
 
+class IsTailCall {
+  bit isCall = 1;
+  bit isTerminator = 1;
+  bit isReturn = 1;
+  bit isBarrier = 1;
+  bit hasExtraSrcRegAllocReq = 1;
+  bit isCodeGenOnly = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction format superclass
 //===----------------------------------------------------------------------===//
@@ -125,6 +145,10 @@ def brtarget24    : Operand<OtherVT> {
 def jmptarget    : Operand<OtherVT> {
   let EncoderMethod = "getJumpTargetOpValue";
   let OperandType = "OPERAND_PCREL";
+}
+
+def calltarget  : Operand<iPTR> {
+  let EncoderMethod = "getJumpTargetOpValue";
 }
 
 // Signed Operand
@@ -405,6 +429,41 @@ class RetBase<RegisterClass RC>: JumpFR<0x3c, "ret", RC> {
   let hasExtraSrcRegAllocReq = 1;
 }
 
+let Predicates = [Ch9_1] in {
+// Jump and Link (Call)
+let isCall=1, hasDelaySlot=1 in {
+  //@JumpLink {
+  class JumpLink<bits<8> op, string instr_asm>:
+    FJ<op, (outs), (ins calltarget:$target, variable_ops),
+       !strconcat(instr_asm, "\t$target"), [(Cpu0JmpLink imm:$target)],
+       IIBranch> {
+       }
+  //@JumpLink }
+
+  class JumpLinkReg<bits<8> op, string instr_asm,
+                    RegisterClass RC>:
+    FA<op, (outs), (ins RC:$rb, variable_ops),
+       !strconcat(instr_asm, "\t$rb"), [(Cpu0JmpLink RC:$rb)], IIBranch> {
+    let rc = 0;
+    let ra = 14;
+    let shamt = 0;
+  }
+}
+
+//@class TailCall
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1,
+    hasExtraSrcRegAllocReq = 1, Defs = [AT] in {
+  class TailCall<Instruction JumpInst> :
+    PseudoSE<(outs), (ins calltarget:$target), [], IIBranch>,
+    PseudoInstExpansion<(JumpInst jmptarget:$target)>;
+
+  class TailCallReg<RegisterClass RO, Instruction JRInst,
+                    RegisterClass ResRO = RO> :
+    PseudoSE<(outs), (ins RO:$rs), [(Cpu0TailCall RO:$rs)], IIBranch>,
+    PseudoInstExpansion<(JRInst ResRO:$rs)>;
+}
+} // let Predicates = [Ch9_1]
+
 let Predicates = [Ch4_1] in {
 // Mul, Div
 class Mult<bits<8> op, string instr_asm, InstrItinClass itin,
@@ -642,6 +701,11 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1,
 def BAL: FJ<0x3A, (outs), (ins jmptarget:$addr), "bal\t$addr", [], IIBranch>, 
              Requires<[HasSlt]>;
 
+/// Jump & link and Return Instructions
+let Predicates = [Ch9_1] in {
+def JSUB    : JumpLink<0x3b, "jsub">;
+}
+
 def JR      : JumpFR<0x3c, "jr", GPROut>;
 
 let Predicates = [Ch3_4] in {
@@ -650,6 +714,10 @@ let isReturn=1, isTerminator=1, hasDelaySlot=1, isBarrier=1, hasCtrlDep=1 in
 }
 
 def RET     : RetBase<GPROut>;
+
+let Predicates = [Ch9_1] in {
+def JALR    : JumpLinkReg<0x39, "jalr", GPROut>;
+}
 
 let Predicates = [Ch4_1] in {
 /// Multiply and Divide Instructions.
@@ -672,6 +740,11 @@ def C0MOVE  : C0Move<0x52, "c0mov">;
 /// No operation
 let addr=0 in
   def NOP   : FJ<0, (outs), (ins), "nop", [], IIAlu>;
+
+let Predicates = [Ch9_1] in {
+def TAILCALL : TailCall<JMP>;
+def TAILCALL_R : TailCallReg<GPROut, JR>;
+}
 
 let Predicates = [Ch7_1] in {
 /// Count Leading
@@ -723,6 +796,19 @@ def : Pat<(addc CPURegs:$lhs, CPURegs:$rhs),
           (ADDu CPURegs:$lhs, CPURegs:$rhs)>;
 def : Pat<(addc  CPURegs:$src, immSExt16:$imm),
           (ADDiu CPURegs:$src, imm:$imm)>;
+}
+
+let Predicates = [Ch9_1] in {
+def : Pat<(Cpu0JmpLink (i32 tglobaladdr:$dst)),
+          (JSUB tglobaladdr:$dst)>;
+def : Pat<(Cpu0JmpLink (i32 texternalsym:$dst)),
+          (JSUB texternalsym:$dst)>;
+
+//@Pat<Cpu0TailCall>
+def : Pat<(Cpu0TailCall (iPTR tglobaladdr:$dst)),
+              (TAILCALL tglobaladdr:$dst)>;
+def : Pat<(Cpu0TailCall (iPTR texternalsym:$dst)),
+              (TAILCALL texternalsym:$dst)>;
 }
 
 // hi/lo relocs
