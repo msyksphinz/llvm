@@ -44,4 +44,12 @@ void Cpu0FunctionInfo::createEhDataRegsFI() {
   }
 }
 
+MachinePointerInfo Cpu0FunctionInfo::callPtrInfo(const char *ES) {
+  return MachinePointerInfo(MF.getPSVManager().getExternalSymbolCallEntry(ES));
+}
+
+MachinePointerInfo Cpu0FunctionInfo::callPtrInfo(const GlobalValue *GV) {
+  return MachinePointerInfo(MF.getPSVManager().getGlobalValueCallEntry(GV));
+}
+
 void Cpu0FunctionInfo::anchor() { }
