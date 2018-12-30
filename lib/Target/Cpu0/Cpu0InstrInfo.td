@@ -221,7 +221,7 @@ def immZExt5 : ImmLeaf<i32, [{return Imm == (Imm & 0x1f);}]>;
 
 // Cpu0 Address Mode! SDNode frameindex could possibily be a match
 // since load and store instructions from stack used it.
-def addr : 
+def addr :
   ComplexPattern<iPTR, 2, "SelectAddr", [frameindex], [SDNPWantParent]>;
 
 //===----------------------------------------------------------------------===//
@@ -266,8 +266,8 @@ class ArithLogicR<bits<8> op, string instr_asm, SDNode OpNode,
 }
 
 let Predicates = [Ch4_2] in {
-class CmpInstr<bits<8> op, string instr_asm, 
-               InstrItinClass itin, RegisterClass RC, RegisterClass RD, 
+class CmpInstr<bits<8> op, string instr_asm,
+               InstrItinClass itin, RegisterClass RC, RegisterClass RD,
                bit isComm = 0>:
   FA<op, (outs RD:$ra), (ins RC:$rb, RC:$rc),
      !strconcat(instr_asm, "\t$ra, $rb, $rc"), [], itin> {
@@ -378,7 +378,7 @@ class CBranch24<bits<8> op, string instr_asm, RegisterClass RC,
 class CBranch16<bits<8> op, string instr_asm, PatFrag cond_op, RegisterClass RC>:
   FL<op, (outs), (ins RC:$ra, RC:$rb, brtarget16:$imm16),
              !strconcat(instr_asm, "\t$ra, $rb, $imm16"),
-             [(brcond (i32 (cond_op RC:$ra, RC:$rb)), bb:$imm16)], IIBranch>, 
+             [(brcond (i32 (cond_op RC:$ra, RC:$rb)), bb:$imm16)], IIBranch>,
              Requires<[HasSlt]> {
   let isBranch = 1;
   let isTerminator = 1;
@@ -585,9 +585,9 @@ class EffectiveAddress<string instr_asm, RegisterClass RC, Operand Mem> :
 let Predicates = [Ch9_2] in {
 // As stack alignment is always done with addiu, we need a 16-bit immediate
 let Defs = [SP], Uses = [SP] in {
-def ADJCALLSTACKDOWN : Cpu0Pseudo<(outs), (ins uimm16:$amt),
-                                  "!ADJCALLSTACKDOWN $amt",
-                                  [(callseq_start timm:$amt)]>;
+def ADJCALLSTACKDOWN : Cpu0Pseudo<(outs), (ins uimm16:$amt1, i32imm:$amt2),
+                                  "!ADJCALLSTACKDOWN $amt1",
+                                  [(callseq_start timm:$amt1, timm:$amt2)]>;
 def ADJCALLSTACKUP   : Cpu0Pseudo<(outs), (ins uimm16:$amt1, uimm16:$amt2),
                                   "!ADJCALLSTACKUP $amt1",
                                   [(callseq_end timm:$amt1, timm:$amt2)]>;
@@ -616,7 +616,7 @@ def LONG_BRANCH_LUi : Cpu0Pseudo<(outs GPROut:$dst),
 def LONG_BRANCH_ADDiu : Cpu0Pseudo<(outs GPROut:$dst),
   (ins GPROut:$src, jmptarget:$tgt, jmptarget:$baltgt), "", []>;
 }
-  
+
 //===----------------------------------------------------------------------===//
 // Instruction definition
 //===----------------------------------------------------------------------===//
@@ -732,7 +732,7 @@ def JMP     : UncondBranch<0x36, "jmp">;
 //@ long branch support //1
 let isBranch = 1, isTerminator = 1, isBarrier = 1,
     hasDelaySlot = 0, Defs = [LR] in
-def BAL: FJ<0x3A, (outs), (ins jmptarget:$addr), "bal\t$addr", [], IIBranch>, 
+def BAL: FJ<0x3A, (outs), (ins jmptarget:$addr), "bal\t$addr", [], IIBranch>,
              Requires<[HasSlt]>;
 
 /// Jump & link and Return Instructions
@@ -906,8 +906,8 @@ def : Pat<(i32 (extloadi16_a addr:$src)), (LHu addr:$src)>;
 let Predicates = [Ch8_1] in {
 
 // brcond for cmp instruction
-multiclass BrcondPatsCmp<RegisterClass RC, Instruction JEQOp, Instruction JNEOp, 
-Instruction JLTOp, Instruction JGTOp, Instruction JLEOp, Instruction JGEOp, 
+multiclass BrcondPatsCmp<RegisterClass RC, Instruction JEQOp, Instruction JNEOp,
+Instruction JLTOp, Instruction JGTOp, Instruction JLEOp, Instruction JGEOp,
 Instruction CMPOp, Register ZEROReg> {
 def : Pat<(brcond (i32 (seteq RC:$lhs, RC:$rhs)), bb:$dst),
           (JEQOp (CMPOp RC:$lhs, RC:$rhs), bb:$dst)>;
@@ -1103,4 +1103,3 @@ defm : SetgePatsCmp<CPURegs>;
 let Predicates = [Ch8_2] in {
 include "Cpu0CondMov.td"
 } // let Predicates = [Ch8_2]
-

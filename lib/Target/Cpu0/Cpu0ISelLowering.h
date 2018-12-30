@@ -333,7 +333,7 @@ namespace llvm {
     void passByValArg(SDValue Chain, const SDLoc &DL,
                       std::deque< std::pair<unsigned, SDValue> > &RegsToPass,
                       SmallVectorImpl<SDValue> &MemOpChains, SDValue StackPtr,
-                      MachineFrameInfo *MFI, SelectionDAG &DAG, SDValue Arg,
+                      MachineFrameInfo &MFI, SelectionDAG &DAG, SDValue Arg,
                       const Cpu0CC &CC, const ByValArgInfo &ByVal,
                       const ISD::ArgFlagsTy &Flags, bool isLittle) const;
 
@@ -371,4 +371,3 @@ namespace llvm {
 }
 
 #endif // Cpu0ISELLOWERING_H
-

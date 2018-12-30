@@ -439,8 +439,8 @@ Cpu0TargetLowering::passArgOnStack(SDValue StackPtr, unsigned Offset,
     return DAG.getStore(Chain, DL, Arg, PtrOff, MachinePointerInfo());
   }
 
-  MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
-  int FI = MFI->CreateFixedObject(Arg.getValueSizeInBits() / 8, Offset, false);
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+  int FI = MFI.CreateFixedObject(Arg.getValueSizeInBits() / 8, Offset, false);
   SDValue FIN = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
   return DAG.getStore(Chain, DL, Arg, FIN, MachinePointerInfo(),
                       /* Alignment = */ 0, MachineMemOperand::MOVolatile);
@@ -517,7 +517,7 @@ Cpu0TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool IsVarArg                         = CLI.IsVarArg;
 
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
   Cpu0FunctionInfo *FuncInfo = MF.getInfo<Cpu0FunctionInfo>();
   bool IsPIC = isPositionIndependent();
@@ -546,7 +546,7 @@ Cpu0TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       isEligibleForTailCallOptimization(Cpu0CCInfo, NextStackOffset,
                                         *MF.getInfo<Cpu0FunctionInfo>());
 
-  if (!IsTailCall && CLI.CS && CLI.CS->isMustTailCall())
+  if (!IsTailCall && CLI.CS && CLI.CS.isMustTailCall())
     report_fatal_error("failed to perform tail call elimination on a call "
                        "site marked musttail");
 
@@ -563,7 +563,7 @@ Cpu0TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   //@TailCall 2 {
   if (!IsTailCall)
-    Chain = DAG.getCALLSEQ_START(Chain, NextStackOffsetVal, DL);
+    Chain = DAG.getCALLSEQ_START(Chain, NextStackOffset, 0, DL);
   //@TailCall 2 }
 
   SDValue StackPtr =
@@ -586,6 +586,10 @@ Cpu0TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     //@ByVal Arg {
     if (Flags.isByVal()) {
+      unsigned FirstByValReg, LastByValReg;
+      unsigned ByValIdx = CCInfo.getInRegsParamsProcessed();
+      CCInfo.getInRegsParamInfo(ByValIdx, FirstByValReg, LastByValReg);
+
       assert(Flags.getByValSize() &&
              "ByVal args of size 0 should have been ignored by front-end.");
       assert(ByValArg != Cpu0CCInfo.byval_end());
@@ -1224,7 +1228,7 @@ void Cpu0TargetLowering::
 passByValArg(SDValue Chain, const SDLoc &DL,
              std::deque< std::pair<unsigned, SDValue> > &RegsToPass,
              SmallVectorImpl<SDValue> &MemOpChains, SDValue StackPtr,
-             MachineFrameInfo *MFI, SelectionDAG &DAG, SDValue Arg,
+             MachineFrameInfo &MFI, SelectionDAG &DAG, SDValue Arg,
              const Cpu0CC &CC, const ByValArgInfo &ByVal,
              const ISD::ArgFlagsTy &Flags, bool isLittle) const {
   unsigned ByValSizeInBytes = Flags.getByValSize();
