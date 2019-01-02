@@ -312,6 +312,7 @@ enum {
   EM_RISCV = 243,         // RISC-V
   EM_LANAI = 244,         // Lanai 32-bit processor
   EM_BPF = 247,           // Linux kernel bpf virtual machine
+  EM_RISCV_MSYKSPHINZ = 248, // Experimental version of RISC-V Msyksphinz
 };
 
 // Object file classes.
@@ -626,10 +627,29 @@ enum : unsigned {
   EF_RISCV_RVE = 0x0008
 };
 
+// RISCV-Msyksphinz Specific e_flags
+enum : unsigned {
+  EF_RISCV_MSYKSPHINZ_RVC               = 0x0001,
+  EF_RISCV_MSYKSPHINZ_FLOAT_ABI         = 0x0006,
+  EF_RISCV_MSYKSPHINZ_FLOAT_ABI_SOFT    = 0x0000,
+  EF_RISCV_MSYKSPHINZ_FLOAT_ABI_SINGLE  = 0x0002,
+  EF_RISCV_MSYKSPHINZ_FLOAT_ABI_DOUBLE  = 0x0004,
+  EF_RISCV_MSYKSPHINZ_FLOAT_ABI_QUAD    = 0x0006,
+  EF_RISCV_MSYKSPHINZ_RVE               = 0x0008
+};
+
+
 // ELF Relocation types for RISC-V
 enum {
 #include "ELFRelocs/RISCV.def"
 };
+
+
+// ELF Relocation types for RISC-V msyksphinz
+enum {
+#include "ELFRelocs/RISCV_msyksphinz.def"
+};
+
 
 // ELF Relocation types for S390/zSeries
 enum {

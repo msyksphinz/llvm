@@ -1,0 +1,1 @@
+set(LLVM_TARGET_DEFINITIONS RISCV_msyksphinz.td)
