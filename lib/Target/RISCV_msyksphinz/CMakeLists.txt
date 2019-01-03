@@ -14,7 +14,8 @@ add_public_tablegen_target(RISCV_msyksphinzCommonTableGen)
 
 # RISCV_msyksphinzCodeGen should match with LLVMBuild.txt RISCV_msyksphinzCodeGen
 add_llvm_target(RISCV_msyksphinzCodeGen
-  RISCV_msyksphinz_TargetMachine.cpp
+  RISCV_msyksphinzTargetMachine.cpp
+  RISCV_msyksphinzObjectFile.cpp
   )
 
 # Should match with "subdirectories =  MCTargetDesc TargetInfo" in LLVMBuild.txt
