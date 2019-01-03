@@ -14,7 +14,6 @@
 #include "RISCV_msyksphinzTargetMachine.h"
 #include "RISCV_msyksphinz.h"
 
-#include "RISCV_msyksphinzSubtarget.h"
 #include "RISCV_msyksphinzTargetObjectFile.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/CodeGen/Passes.h"
@@ -26,8 +25,6 @@ using namespace llvm;
 
 extern "C" void LLVMInitializeRISCV_msyksphinzTarget() {
   // Register the target.
-  //- Big endian Target Machine
-  RegisterTargetMachine<RISCV_msyksphinzebTargetMachine> X(TheRISCV_msyksphinzTarget);
   //- Little endian Target Machine
   RegisterTargetMachine<RISCV_msyksphinzelTargetMachine> Y(TheRISCV_msyksphinzelTarget);
 }
@@ -36,25 +33,9 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
                                      const TargetOptions &Options,
                                      bool isLittle) {
   std::string Ret = "";
-  // There are both little and big endian cpu0.
-  if (isLittle)
-    Ret += "e";
-  else
-    Ret += "E";
-
+  Ret += "e";
   Ret += "-m:m";
-
-  // Pointers are 32 bit on some ABIs.
-  Ret += "-p:32:32";
-
-  // 8 and 16 bit integers only need to have natural alignment, but try to
-  // align them to 32 bits. 64 bit integers have natural alignment.
-  Ret += "-i8:8:32-i16:16:32-i64:64";
-
-  // 32 bit registers are always available and the stack is at least 64 bit
-  // aligned.
-  Ret += "-n32-S64";
-
+  Ret += "-p:64:64-i64:64-i128:128-n64-S128";
   return Ret;
 }
 
@@ -65,13 +46,6 @@ static Reloc::Model getEffectiveRelocModel(CodeModel::Model CM,
   return *RM;
 }
 
-// DataLayout --> Big-endian, 32-bit pointer/ABI/alignment
-// The stack is always 8 byte aligned
-// On function prologue, the stack is created by decrementing
-// its pointer. Once decremented, all references are done with positive
-// offset from the stack/frame pointer, using StackGrowsUp enables
-// an easier handling.
-// Using CodeModel::Large enables different CALL behavior.
 RISCV_msyksphinzTargetMachine::RISCV_msyksphinzTargetMachine(const Target &T, const Triple &TT,
                                      StringRef CPU, StringRef FS,
                                      const TargetOptions &Options,
@@ -91,16 +65,6 @@ RISCV_msyksphinzTargetMachine::RISCV_msyksphinzTargetMachine(const Target &T, co
 }
 
 RISCV_msyksphinzTargetMachine::~RISCV_msyksphinzTargetMachine() {}
-
-void RISCV_msyksphinzebTargetMachine::anchor() { }
-
-RISCV_msyksphinzebTargetMachine::RISCV_msyksphinzebTargetMachine(const Target &T, const Triple &TT,
-                                         StringRef CPU, StringRef FS,
-                                         const TargetOptions &Options,
-                                         Optional<Reloc::Model> RM,
-                                         CodeModel::Model CM,
-                                         CodeGenOpt::Level OL)
-    : RISCV_msyksphinzTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, false) {}
 
 void RISCV_msyksphinzelTargetMachine::anchor() { }
 

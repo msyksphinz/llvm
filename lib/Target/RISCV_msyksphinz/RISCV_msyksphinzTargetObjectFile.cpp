@@ -9,7 +9,6 @@
 
 #include "RISCV_msyksphinzTargetObjectFile.h"
 
-#include "RISCV_msyksphinzSubtarget.h"
 #include "RISCV_msyksphinzTargetMachine.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"

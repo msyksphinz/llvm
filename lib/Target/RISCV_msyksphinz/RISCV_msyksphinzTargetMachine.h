@@ -14,10 +14,9 @@
 #ifndef LLVM_LIB_TARGET_CPU0_CPU0TARGETMACHINE_H
 #define LLVM_LIB_TARGET_CPU0_CPU0TARGETMACHINE_H
 
-#include "RISCV_msyksphinzSubtarget.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
-#include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -27,9 +26,7 @@ class RISCV_msyksphinzRegisterInfo;
 class RISCV_msyksphinzTargetMachine : public LLVMTargetMachine {
   bool isLittle;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
-  // Selected ABI
-  RISCV_msyksphinzABIInfo ABI;
-  RISCV_msyksphinzSubtarget DefaultSubtarget;
+  RISCV_msyksphinzSubtarget Subtarget;
 
   mutable StringMap<std::unique_ptr<RISCV_msyksphinzSubtarget>> SubtargetMap;
 public:
@@ -40,7 +37,7 @@ public:
   ~RISCV_msyksphinzTargetMachine() override;
 
   const RISCV_msyksphinzSubtarget *getSubtargetImpl() const {
-    return &DefaultSubtarget;
+    return &Subtarget;
   }
 
   const RISCV_msyksphinzSubtarget *getSubtargetImpl(const Function &F) const override;
