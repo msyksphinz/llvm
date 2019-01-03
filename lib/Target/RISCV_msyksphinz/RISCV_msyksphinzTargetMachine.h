@@ -14,9 +14,6 @@
 #ifndef LLVM_LIB_TARGET_CPU0_CPU0TARGETMACHINE_H
 #define LLVM_LIB_TARGET_CPU0_CPU0TARGETMACHINE_H
 
-#include "RISCV_msyksphinzConfig.h"
-
-#include "MCTargetDesc/RISCV_msyksphinzABIInfo.h"
 #include "RISCV_msyksphinzSubtarget.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"

@@ -10,8 +10,6 @@
 #ifndef LLVM_LIB_TARGET_RISCV_msyksphinz_RISCV_msyksphinzTARGETOBJECTFILE_H
 #define LLVM_LIB_TARGET_RISCV_msyksphinz_RISCV_msyksphinzTARGETOBJECTFILE_H
 
-#include "RISCV_msyksphinzConfig.h"
-
 #include "RISCV_msyksphinzTargetMachine.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 

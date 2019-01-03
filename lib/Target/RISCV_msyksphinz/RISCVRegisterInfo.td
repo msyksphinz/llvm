@@ -1,15 +1,15 @@
 let Namespace = "RISCV_msyksphinz" in {
 
 // We have banks of 32 registers each.
-class RISCVReg<bits<5> Enc, string n> : Register<n> {
+class RISCV_msyksphinzReg<bits<16> Enc, string n> : Register<n> {
   let HWEncoding = Enc;
 }
 
 // RISCV CPU Registers
-class RISCVGPRReg<bits<5> Enc, string n> : Cpu0Reg<Enc, n>;
+class RISCVGPRReg<bits<16> Enc, string n> : RISCV_msyksphinzReg<Enc, n>;
 
 // Co-processor 0 Registers
-class RISCVFPReg<bits<5> Enc, string n> : Cpu0Reg<Enc, n>;
+class RISCVFPReg<bits<16> Enc, string n> : RISCV_msyksphinzReg<Enc, n>;
 
 def ZERO : RISCVGPRReg<0,  "x0">,    DwarfRegNum<[0]>;
 def RA   : RISCVGPRReg<1,  "x1">,    DwarfRegNum<[1]>;
@@ -48,3 +48,21 @@ def T5   : RISCVGPRReg<30, "x30">,   DwarfRegNum<[30]>;
 def T6   : RISCVGPRReg<31, "x31">,   DwarfRegNum<[31]>;
 
 }
+
+
+//===----------------------------------------------------------------------===//
+//@Register Classes
+//===----------------------------------------------------------------------===//
+
+def RISCVRegs : RegisterClass<"RISCV_msyksphinz", [i32], 32, (add
+  // Reserved
+  ZERO,
+  // Return Values and Arguments
+  A0, A1, A2, A3, A4, A5, A6, A7,
+  // Not preserved across procedure calls
+  T0, T1, T2, T3, T4, T5, T6,
+  // Callee save
+  S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, S11,
+  // Reserved
+  RA, SP, GP, TP
+  )>;
