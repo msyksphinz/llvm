@@ -20,7 +20,7 @@ subdirectories = MCTargetDesc TargetInfo
 
 [component_0]
 type = TargetGroup
-name = RISCV_msyksphinz
+name = MYRISCVX
 parent = Target
 has_asmparser = 1
 has_asmprinter = 1
@@ -28,8 +28,8 @@ has_disassembler = 1
 
 [component_1]
 type = Library
-name = RISCV_msyksphinzCodeGen
-parent = RISCV_msyksphinz
-required_libraries = Core CodeGen MC RISCV_msyksphinzDesc
-  RISCV_msyksphinzInfo SelectionDAG Support Target
-add_to_library_groups = RISCV_msyksphinz
+name = MYRISCVXCodeGen
+parent = MYRISCVX
+required_libraries = Core CodeGen MC MYRISCVXDesc
+  MYRISCVXInfo SelectionDAG Support Target
+add_to_library_groups = MYRISCVX

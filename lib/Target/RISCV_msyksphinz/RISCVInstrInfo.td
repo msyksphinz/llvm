@@ -1,4 +1,4 @@
-//===- RISCV_msyksphinzInstrInfo.td - Target Description for RISCV_msyksphinz Target -*- tablegen -*-=//
+//===- MYRISCVXInstrInfo.td - Target Description for MYRISCVX Target -*- tablegen -*-=//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the RISCV_msyksphinz implementation of the TargetInstrInfo class.
+// This file contains the MYRISCVX implementation of the TargetInstrInfo class.
 //
 //===----------------------------------------------------------------------===//
 
@@ -51,7 +51,7 @@ class ArithLogicI<bits<8> op, string instr_asm, SDNode OpNode,
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
-// RISCV_msyksphinz Instructions
+// MYRISCVX Instructions
 //===----------------------------------------------------------------------===//
 
 /// Arithmetic Instructions (ALU Immediate)

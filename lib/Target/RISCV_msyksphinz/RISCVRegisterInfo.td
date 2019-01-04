@@ -1,15 +1,15 @@
-let Namespace = "RISCV_msyksphinz" in {
+let Namespace = "MYRISCVX" in {
 
 // We have banks of 32 registers each.
-class RISCV_msyksphinzReg<bits<16> Enc, string n> : Register<n> {
+class MYRISCVXReg<bits<16> Enc, string n> : Register<n> {
   let HWEncoding = Enc;
 }
 
 // RISCV CPU Registers
-class RISCVGPRReg<bits<16> Enc, string n> : RISCV_msyksphinzReg<Enc, n>;
+class RISCVGPRReg<bits<16> Enc, string n> : MYRISCVXReg<Enc, n>;
 
 // Co-processor 0 Registers
-class RISCVFPReg<bits<16> Enc, string n> : RISCV_msyksphinzReg<Enc, n>;
+class RISCVFPReg<bits<16> Enc, string n> : MYRISCVXReg<Enc, n>;
 
 def ZERO : RISCVGPRReg<0,  "x0">,    DwarfRegNum<[0]>;
 def RA   : RISCVGPRReg<1,  "x1">,    DwarfRegNum<[1]>;
@@ -54,7 +54,7 @@ def T6   : RISCVGPRReg<31, "x31">,   DwarfRegNum<[31]>;
 //@Register Classes
 //===----------------------------------------------------------------------===//
 
-def RISCVRegs : RegisterClass<"RISCV_msyksphinz", [i32], 32, (add
+def RISCVRegs : RegisterClass<"MYRISCVX", [i32], 32, (add
   // Reserved
   ZERO,
   // Return Values and Arguments

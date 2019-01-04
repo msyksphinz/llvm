@@ -7,18 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_RISCV_msyksphinz_RISCV_msyksphinzTARGETOBJECTFILE_H
-#define LLVM_LIB_TARGET_RISCV_msyksphinz_RISCV_msyksphinzTARGETOBJECTFILE_H
+#ifndef LLVM_LIB_TARGET_MYRISCVX_MYRISCVXTARGETOBJECTFILE_H
+#define LLVM_LIB_TARGET_MYRISCVX_MYRISCVXTARGETOBJECTFILE_H
 
-#include "RISCV_msyksphinzTargetMachine.h"
+#include "MYRISCVXTargetMachine.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 
 namespace llvm {
-class RISCV_msyksphinzTargetMachine;
-  class RISCV_msyksphinzTargetObjectFile : public TargetLoweringObjectFileELF {
+class MYRISCVXTargetMachine;
+  class MYRISCVXTargetObjectFile : public TargetLoweringObjectFileELF {
     MCSection *SmallDataSection;
     MCSection *SmallBSSSection;
-    const RISCV_msyksphinzTargetMachine *TM;
+    const MYRISCVXTargetMachine *TM;
   public:
 
     void Initialize(MCContext &Ctx, const TargetMachine &TM) override;

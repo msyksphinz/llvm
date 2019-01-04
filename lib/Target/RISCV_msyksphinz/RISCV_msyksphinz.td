@@ -1,4 +1,4 @@
-//===-- RISCV_msyksphinz.td - Describe the RISCV_msyksphinz Target Machine ---------*- tablegen -*-===//
+//===-- MYRISCVX.td - Describe the MYRISCVX Target Machine ---------*- tablegen -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
-// This is the top level entry point for the RISCV_msyksphinz target.
+// This is the top level entry point for the MYRISCVX target.
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
@@ -22,14 +22,14 @@ include "RISCVRegisterInfo.td"
 
 include "RISCVInstrInfo.td"
 
-def RISCV_msyksphinzInstrInfo : InstrInfo;
+def MYRISCVXInstrInfo : InstrInfo;
 
 
-// Will generate RISCV_msyksphinzGenAsmWrite.inc included by RISCV_msyksphinzInstPrinter.cpp, contents
+// Will generate MYRISCVXGenAsmWrite.inc included by MYRISCVXInstPrinter.cpp, contents
 //  as follows,
-// void RISCV_msyksphinzInstPrinter::printInstruction(const MCInst *MI, raw_ostream &O) {...}
-// const char *RISCV_msyksphinzInstPrinter::getRegisterName(unsigned RegNo) {...}
-def RISCV_msyksphinz : Target {
-// def RISCV_msyksphinzInstrInfo : InstrInfo as before.
-  let InstructionSet = RISCV_msyksphinzInstrInfo;
+// void MYRISCVXInstPrinter::printInstruction(const MCInst *MI, raw_ostream &O) {...}
+// const char *MYRISCVXInstPrinter::getRegisterName(unsigned RegNo) {...}
+def MYRISCVX : Target {
+// def MYRISCVXInstrInfo : InstrInfo as before.
+  let InstructionSet = MYRISCVXInstrInfo;
 }

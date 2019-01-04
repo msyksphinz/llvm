@@ -1,4 +1,4 @@
-//===-- RISCV_msyksphinzTargetInfo.cpp - RISCV_msyksphinz Target Implementation -------------------===//
+//===-- MYRISCVXTargetInfo.cpp - MYRISCVX Target Implementation -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,17 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RISCV_msyksphinz.h"
+#include "MYRISCVX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
-Target llvm::TheRISCV_msyksphinzTarget, llvm::TheRISCV_msyksphinzelTarget;
+Target llvm::TheMYRISCVXTarget, llvm::TheMYRISCVXelTarget;
 
-extern "C" void LLVMInitializeRISCV_msyksphinzTargetInfo() {
-  RegisterTarget<Triple::cpu0,
-        /*HasJIT=*/true> X(TheRISCV_msyksphinzTarget, "cpu0", "RISCV_msyksphinz");
-
-  RegisterTarget<Triple::cpu0el,
-        /*HasJIT=*/true> Y(TheRISCV_msyksphinzelTarget, "cpu0el", "RISCV_msyksphinzel");
+extern "C" void LLVMInitializeMYRISCVXTargetInfo() {
+  RegisterTarget<Triple::riscv_msyksphinz,
+        /*HasJIT=*/true> Y(TheMYRISCVXTarget, "riscv_msyksphinz", "MYRISCVX");
 }

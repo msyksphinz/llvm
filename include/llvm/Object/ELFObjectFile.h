@@ -1043,7 +1043,7 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
       return "ELF64-ppc64";
     case ELF::EM_RISCV:
       return "ELF64-riscv";
-    case ELF::EM_RISCV_MSYKSPHINZ:
+    case ELF::EM_MYRISCVX:
       return "ELF64-riscv-msyksphinz";
     case ELF::EM_S390:
       return "ELF64-s390";
@@ -1104,7 +1104,7 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
     default:
       report_fatal_error("Invalid ELFCLASS!");
     }
-  case ELF::EM_RISCV_MSYKSPHINZ:
+  case ELF::EM_MYRISCVX:
     return Triple::riscv64_msyksphinz;
 
   case ELF::EM_S390:

@@ -17,7 +17,7 @@
 
 [component_0]
 type = Library
-name = RISCV_msyksphinzInfo
-parent = RISCV_msyksphinz
+name = MYRISCVXInfo
+parent = MYRISCVX
 required_libraries = Support
-add_to_library_groups = RISCV_msyksphinz
+add_to_library_groups = MYRISCVX

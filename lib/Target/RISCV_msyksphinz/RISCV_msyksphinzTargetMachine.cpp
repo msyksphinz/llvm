@@ -1,4 +1,4 @@
-//===-- RISCV_msyksphinzTargetMachine.cpp - Define TargetMachine for RISCV_msyksphinz -------------===//
+//===-- MYRISCVXTargetMachine.cpp - Define TargetMachine for MYRISCVX -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implements the info about RISCV_msyksphinz target spec.
+// Implements the info about MYRISCVX target spec.
 //
 //===----------------------------------------------------------------------===//
 
-#include "RISCV_msyksphinzTargetMachine.h"
-#include "RISCV_msyksphinz.h"
+#include "MYRISCVXTargetMachine.h"
+#include "MYRISCVX.h"
 
-#include "RISCV_msyksphinzTargetObjectFile.h"
+#include "MYRISCVXTargetObjectFile.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -23,10 +23,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "cpu0"
 
-extern "C" void LLVMInitializeRISCV_msyksphinzTarget() {
+extern "C" void LLVMInitializeMYRISCVXTarget() {
   // Register the target.
   //- Little endian Target Machine
-  RegisterTargetMachine<RISCV_msyksphinzelTargetMachine> Y(TheRISCV_msyksphinzelTarget);
+  RegisterTargetMachine<MYRISCVXelTargetMachine> Y(TheMYRISCVXelTarget);
 }
 
 static std::string computeDataLayout(const Triple &TT, StringRef CPU,
@@ -46,7 +46,7 @@ static Reloc::Model getEffectiveRelocModel(CodeModel::Model CM,
   return *RM;
 }
 
-RISCV_msyksphinzTargetMachine::RISCV_msyksphinzTargetMachine(const Target &T, const Triple &TT,
+MYRISCVXTargetMachine::MYRISCVXTargetMachine(const Target &T, const Triple &TT,
                                      StringRef CPU, StringRef FS,
                                      const TargetOptions &Options,
                                      Optional<Reloc::Model> RM,
@@ -56,28 +56,28 @@ RISCV_msyksphinzTargetMachine::RISCV_msyksphinzTargetMachine(const Target &T, co
     : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options, isLittle), TT,
                         CPU, FS, Options, getEffectiveRelocModel(CM, RM), CM,
                         OL),
-      isLittle(isLittle), TLOF(make_unique<RISCV_msyksphinzTargetObjectFile>()),
-      ABI(RISCV_msyksphinzABIInfo::computeTargetABI()),
+      isLittle(isLittle), TLOF(make_unique<MYRISCVXTargetObjectFile>()),
+      ABI(MYRISCVXABIInfo::computeTargetABI()),
       DefaultSubtarget(TT, CPU, FS, isLittle, *this) {
   // initAsmInfo will display features by llc -march=cpu0 -mcpu=help on 3.7 but
   // not on 3.6
   initAsmInfo();
 }
 
-RISCV_msyksphinzTargetMachine::~RISCV_msyksphinzTargetMachine() {}
+MYRISCVXTargetMachine::~MYRISCVXTargetMachine() {}
 
-void RISCV_msyksphinzelTargetMachine::anchor() { }
+void MYRISCVXelTargetMachine::anchor() { }
 
-RISCV_msyksphinzelTargetMachine::RISCV_msyksphinzelTargetMachine(const Target &T, const Triple &TT,
+MYRISCVXelTargetMachine::MYRISCVXelTargetMachine(const Target &T, const Triple &TT,
                                          StringRef CPU, StringRef FS,
                                          const TargetOptions &Options,
                                          Optional<Reloc::Model> RM,
                                          CodeModel::Model CM,
                                          CodeGenOpt::Level OL)
-    : RISCV_msyksphinzTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, true) {}
+    : MYRISCVXTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, true) {}
 
-const RISCV_msyksphinzSubtarget *
-RISCV_msyksphinzTargetMachine::getSubtargetImpl(const Function &F) const {
+const MYRISCVXSubtarget *
+MYRISCVXTargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
   Attribute FSAttr = F.getFnAttribute("target-features");
 
@@ -94,30 +94,30 @@ RISCV_msyksphinzTargetMachine::getSubtargetImpl(const Function &F) const {
     // creation will depend on the TM and the code generation flags on the
     // function that reside in TargetOptions.
     resetTargetOptions(F);
-    I = llvm::make_unique<RISCV_msyksphinzSubtarget>(TargetTriple, CPU, FS, isLittle,
+    I = llvm::make_unique<MYRISCVXSubtarget>(TargetTriple, CPU, FS, isLittle,
                                          *this);
   }
   return I.get();
 }
 
 namespace {
-//@RISCV_msyksphinzPassConfig {
-/// RISCV_msyksphinz Code Generator Pass Configuration Options.
-class RISCV_msyksphinzPassConfig : public TargetPassConfig {
+//@MYRISCVXPassConfig {
+/// MYRISCVX Code Generator Pass Configuration Options.
+class MYRISCVXPassConfig : public TargetPassConfig {
 public:
-  RISCV_msyksphinzPassConfig(RISCV_msyksphinzTargetMachine *TM, PassManagerBase &PM)
+  MYRISCVXPassConfig(MYRISCVXTargetMachine *TM, PassManagerBase &PM)
     : TargetPassConfig(TM, PM) {}
 
-  RISCV_msyksphinzTargetMachine &getRISCV_msyksphinzTargetMachine() const {
-    return getTM<RISCV_msyksphinzTargetMachine>();
+  MYRISCVXTargetMachine &getMYRISCVXTargetMachine() const {
+    return getTM<MYRISCVXTargetMachine>();
   }
 
-  const RISCV_msyksphinzSubtarget &getRISCV_msyksphinzSubtarget() const {
-    return *getRISCV_msyksphinzTargetMachine().getSubtargetImpl();
+  const MYRISCVXSubtarget &getMYRISCVXSubtarget() const {
+    return *getMYRISCVXTargetMachine().getSubtargetImpl();
   }
 };
 } // namespace
 
-TargetPassConfig *RISCV_msyksphinzTargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new RISCV_msyksphinzPassConfig(this, PM);
+TargetPassConfig *MYRISCVXTargetMachine::createPassConfig(PassManagerBase &PM) {
+  return new MYRISCVXPassConfig(this, PM);
 }

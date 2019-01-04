@@ -1,4 +1,4 @@
-//===-- RISCV_msyksphinzMCTargetDesc.cpp - RISCV_msyksphinz Target Descriptions -------------------===//
+//===-- MYRISCVXMCTargetDesc.cpp - MYRISCVX Target Descriptions -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file provides RISCV_msyksphinz specific target descriptions.
+// This file provides MYRISCVX specific target descriptions.
 //
 //===----------------------------------------------------------------------===//
 
-#include "RISCV_msyksphinzMCTargetDesc.h"
+#include "MYRISCVXMCTargetDesc.h"
 #include "llvm/MC/MachineLocation.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -28,16 +28,16 @@
 using namespace llvm;
 
 #define GET_INSTRINFO_MC_DESC
-#include "RISCV_msyksphinzGenInstrInfo.inc"
+#include "MYRISCVXGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_MC_DESC
-#include "RISCV_msyksphinzGenSubtargetInfo.inc"
+#include "MYRISCVXGenSubtargetInfo.inc"
 
 #define GET_REGINFO_MC_DESC
-#include "RISCV_msyksphinzGenRegisterInfo.inc"
+#include "MYRISCVXGenRegisterInfo.inc"
 
 //@2 {
-extern "C" void LLVMInitializeRISCV_msyksphinzTargetMC() {
+extern "C" void LLVMInitializeMYRISCVXTargetMC() {
 
 }
 //@2 }

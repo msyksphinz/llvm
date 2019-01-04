@@ -1,4 +1,4 @@
-//===-- RISCV_msyksphinzMCTargetDesc.h - RISCV_msyksphinz Target Descriptions -----------*- C++ -*-===//
+//===-- MYRISCVXMCTargetDesc.h - MYRISCVX Target Descriptions -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file provides RISCV_msyksphinz specific target descriptions.
+// This file provides MYRISCVX specific target descriptions.
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,21 +20,21 @@ namespace llvm {
 class Target;
 class Triple;
 
-extern Target TheRISCV_msyksphinzTarget;
-extern Target TheRISCV_msyksphinzelTarget;
+extern Target TheMYRISCVXTarget;
+extern Target TheMYRISCVXelTarget;
 
 } // End llvm namespace
 
-// Defines symbolic names for RISCV_msyksphinz registers.  This defines a mapping from
+// Defines symbolic names for MYRISCVX registers.  This defines a mapping from
 // register name to register number.
 #define GET_REGINFO_ENUM
-#include "RISCV_msyksphinzGenRegisterInfo.inc"
+#include "MYRISCVXGenRegisterInfo.inc"
 
-// Defines symbolic names for the RISCV_msyksphinz instructions.
+// Defines symbolic names for the MYRISCVX instructions.
 #define GET_INSTRINFO_ENUM
-#include "RISCV_msyksphinzGenInstrInfo.inc"
+#include "MYRISCVXGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM
-#include "RISCV_msyksphinzGenSubtargetInfo.inc"
+#include "MYRISCVXGenSubtargetInfo.inc"
 
 #endif

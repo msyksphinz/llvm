@@ -1,3 +1,3 @@
-add_llvm_library(LLVMRISCV_msyksphinzInfo
-  RISCV_msyksphinzTargetInfo.cpp
+add_llvm_library(LLVMMYRISCVXInfo
+  MYRISCVXTargetInfo.cpp
   )

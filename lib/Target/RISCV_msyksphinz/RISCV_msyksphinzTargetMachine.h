@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the RISCV_msyksphinz specific subclass of TargetMachine.
+// This file declares the MYRISCVX specific subclass of TargetMachine.
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,26 +21,26 @@
 
 namespace llvm {
 class formatted_raw_ostream;
-class RISCV_msyksphinzRegisterInfo;
+class MYRISCVXRegisterInfo;
 
-class RISCV_msyksphinzTargetMachine : public LLVMTargetMachine {
+class MYRISCVXTargetMachine : public LLVMTargetMachine {
   bool isLittle;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
-  RISCV_msyksphinzSubtarget Subtarget;
+  MYRISCVXSubtarget Subtarget;
 
-  mutable StringMap<std::unique_ptr<RISCV_msyksphinzSubtarget>> SubtargetMap;
+  mutable StringMap<std::unique_ptr<MYRISCVXSubtarget>> SubtargetMap;
 public:
-  RISCV_msyksphinzTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
+  MYRISCVXTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                     StringRef FS, const TargetOptions &Options,
                     Optional<Reloc::Model> RM, CodeModel::Model CM,
                     CodeGenOpt::Level OL, bool isLittle);
-  ~RISCV_msyksphinzTargetMachine() override;
+  ~MYRISCVXTargetMachine() override;
 
-  const RISCV_msyksphinzSubtarget *getSubtargetImpl() const {
+  const MYRISCVXSubtarget *getSubtargetImpl() const {
     return &Subtarget;
   }
 
-  const RISCV_msyksphinzSubtarget *getSubtargetImpl(const Function &F) const override;
+  const MYRISCVXSubtarget *getSubtargetImpl(const Function &F) const override;
 
   // Pass Pipeline Configuration
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
@@ -49,26 +49,26 @@ public:
     return TLOF.get();
   }
   bool isLittleEndian() const { return isLittle; }
-  const RISCV_msyksphinzABIInfo &getABI() const { return ABI; }
+  const MYRISCVXABIInfo &getABI() const { return ABI; }
 };
 
-/// RISCV_msyksphinzebTargetMachine - RISCV_msyksphinz32 big endian target machine.
+/// MYRISCVXebTargetMachine - MYRISCVX32 big endian target machine.
 ///
-class RISCV_msyksphinzebTargetMachine : public RISCV_msyksphinzTargetMachine {
+class MYRISCVXebTargetMachine : public MYRISCVXTargetMachine {
   virtual void anchor();
 public:
-  RISCV_msyksphinzebTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
+  MYRISCVXebTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, const TargetOptions &Options,
                       Optional<Reloc::Model> RM, CodeModel::Model CM,
                       CodeGenOpt::Level OL);
 };
 
-/// RISCV_msyksphinzelTargetMachine - RISCV_msyksphinz32 little endian target machine.
+/// MYRISCVXelTargetMachine - MYRISCVX32 little endian target machine.
 ///
-class RISCV_msyksphinzelTargetMachine : public RISCV_msyksphinzTargetMachine {
+class MYRISCVXelTargetMachine : public MYRISCVXTargetMachine {
   virtual void anchor();
 public:
-  RISCV_msyksphinzelTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
+  MYRISCVXelTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, const TargetOptions &Options,
                       Optional<Reloc::Model> RM, CodeModel::Model CM,
                       CodeGenOpt::Level OL);

@@ -1,4 +1,4 @@
-//===-- RISCV_msyksphinzInstrFormats.td - RISCV_msyksphinz Instruction Formats -----*- tablegen -*-===//
+//===-- MYRISCVXInstrFormats.td - MYRISCVX Instruction Formats -----*- tablegen -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -30,8 +30,8 @@ class Format<bits<4> val> {
 def FrmL      : Format<2>;
 def IIAlu     : InstrItinClass;
 
-// Generic RISCV_msyksphinz Format
-class RISCV_msyksphinzInst<dag outs, dag ins, string asmstr, list<dag> pattern,
+// Generic MYRISCVX Format
+class MYRISCVXInst<dag outs, dag ins, string asmstr, list<dag> pattern,
                InstrItinClass itin, Format f>: Instruction
 {
   // Inst and Size: for tablegen(... -gen-emitter) and
@@ -39,7 +39,7 @@ class RISCV_msyksphinzInst<dag outs, dag ins, string asmstr, list<dag> pattern,
   field bits<32> Inst;
   Format Form = f;
 
-  let Namespace = "RISCV_msyksphinz";
+  let Namespace = "MYRISCVX";
 
   let Size = 4;
 
@@ -56,14 +56,14 @@ class RISCV_msyksphinzInst<dag outs, dag ins, string asmstr, list<dag> pattern,
   let Itinerary   = itin;
 
   //
-  // Attributes specific to RISCV_msyksphinz instructions...
+  // Attributes specific to MYRISCVX instructions...
   //
   bits<4> FormBits = Form.Value;
 
-  // TSFlags layout should be kept in sync with RISCV_msyksphinzInstrInfo.h.
+  // TSFlags layout should be kept in sync with MYRISCVXInstrInfo.h.
   let TSFlags{3-0}   = FormBits;
 
-  let DecoderNamespace = "RISCV_msyksphinz";
+  let DecoderNamespace = "MYRISCVX";
 
   field bits<32> SoftFail = 0;
 }
@@ -71,11 +71,11 @@ class RISCV_msyksphinzInst<dag outs, dag ins, string asmstr, list<dag> pattern,
 
 //@class FL {
 //===----------------------------------------------------------------------===//
-// Format L instruction class in RISCV_msyksphinz : <|opcode|ra|rb|cx|>
+// Format L instruction class in MYRISCVX : <|opcode|ra|rb|cx|>
 //===----------------------------------------------------------------------===//
 
 class FL<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern,
-         InstrItinClass itin>: RISCV_msyksphinzInst<outs, ins, asmstr, pattern, itin, FrmL>
+         InstrItinClass itin>: MYRISCVXInst<outs, ins, asmstr, pattern, itin, FrmL>
 {
   bits<4>  ra;
   bits<4>  rb;

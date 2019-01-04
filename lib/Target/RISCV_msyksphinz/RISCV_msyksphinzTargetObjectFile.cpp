@@ -7,16 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RISCV_msyksphinzTargetObjectFile.h"
+#include "MYRISCVXTargetObjectFile.h"
 
-#include "RISCV_msyksphinzTargetMachine.h"
+#include "MYRISCVXTargetMachine.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ELF.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
@@ -25,7 +25,7 @@ SSThreshold("cpu0-ssection-threshold", cl::Hidden,
             cl::desc("Small data and bss section threshold size (default=8)"),
             cl::init(8));
 
-void RISCV_msyksphinzTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM){
+void MYRISCVXTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM){
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
   InitializeELF(TM.Options.UseInitArray);
 
@@ -34,5 +34,5 @@ void RISCV_msyksphinzTargetObjectFile::Initialize(MCContext &Ctx, const TargetMa
 
   SmallBSSSection = getContext().getELFSection(".sbss", ELF::SHT_NOBITS,
                                                ELF::SHF_WRITE | ELF::SHF_ALLOC);
-  this->TM = &static_cast<const RISCV_msyksphinzTargetMachine &>(TM);
+  this->TM = &static_cast<const MYRISCVXTargetMachine &>(TM);
 }
