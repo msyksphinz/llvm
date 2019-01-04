@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_CPU0_CPU0TARGETMACHINE_H
-#define LLVM_LIB_TARGET_CPU0_CPU0TARGETMACHINE_H
+#ifndef LLVM_LIB_TARGET_MYRISCVX_MYRISCVXTARGETMACHINE_H
+#define LLVM_LIB_TARGET_MYRISCVX_MYRISCVXTARGETMACHINE_H
 
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"

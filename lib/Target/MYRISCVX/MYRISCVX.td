@@ -22,8 +22,11 @@ include "RISCVRegisterInfo.td"
 
 include "RISCVInstrInfo.td"
 
-def MYRISCVXInstrInfo : InstrInfo;
+def FeatureMYRISCVX64 : SubtargetFeature<"x64", "HasArchX64", "true", "MYRISCVX64 ISA Support">;
 
+def : ProcessorModel<"myriscv64_impl", NoSchedModel, [FeatureMYRISCVX64]>;
+
+def MYRISCVXInstrInfo : InstrInfo;
 
 // Will generate MYRISCVXGenAsmWrite.inc included by MYRISCVXInstPrinter.cpp, contents
 //  as follows,
