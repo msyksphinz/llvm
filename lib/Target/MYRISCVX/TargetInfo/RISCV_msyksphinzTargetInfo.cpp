@@ -15,6 +15,6 @@ using namespace llvm;
 Target llvm::TheMYRISCVXTarget, llvm::TheMYRISCVXelTarget;
 
 extern "C" void LLVMInitializeMYRISCVXTargetInfo() {
-  RegisterTarget<Triple::riscv_msyksphinz,
-        /*HasJIT=*/true> Y(TheMYRISCVXTarget, "riscv_msyksphinz", "MYRISCVX");
+  RegisterTarget<Triple::myriscvx,
+        /*HasJIT=*/true> Y(TheMYRISCVXTarget, "myriscvx", "MYRISCVX");
 }

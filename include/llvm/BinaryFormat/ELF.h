@@ -627,7 +627,7 @@ enum : unsigned {
   EF_RISCV_RVE = 0x0008
 };
 
-// RISCV-Msyksphinz Specific e_flags
+// MYRISCVX Specific e_flags
 enum : unsigned {
   EF_MYRISCVX_RVC               = 0x0001,
   EF_MYRISCVX_FLOAT_ABI         = 0x0006,
