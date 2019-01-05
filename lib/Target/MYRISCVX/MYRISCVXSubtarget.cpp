@@ -13,7 +13,6 @@
 
 #include "MYRISCVXSubtarget.h"
 
-#include "MYRISCVXMachineFunction.h"
 #include "MYRISCVX.h"
 #include "MYRISCVXRegisterInfo.h"
 
@@ -58,16 +57,16 @@ bool MYRISCVXSubtarget::isPositionIndependent() const {
 MYRISCVXSubtarget &
 MYRISCVXSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
                                                const TargetMachine &TM) {
-  if (TargetTriple.getArch() == Triple::cpu0 || TargetTriple.getArch() == Triple::cpu0el) {
+  if (TargetTriple.getArch() == Triple::myriscvx) {
     if (CPU.empty() || CPU == "generic") {
-      CPU = "cpu032II";
+      CPU = "myriscvx";
     }
     else if (CPU == "help") {
       CPU = "";
       return *this;
     }
-    else if (CPU != "cpu032I" && CPU != "cpu032II") {
-      CPU = "cpu032II";
+    else if (CPU != "myriscvx") {
+      CPU = "myriscvx";
     }
   }
   else {
@@ -76,22 +75,20 @@ MYRISCVXSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
     exit(0);
   }
 
-  if (CPU == "cpu032I")
-    MYRISCVXArchVersion = MYRISCVX32I;
-  else if (CPU == "cpu032II")
-    MYRISCVXArchVersion = MYRISCVX32II;
-
-  if (isMYRISCVX32I()) {
-    HasCmp = true;
-    HasSlt = false;
-  }
-  else if (isMYRISCVX32II()) {
-    HasCmp = true;
-    HasSlt = true;
-  }
-  else {
-    errs() << "-mcpu must be empty(default:cpu032II), cpu032I or cpu032II" << "\n";
-  }
+  // if (CPU == "cpu032I")
+  //   MYRISCVXArchVersion = MYRISCVX32I;
+  //
+  // if (isMYRISCVX32I()) {
+  //   HasCmp = true;
+  //   HasSlt = false;
+  // }
+  // else if (isMYRISCVX32II()) {
+  //   HasCmp = true;
+  //   HasSlt = true;
+  // }
+  // else {
+  //   errs() << "-mcpu must be empty(default:cpu032II), cpu032I or cpu032II" << "\n";
+  // }
 
   // Parse features string.
   ParseSubtargetFeatures(CPU, FS);

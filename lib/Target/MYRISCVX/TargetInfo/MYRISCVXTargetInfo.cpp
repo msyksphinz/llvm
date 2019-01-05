@@ -16,5 +16,5 @@ Target llvm::TheMYRISCVXTarget, llvm::TheMYRISCVXelTarget;
 
 extern "C" void LLVMInitializeMYRISCVXTargetInfo() {
   RegisterTarget<Triple::myriscvx,
-        /*HasJIT=*/true> Y(TheMYRISCVXTarget, "myriscvx", "MYRISCVX");
+                 /*HasJIT=*/true> Y(TheMYRISCVXTarget, "myriscvx", "MYRISCVX", "MYRISCVX");
 }

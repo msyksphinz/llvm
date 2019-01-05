@@ -14,6 +14,8 @@
 #ifndef LLVM_LIB_TARGET_MYRISCVX_MYRISCVXTARGETMACHINE_H
 #define LLVM_LIB_TARGET_MYRISCVX_MYRISCVXTARGETMACHINE_H
 
+#include "MYRISCVXSubtarget.h"
+
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
@@ -49,7 +51,7 @@ public:
     return TLOF.get();
   }
   bool isLittleEndian() const { return isLittle; }
-  const MYRISCVXABIInfo &getABI() const { return ABI; }
+  // xxx: const MYRISCVXABIInfo &getABI() const { return ABI; }
 };
 
 /// MYRISCVXebTargetMachine - MYRISCVX32 big endian target machine.
