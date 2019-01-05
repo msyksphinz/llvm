@@ -16,6 +16,7 @@ add_public_tablegen_target(MYRISCVXCommonTableGen)
 add_llvm_target(MYRISCVXCodeGen
   MYRISCVXTargetMachine.cpp
   MYRISCVXTargetObjectFile.cpp
+  MYRISCVXSubtarget.cpp
   )
 
 # Should match with "subdirectories =  MCTargetDesc TargetInfo" in LLVMBuild.txt
