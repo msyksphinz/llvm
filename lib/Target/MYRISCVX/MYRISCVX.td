@@ -18,9 +18,10 @@
 
 include "llvm/Target/Target.td"
 
-include "RISCVRegisterInfo.td"
+include "MYRISCVXRegisterInfo.td"
 
-include "RISCVInstrInfo.td"
+include "MYRISCVXInstrInfo.td"
+include "MYRISCVXCallingConv.td"
 
 def FeatureMYRISCVX64 : SubtargetFeature<"x64", "HasArchX64", "true", "MYRISCVX64 ISA Support">;
 
@@ -32,7 +33,7 @@ def MYRISCVXInstrInfo : InstrInfo;
 //  as follows,
 // void MYRISCVXInstPrinter::printInstruction(const MCInst *MI, raw_ostream &O) {...}
 // const char *MYRISCVXInstPrinter::getRegisterName(unsigned RegNo) {...}
+
 def MYRISCVX : Target {
-// def MYRISCVXInstrInfo : InstrInfo as before.
   let InstructionSet = MYRISCVXInstrInfo;
 }

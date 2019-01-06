@@ -15,7 +15,7 @@
 // Instruction format superclass
 //===----------------------------------------------------------------------===//
 
-include "RISCVInstrFormats.td"
+include "MYRISCVXInstrFormats.td"
 
 //===----------------------------------------------------------------------===//
 // Cpu0 Operand, Complex Patterns and Transformations Definitions.
