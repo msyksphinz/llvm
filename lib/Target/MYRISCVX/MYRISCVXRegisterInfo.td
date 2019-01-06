@@ -54,7 +54,7 @@ def T6   : RISCVGPRReg<31, "x31">,   DwarfRegNum<[31]>;
 //@Register Classes
 //===----------------------------------------------------------------------===//
 
-def RISCVRegs : RegisterClass<"MYRISCVX", [i32], 32, (add
+def CPURegs : RegisterClass<"MYRISCVX", [i32], 32, (add
   // Reserved
   ZERO,
   // Return Values and Arguments

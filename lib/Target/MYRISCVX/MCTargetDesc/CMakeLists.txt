@@ -1,5 +1,6 @@
 # MCTargetDesc/CMakeLists.txt
 
-add_llvm_library(LLVMRISCV_msyskphinzDesc
+add_llvm_library(LLVMMYRISCVXDesc
   MYRISCVXMCTargetDesc.cpp
+  MYRISCVXABIInfo.cpp
   )

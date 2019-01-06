@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_MYRISCVX_MYRISCVXTARGETMACHINE_H
 #define LLVM_LIB_TARGET_MYRISCVX_MYRISCVXTARGETMACHINE_H
 
+#include "MCTargetDesc/MYRISCVXABIInfo.h"
 #include "MYRISCVXSubtarget.h"
 
 #include "llvm/CodeGen/Passes.h"
@@ -28,14 +29,19 @@ class MYRISCVXRegisterInfo;
 class MYRISCVXTargetMachine : public LLVMTargetMachine {
   bool isLittle;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
+  // Selected ABI
+  MYRISCVXABIInfo   ABI;
   MYRISCVXSubtarget Subtarget;
 
   mutable StringMap<std::unique_ptr<MYRISCVXSubtarget>> SubtargetMap;
 public:
-  MYRISCVXTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
-                    StringRef FS, const TargetOptions &Options,
-                    Optional<Reloc::Model> RM, CodeModel::Model CM,
-                    CodeGenOpt::Level OL, bool isLittle);
+  MYRISCVXTargetMachine(const Target &T, const Triple &TT,
+                        StringRef CPU, StringRef FS,
+                        const TargetOptions &Options,
+                        Optional<Reloc::Model> RM,
+                        Optional<CodeModel::Model> CM,
+                        CodeGenOpt::Level OL, bool JIT,
+                        bool isLittle);
   ~MYRISCVXTargetMachine() override;
 
   const MYRISCVXSubtarget *getSubtargetImpl() const {
@@ -51,7 +57,7 @@ public:
     return TLOF.get();
   }
   bool isLittleEndian() const { return isLittle; }
-  // xxx: const MYRISCVXABIInfo &getABI() const { return ABI; }
+  const MYRISCVXABIInfo &getABI() const { return ABI; }
 };
 
 /// MYRISCVXebTargetMachine - MYRISCVX32 big endian target machine.
@@ -60,9 +66,10 @@ class MYRISCVXebTargetMachine : public MYRISCVXTargetMachine {
   virtual void anchor();
 public:
   MYRISCVXebTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
-                      StringRef FS, const TargetOptions &Options,
-                      Optional<Reloc::Model> RM, CodeModel::Model CM,
-                      CodeGenOpt::Level OL);
+                          StringRef FS, const TargetOptions &Options,
+                          Optional<Reloc::Model> RM,
+                          Optional<CodeModel::Model> CM,
+                          CodeGenOpt::Level OL, bool JIT);
 };
 
 /// MYRISCVXelTargetMachine - MYRISCVX32 little endian target machine.
@@ -70,10 +77,12 @@ public:
 class MYRISCVXelTargetMachine : public MYRISCVXTargetMachine {
   virtual void anchor();
 public:
-  MYRISCVXelTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
-                      StringRef FS, const TargetOptions &Options,
-                      Optional<Reloc::Model> RM, CodeModel::Model CM,
-                      CodeGenOpt::Level OL);
+  MYRISCVXelTargetMachine(const Target &T, const Triple &TT,
+                          StringRef CPU, StringRef FS,
+                          const TargetOptions &Options,
+                          Optional<Reloc::Model> RM,
+                          Optional<CodeModel::Model> CM,
+                          CodeGenOpt::Level OL, bool JIT);
 };
 } // End llvm namespace
 

@@ -18,7 +18,14 @@
 include "MYRISCVXInstrFormats.td"
 
 //===----------------------------------------------------------------------===//
-// Cpu0 Operand, Complex Patterns and Transformations Definitions.
+// MYRISCVX profiles and nodes
+//===----------------------------------------------------------------------===//
+
+def SDT_MYRISCVXCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>]>;
+def SDT_MYRISCVXCallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
+
+//===----------------------------------------------------------------------===//
+// MYRISCVX Operand, Complex Patterns and Transformations Definitions.
 //===----------------------------------------------------------------------===//
 // Instruction operand types
 
@@ -30,6 +37,14 @@ def simm16      : Operand<i32> {
 // Node immediate fits as 16-bit sign extended on target immediate.
 // e.g. addi, andi
 def immSExt16  : PatLeaf<(imm), [{ return isInt<16>(N->getSExtValue()); }]>;
+
+
+// These are target-independent nodes, but have target-specific formats.
+def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_MYRISCVXCallSeqStart,
+                           [SDNPHasChain, SDNPOutGlue]>;
+def callseq_end   : SDNode<"ISD::CALLSEQ_END", SDT_MYRISCVXCallSeqEnd,
+                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+
 
 
 //===----------------------------------------------------------------------===//
@@ -50,10 +65,20 @@ class ArithLogicI<bits<8> op, string instr_asm, SDNode OpNode,
 // Instruction definition
 //===----------------------------------------------------------------------===//
 
+// Pessimistically assume the stack pointer will be clobbered
+let Defs = [SP], Uses = [SP] in {
+def ADJCALLSTACKDOWN : MYRISCVXPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                                  "!ADJCALLSTACKDOWN $amt1",
+                                  [(callseq_start timm:$amt1, timm:$amt2)]>;
+def ADJCALLSTACKUP   : MYRISCVXPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                                  "!ADJCALLSTACKUP $amt1",
+                                  [(callseq_end timm:$amt1, timm:$amt2)]>;
+} // Defs = [SP], Uses = [SP]
+
 //===----------------------------------------------------------------------===//
 // MYRISCVX Instructions
 //===----------------------------------------------------------------------===//
 
 /// Arithmetic Instructions (ALU Immediate)
 // IR "add" defined in include/llvm/Target/TargetSelectionDAG.td, line 315 (def add).
-def ADDiu   : ArithLogicI<0x09, "addiu", add, simm16, immSExt16, RISCVRegs>;
+def ADDiu   : ArithLogicI<0x09, "addiu", add, simm16, immSExt16, CPURegs>;

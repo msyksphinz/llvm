@@ -15,8 +15,8 @@
 #define LLVM_LIB_TARGET_MYRISCVX_MYRISCVXSUBTARGET_H
 
 #include "MYRISCVXFrameLowering.h"
-// #include "MYRISCVXISelLowering.h"
-// #include "MYRISCVXInstrInfo.h"
+#include "MYRISCVXISelLowering.h"
+#include "MYRISCVXInstrInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCInstrItineraries.h"
@@ -50,13 +50,13 @@ protected:
 
   const SelectionDAGTargetInfo TSInfo;
 
-  // std::unique_ptr<const MYRISCVXInstrInfo> InstrInfo;
+  std::unique_ptr<const MYRISCVXInstrInfo> InstrInfo;
   std::unique_ptr<const MYRISCVXFrameLowering> FrameLowering;
-  // std::unique_ptr<const MYRISCVXTargetLowering> TLInfo;
+  std::unique_ptr<const MYRISCVXTargetLowering> TLInfo;
 
 public:
   bool isPositionIndependent() const;
-  // const MYRISCVXABIInfo &getABI() const;
+  const MYRISCVXABIInfo &getABI() const;
 
   /// This constructor initializes the data members to match that
   /// of the specified triple.
@@ -80,16 +80,16 @@ public:
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
   }
-  // const MYRISCVXInstrInfo *getInstrInfo() const override { return InstrInfo.get(); }
+  const MYRISCVXInstrInfo *getInstrInfo() const override { return InstrInfo.get(); }
   const TargetFrameLowering *getFrameLowering() const override {
     return FrameLowering.get();
   }
-  // const MYRISCVXRegisterInfo *getRegisterInfo() const override {
-  //   return &InstrInfo->getRegisterInfo();
-  // }
-  // const MYRISCVXTargetLowering *getTargetLowering() const override {
-  //   return TLInfo.get();
-  // }
+  const MYRISCVXRegisterInfo *getRegisterInfo() const override {
+    return &InstrInfo->getRegisterInfo();
+  }
+  const MYRISCVXTargetLowering *getTargetLowering() const override {
+    return TLInfo.get();
+  }
   const InstrItineraryData *getInstrItineraryData() const override {
     return &InstrItins;
   }

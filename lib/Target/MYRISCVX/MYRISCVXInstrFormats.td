@@ -27,8 +27,14 @@ class Format<bits<4> val> {
   bits<4> Value = val;
 }
 
-def FrmL      : Format<2>;
-def IIAlu     : InstrItinClass;
+def InstFormatPseudo : Format<0>;
+def FrmL             : Format<2>;
+
+//===----------------------------------------------------------------------===//
+// MYRISCVX Generic instruction itineraries.
+//===----------------------------------------------------------------------===//
+def IIAlu            : InstrItinClass;
+def IIPseudo         : InstrItinClass;
 
 // Generic MYRISCVX Format
 class MYRISCVXInst<dag outs, dag ins, string asmstr, list<dag> pattern,
@@ -66,6 +72,14 @@ class MYRISCVXInst<dag outs, dag ins, string asmstr, list<dag> pattern,
   let DecoderNamespace = "MYRISCVX";
 
   field bits<32> SoftFail = 0;
+}
+
+
+// Pseudo instructions
+class MYRISCVXPseudo<dag outs, dag ins, string asmstr, list<dag> pattern>:
+      MYRISCVXInst<outs, ins, asmstr, pattern, IIPseudo, InstFormatPseudo> {
+  let isCodeGenOnly = 1;
+  let isPseudo = 1;
 }
 
 

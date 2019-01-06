@@ -38,26 +38,34 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
   return Ret;
 }
 
-static Reloc::Model getEffectiveRelocModel(CodeModel::Model CM,
+static Reloc::Model getEffectiveRelocModel(bool JIT,
                                            Optional<Reloc::Model> RM) {
-  if (!RM.hasValue() || CM == CodeModel::JITDefault)
+  if (!RM.hasValue() /* || CM == CodeModel::JITDefault */)
     return Reloc::Static;
   return *RM;
 }
 
+static CodeModel::Model getEffectiveCodeModel(Optional<CodeModel::Model> CM) {
+  if (CM)
+    return *CM;
+  return CodeModel::Small;
+}
+
+
 MYRISCVXTargetMachine::MYRISCVXTargetMachine(const Target &T, const Triple &TT,
-                                     StringRef CPU, StringRef FS,
-                                     const TargetOptions &Options,
-                                     Optional<Reloc::Model> RM,
-                                     CodeModel::Model CM, CodeGenOpt::Level OL,
-                                     bool isLittle)
+                                             StringRef CPU, StringRef FS,
+                                             const TargetOptions &Options,
+                                             Optional<Reloc::Model> RM,
+                                             Optional<CodeModel::Model> CM,
+                                             CodeGenOpt::Level OL, bool JIT,
+                                             bool isLittle)
   //- Default is big endian
     : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options, isLittle), TT,
-                        CPU, FS, Options, getEffectiveRelocModel(CM, RM), CM,
-                        OL),
+                        CPU, FS, Options, getEffectiveRelocModel(JIT, RM),
+                        getEffectiveCodeModel(CM), OL),
       isLittle(isLittle), TLOF(make_unique<MYRISCVXTargetObjectFile>()),
       ABI(MYRISCVXABIInfo::computeTargetABI()),
-      DefaultSubtarget(TT, CPU, FS, isLittle, *this) {
+      Subtarget(TT, CPU, FS, isLittle, *this) {
   // initAsmInfo will display features by llc -march=cpu0 -mcpu=help on 3.7 but
   // not on 3.6
   initAsmInfo();
@@ -68,12 +76,12 @@ MYRISCVXTargetMachine::~MYRISCVXTargetMachine() {}
 void MYRISCVXelTargetMachine::anchor() { }
 
 MYRISCVXelTargetMachine::MYRISCVXelTargetMachine(const Target &T, const Triple &TT,
-                                         StringRef CPU, StringRef FS,
-                                         const TargetOptions &Options,
-                                         Optional<Reloc::Model> RM,
-                                         CodeModel::Model CM,
-                                         CodeGenOpt::Level OL)
-    : MYRISCVXTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, true) {}
+                                                 StringRef CPU, StringRef FS,
+                                                 const TargetOptions &Options,
+                                                 Optional<Reloc::Model> RM,
+                                                 Optional<CodeModel::Model> CM,
+                                                 CodeGenOpt::Level OL, bool JIT)
+    : MYRISCVXTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, true) {}
 
 const MYRISCVXSubtarget *
 MYRISCVXTargetMachine::getSubtargetImpl(const Function &F) const {
@@ -104,7 +112,7 @@ namespace {
 /// MYRISCVX Code Generator Pass Configuration Options.
 class MYRISCVXPassConfig : public TargetPassConfig {
 public:
-  MYRISCVXPassConfig(MYRISCVXTargetMachine *TM, PassManagerBase &PM)
+  MYRISCVXPassConfig(MYRISCVXTargetMachine &TM, PassManagerBase &PM)
     : TargetPassConfig(TM, PM) {}
 
   MYRISCVXTargetMachine &getMYRISCVXTargetMachine() const {
@@ -118,5 +126,5 @@ public:
 } // namespace
 
 TargetPassConfig *MYRISCVXTargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new MYRISCVXPassConfig(this, PM);
+  return new MYRISCVXPassConfig(*this, PM);
 }

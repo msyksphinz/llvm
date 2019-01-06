@@ -13,6 +13,7 @@
 
 #include "MYRISCVXSubtarget.h"
 
+#include "MYRISCVXMachineFunction.h"
 #include "MYRISCVX.h"
 #include "MYRISCVXRegisterInfo.h"
 
