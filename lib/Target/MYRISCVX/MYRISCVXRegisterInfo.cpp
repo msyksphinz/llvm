@@ -48,7 +48,7 @@ MYRISCVXRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 
 const uint32_t *
 MYRISCVXRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
-                                       CallingConv::ID) const {
+                                           CallingConv::ID) const {
   // xxx: return CSR_O32_RegMask;
 }
 

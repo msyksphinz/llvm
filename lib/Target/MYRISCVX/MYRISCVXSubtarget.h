@@ -43,6 +43,13 @@ public:
   }
 
 protected:
+  enum MYRISCVXArchEnum {
+    MYRISCVX64
+  };
+
+  // MYRISCVX Architecture version
+  MYRISCVXArchEnum MYRISCVXArchVersion;
+
   // IsLittle - The target is Little Endian
   bool IsLittle;
 

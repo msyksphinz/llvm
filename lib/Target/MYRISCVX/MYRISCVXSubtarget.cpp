@@ -57,7 +57,8 @@ bool MYRISCVXSubtarget::isPositionIndependent() const {
 
 MYRISCVXSubtarget &
 MYRISCVXSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
-                                               const TargetMachine &TM) {
+                                                   const TargetMachine &TM) {
+
   if (TargetTriple.getArch() == Triple::myriscvx) {
     if (CPU.empty() || CPU == "generic") {
       CPU = "myriscvx64";
