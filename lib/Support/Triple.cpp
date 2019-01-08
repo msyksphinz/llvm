@@ -43,7 +43,7 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case amdgcn:         return "amdgcn";
   case riscv32:        return "riscv32";
   case riscv64:        return "riscv64";
-  case myriscvx: return "myriscvx";
+  case myriscvx:       return "myriscvx";
   case sparc:          return "sparc";
   case sparcv9:        return "sparcv9";
   case sparcel:        return "sparcel";
@@ -148,7 +148,7 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
   case riscv32:
   case riscv64:     return "riscv";
 
-  case  myriscvx: return "myriscvx";
+  case  myriscvx:   return "myriscvx";
   }
 }
 
@@ -1315,6 +1315,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::ppc64:          T.setArch(Triple::ppc);     break;
   case Triple::sparcv9:        T.setArch(Triple::sparc);   break;
   case Triple::riscv64:        T.setArch(Triple::riscv32); break;
+  case Triple::myriscvx:       T.setArch(Triple::myriscvx);break;
   case Triple::x86_64:         T.setArch(Triple::x86);     break;
   case Triple::amdil64:        T.setArch(Triple::amdil);   break;
   case Triple::hsail64:        T.setArch(Triple::hsail);   break;
@@ -1377,6 +1378,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::ppc:             T.setArch(Triple::ppc64);      break;
   case Triple::sparc:           T.setArch(Triple::sparcv9);    break;
   case Triple::riscv32:         T.setArch(Triple::riscv64);    break;
+  case Triple::myriscvx:        T.setArch(Triple::myriscvx);break;
   case Triple::x86:             T.setArch(Triple::x86_64);     break;
   case Triple::amdil:           T.setArch(Triple::amdil64);    break;
   case Triple::hsail:           T.setArch(Triple::hsail64);    break;
@@ -1413,6 +1415,7 @@ Triple Triple::getBigEndianArchVariant() const {
   case Triple::r600:
   case Triple::riscv32:
   case Triple::riscv64:
+  case Triple::myriscvx:
   case Triple::shave:
   case Triple::spir64:
   case Triple::spir:
@@ -1501,6 +1504,7 @@ bool Triple::isLittleEndian() const {
   case Triple::r600:
   case Triple::riscv32:
   case Triple::riscv64:
+  case Triple::myriscvx:
   case Triple::shave:
   case Triple::sparcel:
   case Triple::spir64:
