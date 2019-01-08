@@ -45,6 +45,11 @@ def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_MYRISCVXCallSeqStart,
 def callseq_end   : SDNode<"ISD::CALLSEQ_END", SDT_MYRISCVXCallSeqEnd,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
+//===----------------------------------------------------------------------===//
+// MYRISCVX Instruction Predicate Definitions.
+//===----------------------------------------------------------------------===//
+def HasMYRISCVX64 : Predicate<"SubTarget->hasMYRISCVX64()">,
+                    AssemblerPredicate<"FeatureMYRISCVX64">;
 
 
 //===----------------------------------------------------------------------===//

@@ -10,7 +10,7 @@ tablegen(LLVM MYRISCVXGenCodeEmitter.inc -gen-emitter)
 tablegen(LLVM MYRISCVXGenMCCodeEmitter.inc -gen-emitter)
 
 # tablegen(LLVM MYRISCVXGenAsmWriter.inc -gen-asm-writer)
-# tablegen(LLVM MYRISCVXGenDAGISel.inc -gen-dag-isel)
+tablegen(LLVM MYRISCVXGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM MYRISCVXGenCallingConv.inc -gen-callingconv)
 tablegen(LLVM MYRISCVXGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM MYRISCVXGenMCPseudoLowering.inc -gen-pseudo-lowering)

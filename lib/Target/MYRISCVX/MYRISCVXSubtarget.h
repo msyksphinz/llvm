@@ -38,6 +38,10 @@ class MYRISCVXSubtarget : public MYRISCVXGenSubtargetInfo {
 public:
   bool HasArchX64;
 
+  bool hasMYRISCVX64() {
+    return true;
+  }
+
 protected:
   // IsLittle - The target is Little Endian
   bool IsLittle;

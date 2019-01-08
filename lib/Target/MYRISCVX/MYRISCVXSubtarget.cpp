@@ -60,14 +60,14 @@ MYRISCVXSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
                                                const TargetMachine &TM) {
   if (TargetTriple.getArch() == Triple::myriscvx) {
     if (CPU.empty() || CPU == "generic") {
-      CPU = "myriscvx";
+      CPU = "myriscvx64";
     }
     else if (CPU == "help") {
       CPU = "";
       return *this;
     }
     else if (CPU != "myriscvx") {
-      CPU = "myriscvx";
+      CPU = "myriscvx64";
     }
   }
   else {
@@ -76,20 +76,8 @@ MYRISCVXSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
     exit(0);
   }
 
-  // if (CPU == "cpu032I")
-  //   MYRISCVXArchVersion = MYRISCVX32I;
-  //
-  // if (isMYRISCVX32I()) {
-  //   HasCmp = true;
-  //   HasSlt = false;
-  // }
-  // else if (isMYRISCVX32II()) {
-  //   HasCmp = true;
-  //   HasSlt = true;
-  // }
-  // else {
-  //   errs() << "-mcpu must be empty(default:cpu032II), cpu032I or cpu032II" << "\n";
-  // }
+  if (CPU == "myriscvx64")
+    MYRISCVXArchVersion = MYRISCVX64;
 
   // Parse features string.
   ParseSubtargetFeatures(CPU, FS);

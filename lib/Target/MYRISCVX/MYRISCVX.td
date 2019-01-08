@@ -25,7 +25,11 @@ include "MYRISCVXCallingConv.td"
 
 def FeatureMYRISCVX64 : SubtargetFeature<"x64", "HasArchX64", "true", "MYRISCVX64 ISA Support">;
 
-def : ProcessorModel<"myriscv64_impl", NoSchedModel, [FeatureMYRISCVX64]>;
+def FeatureMYRISCVX64_CPU : SubtargetFeature<"myriscv64_impl", "MYRISCVXArchVersion",
+                                "MYRRISCVX64", "MYRISCVX64 ISA Support",
+                                [FeatureMYRISCVX64]>;
+
+def : ProcessorModel<"myriscv64_impl", NoSchedModel, [FeatureMYRISCVX64_CPU]>;
 
 def MYRISCVXInstrInfo : InstrInfo;
 
