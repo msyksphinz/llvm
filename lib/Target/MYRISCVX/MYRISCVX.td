@@ -23,13 +23,13 @@ include "MYRISCVXRegisterInfo.td"
 include "MYRISCVXInstrInfo.td"
 include "MYRISCVXCallingConv.td"
 
-def FeatureMYRISCVX64 : SubtargetFeature<"x64", "HasArchX64", "true", "MYRISCVX64 ISA Support">;
+def FeatureMYRISCVX64 : SubtargetFeature<"myriscvx64", "HasArchX64", "true", "MYRISCVX64 ISA Support">;
 
-def FeatureMYRISCVX64_CPU : SubtargetFeature<"myriscv64_impl", "MYRISCVXArchVersion",
+def FeatureMYRISCVX64_CPU : SubtargetFeature<"myriscvx64_impl", "MYRISCVXArchVersion",
                                 "MYRISCVX64", "MYRISCVX64 ISA Support",
                                 [FeatureMYRISCVX64]>;
 
-def : ProcessorModel<"myriscv64_impl", NoSchedModel, [FeatureMYRISCVX64_CPU]>;
+def : ProcessorModel<"myriscvx64_impl", NoSchedModel, [FeatureMYRISCVX64_CPU]>;
 
 def MYRISCVXInstrInfo : InstrInfo;
 

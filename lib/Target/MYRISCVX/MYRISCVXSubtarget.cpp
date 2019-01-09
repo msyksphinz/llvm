@@ -61,14 +61,14 @@ MYRISCVXSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
 
   if (TargetTriple.getArch() == Triple::myriscvx) {
     if (CPU.empty() || CPU == "generic") {
-      CPU = "myriscvx64";
+      CPU = "myriscvx64_impl";
     }
     else if (CPU == "help") {
       CPU = "";
       return *this;
     }
-    else if (CPU != "myriscvx") {
-      CPU = "myriscvx64";
+    else if (CPU != "myriscvx64_impl") {
+      CPU = "myriscvx64_impl";
     }
   }
   else {
@@ -77,7 +77,7 @@ MYRISCVXSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
     exit(0);
   }
 
-  if (CPU == "myriscvx64")
+  if (CPU == "myriscvx64_impl")
     MYRISCVXArchVersion = MYRISCVX64;
 
   // Parse features string.
