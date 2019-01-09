@@ -106,16 +106,16 @@ private:
   /// holds the virtual register into which the sret argument is passed.
   unsigned SRetReturnReg;
 
-  /// GlobalBaseReg - keeps track of the virtual register initialized for
-  /// use as the global base register. This is used for PIC in some PIC
-  /// relocation models.
-  unsigned GlobalBaseReg;
-
   /// CallsEhReturn - Whether the function calls llvm.eh.return.
   bool CallsEhReturn;
 
   /// CallsEhDwarf - Whether the function calls llvm.eh.dwarf.
   bool CallsEhDwarf;
+
+  /// GlobalBaseReg - keeps track of the virtual register initialized for
+  /// use as the global base register. This is used for PIC in some PIC
+  /// relocation models.
+  unsigned GlobalBaseReg;
 
   /// VarArgsFrameIndex - FrameIndex for start of varargs area.
   int VarArgsFrameIndex;
