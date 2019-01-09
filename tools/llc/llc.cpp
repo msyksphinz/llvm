@@ -457,8 +457,6 @@ static int compileModule(char **argv, LLVMContext &Context) {
       TheTriple.getTriple(), CPUStr, FeaturesStr, Options, getRelocModel(),
       getCodeModel(), OLvl));
 
-  std::cout << "March: " << MArch << ", " << CPUStr << ", " << FeaturesStr << '\n';
-
   assert(Target && "Could not allocate target machine!");
 
   // If we don't have a module then just exit now. We do this down

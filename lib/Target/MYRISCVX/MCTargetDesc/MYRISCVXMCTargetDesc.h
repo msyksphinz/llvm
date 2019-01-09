@@ -20,7 +20,6 @@ namespace llvm {
 class Target;
 class Triple;
 
-extern Target TheMYRISCVXTarget;
 extern Target TheMYRISCVXelTarget;
 
 } // End llvm namespace

@@ -12,9 +12,9 @@
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
-Target llvm::TheMYRISCVXTarget, llvm::TheMYRISCVXelTarget;
+Target llvm::TheMYRISCVXelTarget;
 
 extern "C" void LLVMInitializeMYRISCVXTargetInfo() {
   RegisterTarget<Triple::myriscvx,
-                 /*HasJIT=*/true> Y(TheMYRISCVXTarget, "myriscvx", "MYRISCVX", "MYRISCVX");
+                 /*HasJIT=*/true> Y(TheMYRISCVXelTarget, "myriscvx", "MYRISCVX", "MYRISCVX");
 }
