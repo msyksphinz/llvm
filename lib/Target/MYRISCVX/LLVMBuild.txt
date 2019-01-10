@@ -16,7 +16,7 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = MCTargetDesc TargetInfo
+subdirectories = MCTargetDesc TargetInfo InstPrinter
 
 [component_0]
 type = TargetGroup
@@ -31,5 +31,5 @@ type = Library
 name = MYRISCVXCodeGen
 parent = MYRISCVX
 required_libraries = Core CodeGen MC MYRISCVXDesc
-  MYRISCVXInfo SelectionDAG Support Target
+  MYRISCVXInfo SelectionDAG Support Target MYRISCVXAsmPrinter
 add_to_library_groups = MYRISCVX

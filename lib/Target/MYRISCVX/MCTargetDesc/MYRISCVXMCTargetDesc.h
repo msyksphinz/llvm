@@ -17,6 +17,18 @@
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
+class MCAsmBackend;
+class MCCodeEmitter;
+class MCContext;
+class MCInstrInfo;
+class MCObjectWriter;
+class MCRegisterInfo;
+class MCSubtargetInfo;
+
+class raw_ostream;
+
+class StringRef;
+
 class Target;
 class Triple;
 

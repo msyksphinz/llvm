@@ -74,7 +74,7 @@ namespace llvm {
   class MYRISCVXTargetLowering : public TargetLowering  {
   public:
     explicit MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
-                                const MYRISCVXSubtarget &STI);
+                                    const MYRISCVXSubtarget &STI);
 
     static const MYRISCVXTargetLowering *create(const MYRISCVXTargetMachine &TM,
                                                 const MYRISCVXSubtarget &STI);

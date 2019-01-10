@@ -34,6 +34,8 @@ def FrmL             : Format<2>;
 // MYRISCVX Generic instruction itineraries.
 //===----------------------------------------------------------------------===//
 def IIAlu            : InstrItinClass;
+def IILoad           : InstrItinClass;
+def IIStore          : InstrItinClass;
 def IIPseudo         : InstrItinClass;
 
 // Generic MYRISCVX Format

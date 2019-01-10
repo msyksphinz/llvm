@@ -34,9 +34,42 @@ def simm16      : Operand<i32> {
   let DecoderMethod= "DecodeSimm16";
 }
 
+// Address operand
+def mem : Operand<i32> {
+  let PrintMethod = "printMemOperand";
+  let MIOperandInfo = (ops CPURegs, simm16);
+  let EncoderMethod = "getMemEncoding";
+}
+
 // Node immediate fits as 16-bit sign extended on target immediate.
 // e.g. addi, andi
 def immSExt16  : PatLeaf<(imm), [{ return isInt<16>(N->getSExtValue()); }]>;
+
+
+// MYRISCVX Address Mode! SDNode frameindex could possibily be a match
+// since load and store instructions from stack used it.
+def addr :
+  ComplexPattern<iPTR, 2, "SelectAddr", [frameindex], [SDNPWantParent]>;
+
+//===----------------------------------------------------------------------===//
+// Pattern fragment for load/store
+//===----------------------------------------------------------------------===//
+
+class AlignedLoad<PatFrag Node> :
+  PatFrag<(ops node:$ptr), (Node node:$ptr), [{
+  LoadSDNode *LD = cast<LoadSDNode>(N);
+  return LD->getMemoryVT().getSizeInBits()/8 <= LD->getAlignment();
+}]>;
+
+class AlignedStore<PatFrag Node> :
+  PatFrag<(ops node:$val, node:$ptr), (Node node:$val, node:$ptr), [{
+  StoreSDNode *SD = cast<StoreSDNode>(N);
+  return SD->getMemoryVT().getSizeInBits()/8 <= SD->getAlignment();
+}]>;
+
+// Load/Store PatFrags.
+def load_a          : AlignedLoad<load>;
+def store_a         : AlignedStore<store>;
 
 
 // These are target-independent nodes, but have target-specific formats.
@@ -66,6 +99,33 @@ class ArithLogicI<bits<8> op, string instr_asm, SDNode OpNode,
 }
 
 
+class FMem<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern,
+          InstrItinClass itin>: FL<op, outs, ins, asmstr, pattern, itin> {
+  bits<20> addr;
+  let Inst{19-16} = addr{19-16};
+  let Inst{15-0}  = addr{15-0};
+  let DecoderMethod = "DecodeMem";
+}
+
+// Memory Load/Store
+let canFoldAsLoad = 1 in
+class LoadM<bits<8> op, string instr_asm, PatFrag OpNode, RegisterClass RC,
+            Operand MemOpnd, bit Pseudo>:
+  FMem<op, (outs RC:$ra), (ins MemOpnd:$addr),
+     !strconcat(instr_asm, "\t$ra, $addr"),
+     [(set RC:$ra, (OpNode addr:$addr))], IILoad> {
+  let isPseudo = Pseudo;
+}
+
+class StoreM<bits<8> op, string instr_asm, PatFrag OpNode, RegisterClass RC,
+             Operand MemOpnd, bit Pseudo>:
+  FMem<op, (outs), (ins RC:$ra, MemOpnd:$addr),
+     !strconcat(instr_asm, "\t$ra, $addr"),
+     [(OpNode RC:$ra, addr:$addr)], IIStore> {
+  let isPseudo = Pseudo;
+}
+
+
 //===----------------------------------------------------------------------===//
 // Instruction definition
 //===----------------------------------------------------------------------===//
@@ -79,6 +139,21 @@ def ADJCALLSTACKUP   : MYRISCVXPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                                   "!ADJCALLSTACKUP $amt1",
                                   [(callseq_end timm:$amt1, timm:$amt2)]>;
 } // Defs = [SP], Uses = [SP]
+
+// 32-bit load.
+multiclass LoadM32<bits<8> op, string instr_asm, PatFrag OpNode,
+                   bit Pseudo = 0> {
+  def #NAME# : LoadM<op, instr_asm, OpNode, CPURegs, mem, Pseudo>;
+}
+
+// 32-bit store.
+multiclass StoreM32<bits<8> op, string instr_asm, PatFrag OpNode,
+                    bit Pseudo = 0> {
+  def #NAME# : StoreM<op, instr_asm, OpNode, CPURegs, mem, Pseudo>;
+}
+
+defm LD     : LoadM32<0x01,  "ld",  load_a>;
+defm ST     : StoreM32<0x02, "st",  store_a>;
 
 //===----------------------------------------------------------------------===//
 // MYRISCVX Instructions

@@ -32,7 +32,8 @@ public:
   MYRISCVXFunctionInfo(MachineFunction& MF)
   : MF(MF),
     VarArgsFrameIndex(0),
-    MaxCallFrameSize(0)
+    MaxCallFrameSize(0),
+    EmitNOAT(false)
     {}
 
   ~MYRISCVXFunctionInfo();
@@ -40,6 +41,8 @@ public:
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
   void setVarArgsFrameIndex(int Index) { VarArgsFrameIndex = Index; }
 
+  bool getEmitNOAT() const { return EmitNOAT; }
+  void setEmitNOAT() { EmitNOAT = true; }
 private:
   virtual void anchor();
 
@@ -49,6 +52,7 @@ private:
   int VarArgsFrameIndex;
 
   unsigned MaxCallFrameSize;
+  bool EmitNOAT;
 };
 //@1 }
 
