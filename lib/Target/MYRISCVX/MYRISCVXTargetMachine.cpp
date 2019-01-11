@@ -14,6 +14,8 @@
 #include "MYRISCVXTargetMachine.h"
 #include "MYRISCVX.h"
 
+#include "MYRISCVXSEISelDAGToDAG.h"
+
 #include "MYRISCVXSubtarget.h"
 #include "MYRISCVXTargetObjectFile.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -122,9 +124,18 @@ public:
   const MYRISCVXSubtarget &getMYRISCVXSubtarget() const {
     return *getMYRISCVXTargetMachine().getSubtargetImpl();
   }
+
+  bool addInstSelector() override;
 };
 } // namespace
 
 TargetPassConfig *MYRISCVXTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new MYRISCVXPassConfig(*this, PM);
+}
+
+// Install an instruction selector pass using
+// the ISelDag to gen MYRISCVX code.
+bool MYRISCVXPassConfig::addInstSelector() {
+  addPass(createMYRISCVXSEISelDag(getMYRISCVXTargetMachine(), getOptLevel()));
+  return false;
 }

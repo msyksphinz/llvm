@@ -34,6 +34,8 @@ add_llvm_target(MYRISCVXCodeGen
   MYRISCVXSEFrameLowering.cpp
   MYRISCVXAsmPrinter.cpp
   MYRISCVXMCInstLower.cpp
+  MYRISCVXISelDAGToDAG.cpp
+  MYRISCVXSEISelDAGToDAG.cpp
   )
 
 # Should match with "subdirectories =  MCTargetDesc TargetInfo" in LLVMBuild.txt
