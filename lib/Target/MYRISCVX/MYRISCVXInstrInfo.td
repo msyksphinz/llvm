@@ -125,6 +125,24 @@ class StoreM<bits<8> op, string instr_asm, PatFrag OpNode, RegisterClass RC,
   let isPseudo = Pseudo;
 }
 
+//@JumpFR {
+let isBranch=1, isTerminator=1, isBarrier=1, imm16=0, hasDelaySlot = 1,
+    isIndirectBranch = 1 in
+class JumpFR<bits<8> op, string instr_asm, RegisterClass RC>:
+  FL<op, (outs), (ins RC:$ra),
+     !strconcat(instr_asm, "\t$ra"), [(brind RC:$ra)], IIBranch> {
+  let rb = 0;
+  let imm16 = 0;
+}
+//@JumpFR }
+
+// Return instruction
+class RetBase<RegisterClass RC>: JumpFR<0x3c, "ret", RC> {
+  let isReturn = 1;
+  let isCodeGenOnly = 1;
+  let hasCtrlDep = 1;
+  let hasExtraSrcRegAllocReq = 1;
+}
 
 //===----------------------------------------------------------------------===//
 // Instruction definition

@@ -43,13 +43,13 @@ MYRISCVXRegisterInfo::MYRISCVXRegisterInfo(const MYRISCVXSubtarget &ST)
 // llc create CSR_O32_SaveList and CSR_O32_RegMask from above defined.
 const MCPhysReg *
 MYRISCVXRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
-  // xxx: return CSR_O32_SaveList;
+  return CSR_O32_SaveList;
 }
 
 const uint32_t *
 MYRISCVXRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                            CallingConv::ID) const {
-  // xxx: return CSR_O32_RegMask;
+  return CSR_O32_RegMask;
 }
 
 // pure virtual method

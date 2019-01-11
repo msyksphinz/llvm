@@ -37,7 +37,7 @@ public:
       : SelectionDAGISel(TM, OL), Subtarget(nullptr) {}
 
   // Pass Name
-  const char *getPassName() const override {
+  StringRef getPassName() const override {
     return "MYRISCVX DAG->DAG Pattern Instruction Selection";
   }
 

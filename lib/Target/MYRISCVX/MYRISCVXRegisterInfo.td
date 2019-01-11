@@ -66,3 +66,5 @@ def CPURegs : RegisterClass<"MYRISCVX", [i32], 32, (add
   // Reserved
   RA, SP, GP, TP
   )>;
+
+include "MYRISCVXGPROutForOther.td"

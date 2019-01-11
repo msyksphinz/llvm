@@ -22,5 +22,4 @@ def RetCC_MYRISCVX : CallingConv<[
   CCDelegateTo<RetCC_MYRISCVXEABI>
 ]>;
 
-def CSR_O32 : CalleeSavedRegs<(add RA, S0,
-                                   (sequence "S%u", 1, 0))>;
+def CSR_O32 : CalleeSavedRegs<(add RA, SP, (sequence "S%u", 0, 11))>;

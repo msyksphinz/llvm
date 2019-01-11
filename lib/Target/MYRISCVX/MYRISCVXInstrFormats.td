@@ -33,10 +33,6 @@ def FrmL             : Format<2>;
 //===----------------------------------------------------------------------===//
 // MYRISCVX Generic instruction itineraries.
 //===----------------------------------------------------------------------===//
-def IIAlu            : InstrItinClass;
-def IILoad           : InstrItinClass;
-def IIStore          : InstrItinClass;
-def IIPseudo         : InstrItinClass;
 
 // Generic MYRISCVX Format
 class MYRISCVXInst<dag outs, dag ins, string asmstr, list<dag> pattern,
