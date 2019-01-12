@@ -46,7 +46,7 @@ static StringRef selectMYRISCVXArchFeature(const Triple &TT, StringRef CPU) {
   if (CPU.empty() || CPU == "generic") {
     if (TT.getArch() == Triple::myriscvx) {
       if (CPU.empty() || CPU == "myriscvx_impl") {
-        MYRISCVXArchFeature = "myriscvx64";
+        MYRISCVXArchFeature = "+myriscvx64";
       }
     }
   }
