@@ -34,6 +34,8 @@ RISCVSubtarget &RISCVSubtarget::initializeSubtargetDependencies(StringRef CPU,
   if (CPUName.empty())
     CPUName = Is64Bit ? "generic-rv64" : "generic-rv32";
   ParseSubtargetFeatures(CPUName, FS);
+  LLVM_DEBUG(dbgs() << "\nRISCVSubtarget::Features:" << FS);
+  LLVM_DEBUG(dbgs() << "\nRISCVSubtarget::CPU:" << CPU << "\n\n");
   if (Is64Bit) {
     XLenVT = MVT::i64;
     XLen = 64;

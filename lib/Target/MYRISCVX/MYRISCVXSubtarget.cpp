@@ -24,6 +24,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
 
+#include <iostream>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "cpu0-subtarget"
@@ -82,6 +84,8 @@ MYRISCVXSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
 
   // Parse features string.
   ParseSubtargetFeatures(CPU, FS);
+  std::cerr << "ParseSubtargetFeatures : CPU = " << CPU.str() << ", FS = " << FS.str() << '\n';
+
   // Initialize scheduling itinerary for the specified CPU.
   InstrItins = getInstrItineraryForCPU(CPU);
 
