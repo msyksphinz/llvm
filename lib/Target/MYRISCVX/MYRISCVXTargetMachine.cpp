@@ -97,7 +97,7 @@ MYRISCVXTargetMachine::getSubtargetImpl(const Function &F) const {
                        ? FSAttr.getValueAsString().str()
                        : TargetFS;
 
-  // FS += "+myriscvx64";
+  FS += "+myriscvx64";
 
   auto &I = SubtargetMap[CPU + FS];
   if (!I) {
