@@ -28,6 +28,8 @@
 #include "InstPrinter/MYRISCVXInstPrinter.h"
 #include "MYRISCVXMCAsmInfo.h"
 
+#include <iostream>
+
 using namespace llvm;
 
 #define GET_INSTRINFO_MC_DESC
@@ -43,6 +45,9 @@ using namespace llvm;
 /// The function will be called at command 'llvm-objdump -d' for MYRISCVX elf input.
 static StringRef selectMYRISCVXArchFeature(const Triple &TT, StringRef CPU) {
   std::string MYRISCVXArchFeature;
+
+  std::cerr << "selectMYRISCVXArchFeature : CPU = " << CPU.str() << '\n';
+
   if (CPU.empty() || CPU == "generic") {
     if (TT.getArch() == Triple::myriscvx) {
       if (CPU.empty() || CPU == "myriscvx_impl") {
@@ -50,6 +55,9 @@ static StringRef selectMYRISCVXArchFeature(const Triple &TT, StringRef CPU) {
       }
     }
   }
+
+  std::cerr << "selectMYRISCVXArchFeature : return value = " << MYRISCVXArchFeature << '\n';
+
   return MYRISCVXArchFeature;
 }
 //@1 }
@@ -68,20 +76,23 @@ static MCRegisterInfo *createMYRISCVXMCRegisterInfo(const Triple &TT) {
 }
 
 static MCSubtargetInfo *createMYRISCVXMCSubtargetInfo(const Triple &TT,
-                                                  StringRef CPU, StringRef FS) {
-  std::string ArchFS = selectMYRISCVXArchFeature(TT,CPU);
-  if (!FS.empty()) {
-    if (!ArchFS.empty())
-      ArchFS = ArchFS + "," + FS.str();
-    else
-      ArchFS = FS;
-  }
-  return createMYRISCVXMCSubtargetInfoImpl(TT, CPU, ArchFS);
-// createMYRISCVXMCSubtargetInfoImpl defined in MYRISCVXGenSubtargetInfo.inc
+                                                      StringRef CPU, StringRef FS) {
+  // std::string ArchFS = selectMYRISCVXArchFeature(TT,CPU);
+  // std::cerr << "Initialize ArchFS = " << ArchFS << '\n';
+  // if (!FS.empty()) {
+  //   if (!ArchFS.empty())
+  //     ArchFS = ArchFS + "," + FS.str();
+  //   else
+  //     ArchFS = FS;
+  // }
+  // std::cerr << "FS.empty = " << FS.empty() << '\n';
+  // std::cerr << "createMYRISCVXMCSubtargetInfo : ArchFS = " << ArchFS << '\n';
+  return createMYRISCVXMCSubtargetInfoImpl(TT, CPU, FS);
+  // createMYRISCVXMCSubtargetInfoImpl defined in MYRISCVXGenSubtargetInfo.inc
 }
 
 static MCAsmInfo *createMYRISCVXMCAsmInfo(const MCRegisterInfo &MRI,
-                                      const Triple &TT) {
+                                          const Triple &TT) {
   MCAsmInfo *MAI = new MYRISCVXMCAsmInfo(TT);
 
   unsigned SP = MRI.getDwarfRegNum(MYRISCVX::SP, true);
@@ -92,17 +103,17 @@ static MCAsmInfo *createMYRISCVXMCAsmInfo(const MCRegisterInfo &MRI,
 }
 
 static MCInstPrinter *createMYRISCVXMCInstPrinter(const Triple &T,
-                                              unsigned SyntaxVariant,
-                                              const MCAsmInfo &MAI,
-                                              const MCInstrInfo &MII,
-                                              const MCRegisterInfo &MRI) {
+                                                  unsigned SyntaxVariant,
+                                                  const MCAsmInfo &MAI,
+                                                  const MCInstrInfo &MII,
+                                                  const MCRegisterInfo &MRI) {
   return new MYRISCVXInstPrinter(MAI, MII, MRI);
 }
 
 namespace {
 
 class MYRISCVXMCInstrAnalysis : public MCInstrAnalysis {
-public:
+ public:
   MYRISCVXMCInstrAnalysis(const MCInstrInfo *Info) : MCInstrAnalysis(Info) {}
 };
 }

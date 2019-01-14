@@ -44,10 +44,10 @@ MYRISCVXSubtarget::MYRISCVXSubtarget(const Triple &TT, const std::string &CPU,
   // MYRISCVXGenSubtargetInfo will display features by llc -march=cpu0 -mcpu=help
   MYRISCVXGenSubtargetInfo(TT, CPU, FS),
   IsLittle(little), TM(_TM), TargetTriple(TT), TSInfo(),
-      InstrInfo(
-          MYRISCVXInstrInfo::create(initializeSubtargetDependencies(CPU, FS, TM))),
-      FrameLowering(MYRISCVXFrameLowering::create(*this)),
-      TLInfo(MYRISCVXTargetLowering::create(TM, *this)) {
+  InstrInfo(
+      MYRISCVXInstrInfo::create(initializeSubtargetDependencies(CPU, FS, TM))),
+  FrameLowering(MYRISCVXFrameLowering::create(*this)),
+  TLInfo(MYRISCVXTargetLowering::create(TM, *this)) {
 
 }
 

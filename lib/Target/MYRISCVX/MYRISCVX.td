@@ -30,6 +30,9 @@ def FeatureMYRISCVX64_CPU : SubtargetFeature<"myriscvx64_impl", "MYRISCVXArchVer
                                 "MYRISCVX64", "MYRISCVX64 ISA Support",
                                 [FeatureMYRISCVX64]>;
 
+def RV64           : HwMode<"+64bit">;
+def RV32           : HwMode<"-64bit">;
+
 def : ProcessorModel<"myriscvx64_impl", NoSchedModel, [FeatureMYRISCVX64_CPU]>;
 
 def MYRISCVXInstrInfo : InstrInfo;

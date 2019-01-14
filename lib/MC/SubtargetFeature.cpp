@@ -30,10 +30,14 @@
 #include <string>
 #include <vector>
 
+#include <iostream>
+
 using namespace llvm;
 
 /// Determine if a feature has a flag; '+' or '-'
 static inline bool hasFlag(StringRef Feature) {
+  std::cerr << "Feature : " << Feature.str() << '\n';
+
   assert(!Feature.empty() && "Empty string");
   // Get first character
   char Ch = Feature[0];

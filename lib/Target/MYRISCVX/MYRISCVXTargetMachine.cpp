@@ -67,7 +67,7 @@ MYRISCVXTargetMachine::MYRISCVXTargetMachine(const Target &T, const Triple &TT,
                         getEffectiveCodeModel(CM), OL),
       isLittle(isLittle), TLOF(make_unique<MYRISCVXTargetObjectFile>()),
       ABI(MYRISCVXABIInfo::computeTargetABI()),
-      Subtarget(TT, CPU, FS, isLittle, *this) {
+      Subtarget(TT, CPU, FS.empty() ? "+myriscvx64" : FS.str() + ", +myriscvx64", isLittle, *this) {
   // initAsmInfo will display features by llc -march=cpu0 -mcpu=help on 3.7 but
   // not on 3.6
   initAsmInfo();
@@ -96,6 +96,8 @@ MYRISCVXTargetMachine::getSubtargetImpl(const Function &F) const {
   std::string FS = !FSAttr.hasAttribute(Attribute::None)
                        ? FSAttr.getValueAsString().str()
                        : TargetFS;
+
+  FS += "+myriscvx64";
 
   auto &I = SubtargetMap[CPU + FS];
   if (!I) {
