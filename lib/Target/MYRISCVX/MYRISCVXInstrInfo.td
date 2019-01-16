@@ -188,3 +188,12 @@ let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
 def RetLR : MYRISCVXPseudo<(outs), (ins), "", [(MYRISCVXRet)]>;
 
 def RET     : RetBase<GPROut>;
+
+
+//===----------------------------------------------------------------------===//
+//  Arbitrary patterns that map to one or more instructions
+//===----------------------------------------------------------------------===//
+
+// Small immediates
+def : Pat<(i32 immSExt16:$in),
+          (ADDiu ZERO, imm:$in)>;
