@@ -28,7 +28,9 @@ class Format<bits<4> val> {
 }
 
 def InstFormatPseudo : Format<0>;
+def FrmA             : Format<1>;
 def FrmL             : Format<2>;
+def FrmJ             : Format<3>;
 
 //===----------------------------------------------------------------------===//
 // MYRISCVX Generic instruction itineraries.
@@ -100,3 +102,25 @@ class FL<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern,
   let Inst{15-0}  = imm16;
 }
 //@class FL }
+
+
+//===----------------------------------------------------------------------===//
+// Format A instruction class in MYRISCVX : <|opcode|ra|rb|rc|cx|>
+//===----------------------------------------------------------------------===//
+
+class FA<bits<8> op, dag outs, dag ins, string asmstr,
+         list<dag> pattern, InstrItinClass itin>:
+      MYRISCVXInst<outs, ins, asmstr, pattern, itin, FrmA>
+{
+  bits<4>  ra;
+  bits<4>  rb;
+  bits<4>  rc;
+  bits<12> shamt;
+
+  let Opcode = op;
+
+  let Inst{23-20} = ra;
+  let Inst{19-16} = rb;
+  let Inst{15-12} = rc;
+  let Inst{11-0}  = shamt;
+}

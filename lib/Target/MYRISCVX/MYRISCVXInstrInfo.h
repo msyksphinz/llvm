@@ -26,9 +26,9 @@ namespace llvm {
 
 class MYRISCVXInstrInfo : public MYRISCVXGenInstrInfo {
   virtual void anchor();
-protected:
+ protected:
   const MYRISCVXSubtarget &Subtarget;
-public:
+ public:
   explicit MYRISCVXInstrInfo(const MYRISCVXSubtarget &STI);
 
   static const MYRISCVXInstrInfo *create(MYRISCVXSubtarget &STI);
@@ -42,7 +42,7 @@ public:
   /// Return the number of bytes of code the specified instruction may be.
   unsigned GetInstSizeInBytes(const MachineInstr &MI) const;
 
-protected:
+ protected:
 };
 const MYRISCVXInstrInfo *createMYRISCVXSEInstrInfo(const MYRISCVXSubtarget &STI);
 }
