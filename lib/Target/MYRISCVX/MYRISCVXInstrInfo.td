@@ -48,8 +48,7 @@ def immSExt16  : PatLeaf<(imm), [{ return isInt<16>(N->getSExtValue()); }]>;
 
 // MYRISCVX Address Mode! SDNode frameindex could possibily be a match
 // since load and store instructions from stack used it.
-def addr :
-  ComplexPattern<iPTR, 2, "SelectAddr", [frameindex], [SDNPWantParent]>;
+def addr : ComplexPattern<iPTR, 2, "SelectAddr", [frameindex], [SDNPWantParent]>;
 
 //===----------------------------------------------------------------------===//
 // Pattern fragment for load/store
@@ -95,6 +94,18 @@ class ArithLogicI<bits<8> op, string instr_asm, SDNode OpNode,
   FL<op, (outs RC:$ra), (ins RC:$rb, Od:$imm16),
      !strconcat(instr_asm, "\t$ra, $rb, $imm16"),
      [(set RC:$ra, (OpNode RC:$rb, imm_type:$imm16))], IIAlu> {
+  let isReMaterializable = 1;
+}
+
+
+// Arithmetic and logical instructions with 3 register operands.
+class ArithLogicR<bits<8> op, string instr_asm, SDNode OpNode,
+                  InstrItinClass itin, RegisterClass RC, bit isComm = 0>:
+  FA<op, (outs GPROut:$ra), (ins RC:$rb, RC:$rc),
+     !strconcat(instr_asm, "\t$ra, $rb, $rc"),
+     [(set GPROut:$ra, (OpNode RC:$rb, RC:$rc))], itin> {
+  let shamt = 0;
+  let isCommutable = isComm;	// e.g. add rb rc =  add rc rb
   let isReMaterializable = 1;
 }
 
@@ -182,7 +193,11 @@ def MYRISCVXRet : SDNode<"MYRISCVXISD::Ret", SDTNone,
 
 /// Arithmetic Instructions (ALU Immediate)
 // IR "add" defined in include/llvm/Target/TargetSelectionDAG.td, line 315 (def add).
-def ADDiu   : ArithLogicI<0x09, "addiu", add, simm16, immSExt16, CPURegs>;
+def ADDI   : ArithLogicI<0x09, "addi", add, simm16, immSExt16, CPURegs>;
+
+def LUI    : ArithLogicR<0x13, "add", add, IIAlu, CPURegs>;
+def ADD    : ArithLogicR<0x13, "add", add, IIAlu, CPURegs, 1>;
+def SUB    : ArithLogicR<0x14, "sub", sub, IIAlu, CPURegs>;
 
 let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
 def RetLR : MYRISCVXPseudo<(outs), (ins), "", [(MYRISCVXRet)]>;
@@ -196,4 +211,4 @@ def RET     : RetBase<GPROut>;
 
 // Small immediates
 def : Pat<(i32 immSExt16:$in),
-          (ADDiu ZERO, imm:$in)>;
+          (ADDI ZERO, imm:$in)>;

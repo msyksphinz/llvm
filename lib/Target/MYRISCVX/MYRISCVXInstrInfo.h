@@ -42,7 +42,12 @@ public:
   /// Return the number of bytes of code the specified instruction may be.
   unsigned GetInstSizeInBytes(const MachineInstr &MI) const;
 
-protected:
+  void movImm32(MachineBasicBlock &MBB,
+                MachineBasicBlock::iterator MBBI,
+                const DebugLoc &DL, unsigned DstReg, uint64_t Val,
+                MachineInstr::MIFlag Flag) const;
+ protected:
+
 };
 const MYRISCVXInstrInfo *createMYRISCVXSEInstrInfo(const MYRISCVXSubtarget &STI);
 }
