@@ -34,6 +34,10 @@ def simm16      : Operand<i32> {
   let DecoderMethod= "DecodeSimm16";
 }
 
+def uimm16      : Operand<i32> {
+  let PrintMethod = "printUnsignedImm";
+}
+
 // Address operand
 def mem : Operand<i32> {
   let PrintMethod = "printMemOperand";
@@ -41,10 +45,30 @@ def mem : Operand<i32> {
   let EncoderMethod = "getMemEncoding";
 }
 
+// Transformation Function - get the lower 16 bits.
+def LO16 : SDNodeXForm<imm, [{
+  return getImm(N, N->getZExtValue() & 0xffff);
+}]>;
+
+// Transformation Function - get the higher 16 bits.
+def HI16 : SDNodeXForm<imm, [{
+  return getImm(N, (N->getZExtValue() >> 16) & 0xffff);
+}]>;
+
 // Node immediate fits as 16-bit sign extended on target immediate.
 // e.g. addi, andi
 def immSExt16  : PatLeaf<(imm), [{ return isInt<16>(N->getSExtValue()); }]>;
+def immZExt16  : PatLeaf<(imm), [{
+  if (N->getValueType(0) == MVT::i32)
+    return (uint32_t)N->getZExtValue() == (unsigned short)N->getZExtValue();
+  else
+    return (uint64_t)N->getZExtValue() == (unsigned short)N->getZExtValue();
+}], LO16>;
 
+def immLow16Zero : PatLeaf<(imm), [{
+  int64_t Val = N->getSExtValue();
+  return isInt<32>(Val) && !(Val & 0xffff);
+}]>;
 
 // MYRISCVX Address Mode! SDNode frameindex could possibily be a match
 // since load and store instructions from stack used it.
@@ -181,6 +205,14 @@ multiclass StoreM32<bits<8> op, string instr_asm, PatFrag OpNode,
   def #NAME# : StoreM<op, instr_asm, OpNode, CPURegs, mem, Pseudo>;
 }
 
+// Load Upper Imediate
+class LoadUpper<bits<8> op, string instr_asm, RegisterClass RC, Operand Imm>:
+  FL<op, (outs RC:$ra), (ins Imm:$imm16),
+     !strconcat(instr_asm, "\t$ra, $imm16"), [], IIAlu> {
+  let rb = 0;
+  let isReMaterializable = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // MYRISCVX Instructions
 //===----------------------------------------------------------------------===//
@@ -194,8 +226,9 @@ def MYRISCVXRet : SDNode<"MYRISCVXISD::Ret", SDTNone,
 /// Arithmetic Instructions (ALU Immediate)
 // IR "add" defined in include/llvm/Target/TargetSelectionDAG.td, line 315 (def add).
 def ADDI   : ArithLogicI<0x09, "addi", add, simm16, immSExt16, CPURegs>;
+def ORI    : ArithLogicI<0x0d, "ori", or, uimm16, immZExt16, CPURegs>;
 
-def LUI    : ArithLogicR<0x13, "add", add, IIAlu, CPURegs>;
+def LUI    : LoadUpper<0x0f, "lui", GPROut, uimm16>;
 def ADD    : ArithLogicR<0x13, "add", add, IIAlu, CPURegs, 1>;
 def SUB    : ArithLogicR<0x14, "sub", sub, IIAlu, CPURegs>;
 
@@ -212,3 +245,11 @@ def RET     : RetBase<GPROut>;
 // Small immediates
 def : Pat<(i32 immSExt16:$in),
           (ADDI ZERO, imm:$in)>;
+def : Pat<(i32 immZExt16:$in),
+          (ORI ZERO, imm:$in)>;
+def : Pat<(i32 immLow16Zero:$in),
+          (LUI (HI16 imm:$in))>;
+
+// Arbitrary immediates
+def : Pat<(i32 imm:$imm),
+          (ORI (LUI (HI16 imm:$imm)), (LO16 imm:$imm))>;
