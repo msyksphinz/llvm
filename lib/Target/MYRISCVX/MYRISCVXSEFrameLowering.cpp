@@ -38,20 +38,18 @@ void MYRISCVXSEFrameLowering::emitPrologue(MachineFunction &MF,
                                            MachineBasicBlock &MBB) const {
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
   MachineFrameInfo &MFI        = MF.getFrameInfo();
-  auto *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
+  // auto *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
 
-  const MYRISCVXSEInstrInfo &TII =
-    *static_cast<const MYRISCVXSEInstrInfo*>(STI.getInstrInfo());
-  const MYRISCVXRegisterInfo &RegInfo =
-      *static_cast<const MYRISCVXRegisterInfo *>(STI.getRegisterInfo());
+  const MYRISCVXSEInstrInfo &TII = *static_cast<const MYRISCVXSEInstrInfo*>(STI.getInstrInfo());
+  // const MYRISCVXRegisterInfo &RegInfo = *static_cast<const MYRISCVXRegisterInfo *>(STI.getRegisterInfo());
 
   MachineBasicBlock::iterator MBBI = MBB.begin();
   DebugLoc dl = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
-  MYRISCVXABIInfo ABI = STI.getABI();
-  unsigned SP = MYRISCVX::SP;
-  const TargetRegisterClass *RC = &MYRISCVX::GPROutRegClass;
+  // MYRISCVXABIInfo ABI = STI.getABI();
+  // unsigned SP = MYRISCVX::SP;
+  // const TargetRegisterClass *RC = &MYRISCVX::GPROutRegClass;
 
-  unsigned FPReg = MYRISCVX::S0;
+  // unsigned FPReg = MYRISCVX::S0;
   unsigned SPReg = MYRISCVX::SP;
 
   // First, compute final stack size.
@@ -142,15 +140,15 @@ void MYRISCVXSEFrameLowering::emitEpilogue(MachineFunction &MF,
 
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
   MachineFrameInfo &MFI            = MF.getFrameInfo();
-  auto *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
+  // auto *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
 
-  const MYRISCVXSEInstrInfo &TII =
-      *static_cast<const MYRISCVXSEInstrInfo *>(STI.getInstrInfo());
-  const MYRISCVXRegisterInfo &RegInfo =
-      *static_cast<const MYRISCVXRegisterInfo *>(STI.getRegisterInfo());
+  // const MYRISCVXSEInstrInfo &TII =
+  //     *static_cast<const MYRISCVXSEInstrInfo *>(STI.getInstrInfo());
+  // const MYRISCVXRegisterInfo &RegInfo =
+  //     *static_cast<const MYRISCVXRegisterInfo *>(STI.getRegisterInfo());
 
   DebugLoc dl = MBBI->getDebugLoc();
-  MYRISCVXABIInfo ABI = STI.getABI();
+  // MYRISCVXABIInfo ABI = STI.getABI();
   unsigned SPReg = MYRISCVX::SP;
 
   // Get the number of bytes from FrameInfo
@@ -176,6 +174,23 @@ MYRISCVXSEFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
   return isInt<16>(MFI.getMaxCallFrameSize() + getStackAlignment()) &&
       !MFI.hasVarSizedObjects();
 }
+
+// This method is called immediately before PrologEpilogInserter scans the
+// physical registers used to determine what callee saved registers should be
+// spilled. This method is optional.
+void MYRISCVXSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
+                                                   BitVector &SavedRegs,
+                                                   RegScavenger *RS) const {
+  //@ determineCalleeSaves-body
+  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+  // auto *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
+  // MachineRegisterInfo& MRI = MF.getRegInfo();
+  // if (MF.getFrameInfo().hasCalls()) {
+  //   setAliasRegs(MF, SavedRegs, MYRISCVX::LR);
+  // }
+  return;
+}
+
 
 const MYRISCVXFrameLowering *
 llvm::createMYRISCVXSEFrameLowering(const MYRISCVXSubtarget &ST) {

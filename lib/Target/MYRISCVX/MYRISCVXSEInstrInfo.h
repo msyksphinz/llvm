@@ -34,6 +34,18 @@ class MYRISCVXSEInstrInfo : public MYRISCVXInstrInfo {
  private:
   void expandRetLR(MachineBasicBlock &MBB, MachineBasicBlock::iterator I) const;
 
+  void storeRegToStack(MachineBasicBlock &MBB,
+                       MachineBasicBlock::iterator MI,
+                       unsigned SrcReg, bool isKill, int FrameIndex,
+                       const TargetRegisterClass *RC,
+                       const TargetRegisterInfo *TRI,
+                       int64_t Offset) const override;
+  void loadRegFromStack(MachineBasicBlock &MBB,
+                        MachineBasicBlock::iterator MI,
+                        unsigned DestReg, int FrameIndex,
+                        const TargetRegisterClass *RC,
+                        const TargetRegisterInfo *TRI,
+                        int64_t Offset) const override;
 
 };
 

@@ -35,6 +35,9 @@ class MYRISCVXSEFrameLowering : public MYRISCVXFrameLowering {
 
   bool
   hasReservedCallFrame(const MachineFunction &MF) const;
+  void determineCalleeSaves(MachineFunction &MF,
+                            BitVector &SavedRegs,
+                            RegScavenger *RS) const;
 
 };
 
