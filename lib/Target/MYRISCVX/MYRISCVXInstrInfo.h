@@ -16,6 +16,7 @@
 
 #include "MYRISCVX.h"
 #include "MYRISCVXRegisterInfo.h"
+#include "MYRISCVXAnalyzeImmediate.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 

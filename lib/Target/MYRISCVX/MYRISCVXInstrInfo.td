@@ -38,6 +38,8 @@ def uimm16      : Operand<i32> {
   let PrintMethod = "printUnsignedImm";
 }
 
+def shamt       : Operand<i32>;
+
 // Address operand
 def mem : Operand<i32> {
   let PrintMethod = "printMemOperand";
@@ -69,6 +71,9 @@ def immLow16Zero : PatLeaf<(imm), [{
   int64_t Val = N->getSExtValue();
   return isInt<32>(Val) && !(Val & 0xffff);
 }]>;
+
+// shamt field must fit in 5 bits.
+def immZExt5 : ImmLeaf<i32, [{return Imm == (Imm & 0x1f);}]>;
 
 // MYRISCVX Address Mode! SDNode frameindex could possibily be a match
 // since load and store instructions from stack used it.
@@ -132,6 +137,22 @@ class ArithLogicR<bits<8> op, string instr_asm, SDNode OpNode,
   let isCommutable = isComm;	// e.g. add rb rc =  add rc rb
   let isReMaterializable = 1;
 }
+
+
+class shift_rotate_imm<bits<8> op, bits<4> isRotate, string instr_asm,
+                       SDNode OpNode, PatFrag PF, Operand ImmOpnd,
+                       RegisterClass RC>:
+  FA<op, (outs GPROut:$ra), (ins RC:$rb, ImmOpnd:$shamt),
+     !strconcat(instr_asm, "\t$ra, $rb, $shamt"),
+     [(set GPROut:$ra, (OpNode RC:$rb, PF:$shamt))], IIAlu> {
+  let rc = 0;
+}
+
+
+// 32-bit shift instructions.
+class shift_rotate_imm32<bits<8> op, bits<4> isRotate, string instr_asm,
+                         SDNode OpNode>:
+  shift_rotate_imm<op, isRotate, instr_asm, OpNode, immZExt5, shamt, CPURegs>;
 
 
 class FMem<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern,
@@ -226,6 +247,7 @@ def MYRISCVXRet : SDNode<"MYRISCVXISD::Ret", SDTNone,
 /// Arithmetic Instructions (ALU Immediate)
 // IR "add" defined in include/llvm/Target/TargetSelectionDAG.td, line 315 (def add).
 def ADDI   : ArithLogicI<0x09, "addi", add, simm16, immSExt16, CPURegs>;
+def SHL    : shift_rotate_imm32<0x1e, 0x00, "shl", shl>;
 def ORI    : ArithLogicI<0x0d, "ori", or, uimm16, immZExt16, CPURegs>;
 
 def LUI    : LoadUpper<0x0f, "lui", GPROut, uimm16>;
