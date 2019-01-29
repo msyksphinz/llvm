@@ -312,6 +312,7 @@ enum {
   EM_RISCV = 243,         // RISC-V
   EM_LANAI = 244,         // Lanai 32-bit processor
   EM_BPF = 247,           // Linux kernel bpf virtual machine
+  EM_MYRISCVX = 248,      // My RISC-V Implementation
 };
 
 // Object file classes.
@@ -626,9 +627,24 @@ enum : unsigned {
   EF_RISCV_RVE = 0x0008
 };
 
+
+// MYRISCVX Specific e_flags
+enum {
+  EF_MYRISCVX_NOREORDER = 0x00000001, // Don't reorder instructions
+  EF_MYRISCVX_PIC       = 0x00000002, // Position independent code
+  EF_MYRISCVX_ARCH_32   = 0x50000000, // MYRISCVX32 instruction set per linux not elf.h
+  EF_MYRISCVX_ARCH      = 0xf0000000  // Mask for applying EF_MYRISCVX_ARCH_ variant
+};
+
+
 // ELF Relocation types for RISC-V
 enum {
 #include "ELFRelocs/RISCV.def"
+};
+
+// ELF Relocation types for MYRISCX
+enum {
+#include "ELFRelocs/MYRISCVX.def"
 };
 
 // ELF Relocation types for S390/zSeries
