@@ -43,8 +43,8 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case amdgcn:         return "amdgcn";
   case riscv32:        return "riscv32";
   case riscv64:        return "riscv64";
-  case myriscv32:      return "myriscvx32";
-  case myriscv64:      return "myriscvx64";
+  case myriscvx32:     return "myriscvx32";
+  case myriscvx64:     return "myriscvx64";
   case sparc:          return "sparc";
   case sparcv9:        return "sparcv9";
   case sparcel:        return "sparcel";
