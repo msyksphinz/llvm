@@ -25,13 +25,16 @@ include "llvm/Target/Target.td"
 def RV64           : HwMode<"+64bit">;
 def RV32           : HwMode<"-64bit">;
 
-def FeatureMYRISCVX       : SubtargetFeature<"MYRISCVX", "MYRISCVXArchVersion", "MYRISCVX",
-                                             "MYRISCVX Support [highly experimental]">;
+def FeatureMYRISCVX64 : SubtargetFeature<"myriscvx64", "HasArch64bit", "true",
+                                         "MYRISCVX-64bit Support [highly experimental]">;
+
+def FeatureMYRISCVX32 : SubtargetFeature<"myriscvx32", "HasArch64bit", "false",
+                                         "MYRISCVX-32bit Support [highly experimental]">;
 
 class Proc<string Name, list<SubtargetFeature> Features>
  : Processor<Name, NoItineraries, Features>;
 
-def : Proc<"MYRISCVX", [FeatureMYRISCVX]>;
+def : Proc<"MYRISCVX", [FeatureMYRISCVX32, FeatureMYRISCVX64]>;
 
 include "MYRISCVXRegisterInfo.td"
 // include "MYRISCVXRegisterInfoGPROutForOther.td" // except AsmParser
