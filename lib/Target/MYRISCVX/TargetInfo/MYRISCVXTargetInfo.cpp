@@ -11,7 +11,10 @@
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
-Target llvm::TheMYRISCVX32Target, llvm::TheMYRISCVX64Target;
+namespace llvm {
+Target TheMYRISCVX32Target;
+Target TheMYRISCVX64Target;
+}
 
 extern "C" void LLVMInitializeMYRISCVXTargetInfo() {
   RegisterTarget<Triple::myriscvx32,
