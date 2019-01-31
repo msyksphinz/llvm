@@ -160,11 +160,20 @@ def ADDI : ArithLogicI<0b0010011, 0b000, "addi", add, simm12, immSExt12, GPR>;
 
 /// Arithmetic Instructions (3-Operand, R-Type)
 def JALR : JumpFR<0b1100111, 0b000, "jalr", GPR>;
-def : InstAlias<"jr $rs1",      (JALR ZERO, GPR:$rs1, 0)>;
+// def : InstAlias<"jr $rs1", (JALR ZERO, GPR:$rs1, 0)>;
 def RET : RetBase<GPR>;
 
 /// No operation
 def : InstAlias<"nop",  (ADDI ZERO, ZERO, 0)>;
+
+class shift_rotate_reg<bits<7> opcode, bits<7> funct7, bits<3> funct3,
+                       bits<4> isRotate, string instr_asm,
+                       SDNode OpNode, RegisterClass RC>:
+  FR<opcode, funct7, funct3, (outs GPR:$ra), (ins RC:$rb, RC:$rc),
+     !strconcat(instr_asm, "\t$ra, $rb, $rc"),
+     [(set GPR:$ra, (OpNode RC:$rb, RC:$rc))], IIAlu> {
+}
+
 
 //===----------------------------------------------------------------------===//
 // Arbitrary patterns that map to one or more instructions

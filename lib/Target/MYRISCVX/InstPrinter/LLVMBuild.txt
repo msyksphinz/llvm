@@ -1,11 +1,11 @@
-;===- ./lib/Target/MYRISCVX/MCTargetDesc/LLVMBuild.txt -------------*- Conf -*--===;
+;===- ./lib/Target/MYRISCVX/InstPrinter/LLVMBuild.txt --------------*- Conf -*--===;
 ;
 ; The LLVM Compiler Infrastructure
 ;
 ; This file is distributed under the University of Illinois Open Source
 ; License. See LICENSE.TXT for details.
 ;
-;===------------------------------------------------------------------------===;
+; ===------------------------------------------------------------------------===;
 ;
 ; This is an LLVMBuild description file for the components in this subdirectory.
 ;
@@ -13,13 +13,11 @@
 ;
 ; http://llvm.org/docs/LLVMBuild.html
 ;
-;===------------------------------------------------------------------------===;
+; ===------------------------------------------------------------------------===;
+
 [component_0]
 type = Library
-name = MYRISCVXDesc
+name = MYRISCVXAsmPrinter
 parent = MYRISCVX
-required_libraries = MC
-                     MYRISCVXInfo
-                     Support
-                     MYRISCVXAsmPrinter
+required_libraries = MC Support
 add_to_library_groups = MYRISCVX

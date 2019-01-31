@@ -17,11 +17,22 @@
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
-  class Target;
-  class Triple;
+class MCAsmBackend;
+class MCCodeEmitter;
+class MCContext;
+class MCInstrInfo;
+class MCObjectWriter;
+class MCRegisterInfo;
+class MCSubtargetInfo;
+class StringRef;
 
-  extern Target TheMYRISCVX32Target;
-  extern Target TheMYRISCVX64Target;
+class Target;
+class Triple;
+
+class raw_ostream;
+
+extern Target TheMYRISCVX32Target;
+extern Target TheMYRISCVX64Target;
 
 } // End llvm namespace
 

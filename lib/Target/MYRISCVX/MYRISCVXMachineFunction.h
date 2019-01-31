@@ -28,8 +28,8 @@ namespace llvm {
  public:
  MYRISCVXFunctionInfo(MachineFunction& MF)
      : MF(MF),
-        VarArgsFrameIndex(0),
-        MaxCallFrameSize(0)
+       VarArgsFrameIndex(0),
+       MaxCallFrameSize(0)
     {}
     ~MYRISCVXFunctionInfo();
     int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
