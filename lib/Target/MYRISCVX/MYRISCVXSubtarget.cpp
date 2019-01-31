@@ -52,14 +52,14 @@ MYRISCVXSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
                                                    const TargetMachine &TM) {
   if (TargetTriple.getArch() == Triple::myriscvx32 || TargetTriple.getArch() == Triple::myriscvx64) {
     if (CPU.empty() || CPU == "generic") {
-      CPU = "MYRISCVX32";
+      CPU = "MYRISCVX";
     }
     else if (CPU == "help") {
       CPU = "";
       return *this;
     }
-    else if (CPU != "MYRISCVX32") {
-      CPU = "MYRISCVX32";
+    else if (CPU != "MYRISCVX") {
+      CPU = "MYRISCVX";
     }
   } else {
     errs() << "!!!Error, TargetTriple.getArch() = " << TargetTriple.getArch()
