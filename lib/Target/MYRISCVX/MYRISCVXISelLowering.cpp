@@ -55,6 +55,10 @@ MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
                                                const MYRISCVXSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI), ABI(TM.getABI()) {
 
+  //@MYRISCVXSETargetLowering body {
+  // Set up the register classes
+  addRegisterClass(MVT::i32, &MYRISCVX::GPRRegClass);
+
   //- Set .align 2
   // It will emit .align 2 later
   setMinFunctionAlignment(2);
