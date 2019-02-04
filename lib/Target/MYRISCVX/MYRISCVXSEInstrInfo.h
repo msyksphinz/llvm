@@ -27,6 +27,12 @@ namespace llvm {
     explicit MYRISCVXSEInstrInfo(const MYRISCVXSubtarget &STI);
 
     const MYRISCVXRegisterInfo &getRegisterInfo() const override;
+
+    //@expandPostRAPseudo
+    bool expandPostRAPseudo(MachineInstr &MI) const override;
+
+   private:
+    void expandRetLR(MachineBasicBlock &MBB, MachineBasicBlock::iterator I) const;
   };
 
 }

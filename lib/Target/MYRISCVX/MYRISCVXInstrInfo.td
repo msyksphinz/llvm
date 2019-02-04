@@ -141,6 +141,10 @@ class RetBase<RegisterClass RC>: JumpFR<0b1100111, 0b000, "ret", RC> {
   let hasExtraSrcRegAllocReq = 1;
 }
 
+let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
+  def RetRA : MYRISCVXPseudo<(outs), (ins), "", [(MYRISCVXRet)]>;
+
+
 //===----------------------------------------------------------------------===//
 // Instruction definition
 //===----------------------------------------------------------------------===//

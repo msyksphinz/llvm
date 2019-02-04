@@ -33,6 +33,7 @@ def FrmI   : Format<2>;
 def FrmS   : Format<3>;
 def FrmU   : Format<4>; // Instruction w/ a custom format
 
+
 // Generic MYRISCVX Format
 class MYRISCVXInst<dag outs, dag ins, string asmstr, list<dag> pattern,
                    InstrItinClass itin, Format f>: Instruction
@@ -138,3 +139,11 @@ class FS<bits<7> opcode, bits<3> funct3,
   let Inst{11-7}  = imm12{4-0};
 }
 //@class FS }
+
+
+// MYRISCVX Pseudo Instructions Format
+class MYRISCVXPseudo<dag outs, dag ins, string asmstr, list<dag> pattern>:
+                     MYRISCVXInst<outs, ins, asmstr, pattern, IIPseudo, Pseudo> {
+  let isCodeGenOnly = 1;
+  let isPseudo = 1;
+}

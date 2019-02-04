@@ -35,3 +35,24 @@ const MYRISCVXRegisterInfo &MYRISCVXSEInstrInfo::getRegisterInfo() const {
 const MYRISCVXInstrInfo *llvm::createMYRISCVXSEInstrInfo(const MYRISCVXSubtarget &STI) {
   return new MYRISCVXSEInstrInfo(STI);
 }
+
+
+//@expandPostRAPseudo
+/// Expand Pseudo instructions into real backend instructions
+bool MYRISCVXSEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
+  //@expandPostRAPseudo-body
+  MachineBasicBlock &MBB = *MI.getParent();
+  switch (MI.getDesc().getOpcode()) {
+    default:
+      return false;
+    case MYRISCVX::RetRA:
+      expandRetLR(MBB, MI);
+      break;
+  }
+  MBB.erase(MI);
+  return true;
+}
+void MYRISCVXSEInstrInfo::expandRetLR(MachineBasicBlock &MBB,
+                                      MachineBasicBlock::iterator I) const {
+  BuildMI(MBB, I, I->getDebugLoc(), get(MYRISCVX::RET)).addReg(MYRISCVX::RA);
+}
