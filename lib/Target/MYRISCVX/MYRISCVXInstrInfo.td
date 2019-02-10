@@ -126,7 +126,8 @@ let isBranch=1, isTerminator=1, isBarrier=1, imm12=0, hasDelaySlot = 0,
 isIndirectBranch = 1 in
 class JumpFR<bits<7> opcode, bits<3> funct3, string instr_asm, RegisterClass RC>:
   FI<opcode, funct3, (outs), (ins RC:$ra),
-     !strconcat(instr_asm, "\t$ra"), [(brind RC:$ra)], IIBranch> {
+     instr_asm, [(brind RC:$ra)], IIBranch> {
+  let rd    = 0;  // Zero
   let rs1   = 1;  // RA
   let imm12 = 0;
 }
