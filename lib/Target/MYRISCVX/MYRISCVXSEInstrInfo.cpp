@@ -56,3 +56,67 @@ void MYRISCVXSEInstrInfo::expandRetLR(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator I) const {
   BuildMI(MBB, I, I->getDebugLoc(), get(MYRISCVX::RET)).addReg(MYRISCVX::RA);
 }
+
+
+/// Adjust SP by Amount bytes.
+void MYRISCVXSEInstrInfo::adjustStackPtr(unsigned SP, int64_t Amount,
+                                         MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator I) const {
+  DebugLoc DL = I != MBB.end() ? I->getDebugLoc() : DebugLoc();
+  unsigned ADD  = MYRISCVX::ADD;
+  unsigned ADDI = MYRISCVX::ADDI;
+
+  if (isInt<16>(Amount)) {
+    // addiu sp, sp, amount
+    BuildMI(MBB, I, DL, get(ADDI), SP).addReg(SP).addImm(Amount);
+  }
+  else { // Expand immediate that doesn't fit in 16-bit.
+    unsigned Reg = loadImmediate(Amount, MBB, I, DL, nullptr);
+    BuildMI(MBB, I, DL, get(ADD), SP).addReg(SP).addReg(Reg, RegState::Kill);
+  }
+}
+
+
+/// This function generates the sequence of instructions needed to get the
+/// result of adding register REG and immediate IMM.
+unsigned
+MYRISCVXSEInstrInfo::loadImmediate(int64_t Imm, MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator II,
+                                   const DebugLoc &DL,
+                                   unsigned *NewImm) const {
+  MYRISCVXAnalyzeImmediate AnalyzeImm;
+  unsigned Size = 32;
+  unsigned LUI = MYRISCVX::LUI;
+  unsigned ZEROReg = MYRISCVX::ZERO;
+  bool LastInstrIsADDiu = NewImm;
+
+  MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
+  // The first instruction can be a LUi, which is different from other
+  // instructions (ADDiu, ORI and SLL) in that it does not have a register
+  // operand.
+  const TargetRegisterClass *RC = &MYRISCVX::GPRRegClass;
+  unsigned Reg = RegInfo.createVirtualRegister(RC);
+
+  const MYRISCVXAnalyzeImmediate::InstSeq &Seq =
+      AnalyzeImm.Analyze(Imm, Size, LastInstrIsADDiu);
+
+  MYRISCVXAnalyzeImmediate::InstSeq::const_iterator Inst = Seq.begin();
+  assert(Seq.size() && (!LastInstrIsADDiu || (Seq.size() > 1)));
+  // The first instruction can be a LUi, which is different from other
+  // instructions (ADDiu, ORI and SLL) in that it does not have a register
+  // operand.
+  if (Inst->Opc == LUI)
+    BuildMI(MBB, II, DL, get(LUI), Reg).addImm(SignExtend64<16>(Inst->ImmOpnd));
+  else
+    BuildMI(MBB, II, DL, get(Inst->Opc), Reg).addReg(ZEROReg)
+        .addImm(SignExtend64<16>(Inst->ImmOpnd));
+
+  // Build the remaining instructions in Seq.
+  for (++Inst; Inst != Seq.end() - LastInstrIsADDiu; ++Inst)
+    BuildMI(MBB, II, DL, get(Inst->Opc), Reg).addReg(Reg)
+        .addImm(SignExtend64<16>(Inst->ImmOpnd));
+
+  if (LastInstrIsADDiu)
+    *NewImm = Inst->ImmOpnd;
+  return Reg;
+}

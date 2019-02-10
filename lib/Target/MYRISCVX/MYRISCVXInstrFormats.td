@@ -141,6 +141,26 @@ class FS<bits<7> opcode, bits<3> funct3,
 //@class FS }
 
 
+//@class FU {
+//===----------------------------------------------------------------------===//
+// I-Type instruction class in MYRISCVX : <|opcode|ra|rb|cx|>
+//===----------------------------------------------------------------------===//
+
+class FU<bits<7> opcode,
+         dag outs, dag ins, string asmstr, list<dag> pattern,
+         InstrItinClass itin>: MYRISCVXInst<outs, ins, asmstr, pattern, itin, FrmI>
+{
+  bits<5>  rd;
+  bits<20> imm20;
+
+  let Opcode = opcode;
+
+  let Inst{31-12} = imm20;
+  let Inst{11-7}  = rd;
+}
+//@class FU }
+
+
 // MYRISCVX Pseudo Instructions Format
 class MYRISCVXPseudo<dag outs, dag ins, string asmstr, list<dag> pattern>:
                      MYRISCVXInst<outs, ins, asmstr, pattern, IIPseudo, Pseudo> {

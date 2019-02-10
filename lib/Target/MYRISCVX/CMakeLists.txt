@@ -35,6 +35,7 @@ add_llvm_target(MYRISCVXCodeGen
   MYRISCVXMCInstLower.cpp
   MYRISCVXISelDAGToDAG.cpp
   MYRISCVXSEISelDAGToDAG.cpp
+  MYRISCVXAnalyzeImmediate.cpp
 )
 
 # Should match with "subdirectories = MCTargetDesc TargetInfo" in LLVMBuild.txt

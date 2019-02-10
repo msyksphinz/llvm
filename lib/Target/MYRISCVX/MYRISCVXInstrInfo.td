@@ -37,6 +37,17 @@ def simm12 : Operand<i32> {
   let DecoderMethod= "DecodeSimm12";
 }
 
+// Signed Operand
+def simm20 : Operand<i32> {
+  let DecoderMethod= "DecodeSimm20";
+}
+
+// Unsigned Operand
+def uimm12 : Operand<i32> {
+  let PrintMethod = "printUnsignedImm";
+}
+
+
 // Address operand
 def mem : Operand<iPTR> {
   let PrintMethod   = "printMemOperand";
@@ -44,9 +55,36 @@ def mem : Operand<iPTR> {
   let EncoderMethod = "getMemEncoding";
 }
 
+// Transformation Function - get the lower 12 bits.
+def LO12 : SDNodeXForm<imm, [{
+  return getImm(N, N->getZExtValue() & 0xfff);
+}]>;
+
+// Transformation Function - get the higher 20 bits.
+def HI20 : SDNodeXForm<imm, [{
+  return getImm(N, (N->getZExtValue() >> 12) & 0xfffff);
+}]>;
+
 // Node immediate fits as 12-bit sign extended on target immediate.
 // e.g. addi, andi
 def immSExt12 : PatLeaf<(imm), [{ return isInt<12>(N->getSExtValue()); }]>;
+def immZExt12 : PatLeaf<(imm), [{
+  if (N->getValueType(0) == MVT::i32)
+    return (uint32_t)N->getZExtValue() == (unsigned short)N->getZExtValue();
+  else
+    return (uint64_t)N->getZExtValue() == (unsigned short)N->getZExtValue();
+}], LO12>;
+
+// Immediate can be loaded with LUi (32-bit int with lower 16-bit cleared).
+def immLow12Zero : PatLeaf<(imm), [{
+  int64_t Val = N->getSExtValue();
+  return isInt<32>(Val) && !(Val & 0x0fff);
+}]>;
+
+// shamt field must fit in 5 bits.
+def immZExt5 : ImmLeaf<i32, [{return Imm == (Imm & 0x1f);}]>;
+
+def shamt : Operand<i32>;
 
 // MYRISCVX Address Mode! SDNode frameindex could possibily be a match
 // since load and store instructions from stack used it.
@@ -79,13 +117,33 @@ def store_a : AlignedStore<store>;
 //===----------------------------------------------------------------------===//
 
 // Arithmetic and logical instructions with 2 register operands.
+class ArithLogicR<bits<7> opcode, bits<3> funct3,
+                  string instr_asm, SDNode OpNode,
+                  RegisterClass RC> :
+  FI<opcode, funct3, (outs GPR:$ra), (ins RC:$rb, RC:$rc),
+  !strconcat(instr_asm, "\t$ra, $rb, $rc"),
+  [(set GPR:$ra, (OpNode RC:$rb, RC:$rc))], IIAlu> {
+    let isReMaterializable = 1;
+}
+
+
+// Arithmetic and logical instructions with 2 register operands.
 class ArithLogicI<bits<7> opcode, bits<3> funct3,
                   string instr_asm, SDNode OpNode,
                   Operand Od, PatLeaf imm_type, RegisterClass RC> :
-  FI<opcode, funct3, (outs GPR:$ra), (ins RC:$rb, Od:$imm16),
-  !strconcat(instr_asm, "\t$ra, $rb, $imm16"),
-  [(set GPR:$ra, (OpNode RC:$rb, imm_type:$imm16))], IIAlu> {
+  FI<opcode, funct3, (outs GPR:$ra), (ins RC:$rb, Od:$imm12),
+  !strconcat(instr_asm, "\t$ra, $rb, $imm12"),
+  [(set GPR:$ra, (OpNode RC:$rb, imm_type:$imm12))], IIAlu> {
     let isReMaterializable = 1;
+}
+
+
+// Arithmetic and logical instructions with 3 register operands.
+class ArithLogicU<bits<7> opcode,
+                  string instr_asm, Operand Od, PatLeaf imm_type> :
+  FU<opcode, (outs GPR:$ra), (ins Od:$imm20),
+    !strconcat(instr_asm, "\t$ra, $imm20"), [], IIAlu> {
+      let isReMaterializable = 1;
 }
 
 // Memory Load/Store
@@ -142,6 +200,31 @@ class RetBase<RegisterClass RC>: JumpFR<0b1100111, 0b000, "ret", RC> {
   let hasExtraSrcRegAllocReq = 1;
 }
 
+
+// Shifts
+class shift_rotate_imm<bits<7> opcode, bits<3> funct3, bits<4> isRotate, string instr_asm,
+                       SDNode OpNode, PatFrag PF, Operand ImmOpnd,
+                       RegisterClass RC>:
+  FI<opcode, funct3, (outs GPR:$ra), (ins RC:$rb, ImmOpnd:$shamt),
+    !strconcat(instr_asm, "\t$ra, $rb, $shamt"),
+    [(set GPR:$ra, (OpNode RC:$rb, PF:$shamt))], IIAlu> {
+}
+
+// 32-bit shift instructions.
+class shift_rotate_imm32<bits<7> opcode, bits<3> funct3, bits<4> isRotate, string instr_asm,
+                         SDNode OpNode>:
+  shift_rotate_imm<opcode, funct3, isRotate, instr_asm, OpNode, immZExt5, shamt, GPR>;
+
+
+class shift_rotate_reg<bits<7> opcode, bits<7> funct7, bits<3> funct3,
+                       bits<4> isRotate, string instr_asm,
+                       SDNode OpNode, RegisterClass RC>:
+  FR<opcode, funct7, funct3, (outs GPR:$ra), (ins RC:$rb, RC:$rc),
+     !strconcat(instr_asm, "\t$ra, $rb, $rc"),
+     [(set GPR:$ra, (OpNode RC:$rb, RC:$rc))], IIAlu> {
+}
+
+
 let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
   def RetRA : MYRISCVXPseudo<(outs), (ins), "", [(MYRISCVXRet)]>;
 
@@ -166,19 +249,25 @@ def ADDI : ArithLogicI<0b0010011, 0b000, "addi", add, simm12, immSExt12, GPR>;
 /// Arithmetic Instructions (3-Operand, R-Type)
 def JALR : JumpFR<0b1100111, 0b000, "jalr", GPR>;
 // def : InstAlias<"jr $rs1", (JALR ZERO, GPR:$rs1, 0)>;
-def RET : RetBase<GPR>;
+def RET  : RetBase<GPR>;
+
+def ORI  : ArithLogicI<0b0010011, 0b110, "ori", or, uimm12, immZExt12, GPR>;
+def LUI  : ArithLogicU<0b0110111, "lui", simm20, immSExt12>;
+def ADD  : ArithLogicR<0b0110011, 0b000, "add", add, GPR>;
+def SRLI : shift_rotate_imm32<0b0010011, 0b101, 0x00, "shli", shl>;
+
+
+//===----------------------------------------------------------------------===//
+// Instruction aliases
+//===----------------------------------------------------------------------===//
+class MYRISCVXInstAlias<string Asm, dag Result, bit Emit = 0b1> :
+  InstAlias<Asm, Result, Emit>;
+
+def : MYRISCVXInstAlias<"move $dst, $src",
+  (ADD GPR:$dst, GPR:$src,ZERO), 1>;
 
 /// No operation
 def : InstAlias<"nop",  (ADDI ZERO, ZERO, 0)>;
-
-class shift_rotate_reg<bits<7> opcode, bits<7> funct7, bits<3> funct3,
-                       bits<4> isRotate, string instr_asm,
-                       SDNode OpNode, RegisterClass RC>:
-  FR<opcode, funct7, funct3, (outs GPR:$ra), (ins RC:$rb, RC:$rc),
-     !strconcat(instr_asm, "\t$ra, $rb, $rc"),
-     [(set GPR:$ra, (OpNode RC:$rb, RC:$rc))], IIAlu> {
-}
-
 
 //===----------------------------------------------------------------------===//
 // Arbitrary patterns that map to one or more instructions
@@ -186,3 +275,13 @@ class shift_rotate_reg<bits<7> opcode, bits<7> funct7, bits<3> funct3,
 // Small immediates
 def : Pat<(i32 immSExt12:$in),
           (ADDI ZERO, imm:$in)>;
+
+def : Pat<(i32 immZExt12:$in),
+          (ORI ZERO, imm:$in)>;
+
+def : Pat<(i32 immLow12Zero:$in),
+          (LUI (HI20 imm:$in))>;
+
+// Arbitrary immediates
+def : Pat<(i32 imm:$imm),
+           (ORI (LUI (HI20 imm:$imm)), (LO12 imm:$imm))>;
