@@ -30,7 +30,7 @@ using namespace llvm;
 void MYRISCVXInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
   //- getRegisterName(RegNo) defined in MYRISCVXGenAsmWriter.inc which indicate in
   // MYRISCVX.td.
-  OS << 'x' << StringRef(getRegisterName(RegNo)).lower();
+  OS << StringRef(getRegisterName(RegNo)).lower();
 }
 
 //@1 {
