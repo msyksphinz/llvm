@@ -240,7 +240,7 @@ let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
 /// Load and Store Instructions
 /// aligned
 defm LW : LoadM32 <0b0000011, 0b010, "lw", load_a >;
-// defm SW : StoreM32<0b0100011, 0b010, "sw", store_a>;
+defm SW : StoreM32<0b0100011, 0b010, "sw", store_a>;
 
 /// Arithmetic Instructions (ALU Immediate)
 // IR "add" defined in include/llvm/Target/TargetSelectionDAG.td, line 315 (def add).
