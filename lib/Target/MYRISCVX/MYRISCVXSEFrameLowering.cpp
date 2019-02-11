@@ -28,6 +28,7 @@
 #include "llvm/Target/TargetOptions.h"
 
 using namespace llvm;
+
 MYRISCVXSEFrameLowering::MYRISCVXSEFrameLowering(const MYRISCVXSubtarget &STI)
     : MYRISCVXFrameLowering(STI, STI.stackAlignment()) {}
 
@@ -131,4 +132,31 @@ MYRISCVXSEFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
   // instruction.
   return isInt<16>(MFI.getMaxCallFrameSize() + getStackAlignment()) &&
       !MFI.hasVarSizedObjects();
+}
+
+
+/// Mark \p Reg and all registers aliasing it in the bitset.
+static void setAliasRegs(MachineFunction &MF, BitVector &SavedRegs, unsigned Reg) {
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
+    SavedRegs.set(*AI);
+}
+
+
+// This method is called immediately before PrologEpilogInserter scans the
+// physical registers used to determine what callee saved registers should be
+// spilled. This method is optional.
+void MYRISCVXSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
+                                                   BitVector &SavedRegs,
+                                                   RegScavenger *RS) const {
+
+  //@determineCalleeSaves-body
+  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+  MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
+  MachineRegisterInfo& MRI = MF.getRegInfo();
+
+  if (MF.getFrameInfo().hasCalls())
+    setAliasRegs(MF, SavedRegs, MYRISCVX::RA);
+
+  return;
 }

@@ -52,6 +52,8 @@ bool MYRISCVXSEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   MBB.erase(MI);
   return true;
 }
+
+
 void MYRISCVXSEInstrInfo::expandRetLR(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator I) const {
   BuildMI(MBB, I, I->getDebugLoc(), get(MYRISCVX::RET)).addReg(MYRISCVX::RA);
@@ -119,4 +121,34 @@ MYRISCVXSEInstrInfo::loadImmediate(int64_t Imm, MachineBasicBlock &MBB,
   if (LastInstrIsADDiu)
     *NewImm = Inst->ImmOpnd;
   return Reg;
+}
+
+
+void MYRISCVXSEInstrInfo::
+storeRegToStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
+                unsigned SrcReg, bool isKill, int FI,
+                const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+                int64_t Offset) const {
+  DebugLoc DL;
+  MachineMemOperand *MMO = GetMemOperand(MBB, FI, MachineMemOperand::MOStore);
+  unsigned Opc = 0;
+  Opc = MYRISCVX::SW;
+  assert(Opc && "Register class not handled!");
+  BuildMI(MBB, I, DL, get(Opc)).addReg(SrcReg, getKillRegState(isKill))
+      .addFrameIndex(FI).addImm(Offset).addMemOperand(MMO);
+}
+
+
+void MYRISCVXSEInstrInfo::
+loadRegFromStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
+                 unsigned DestReg, int FI, const TargetRegisterClass *RC,
+                 const TargetRegisterInfo *TRI, int64_t Offset) const {
+  DebugLoc DL;
+  if (I != MBB.end()) DL = I->getDebugLoc();
+  MachineMemOperand *MMO = GetMemOperand(MBB, FI, MachineMemOperand::MOLoad);
+  unsigned Opc = 0;
+  Opc = MYRISCVX::LW;
+  assert(Opc && "Register class not handled!");
+  BuildMI(MBB, I, DL, get(Opc), DestReg).addFrameIndex(FI).addImm(Offset)
+      .addMemOperand(MMO);
 }
