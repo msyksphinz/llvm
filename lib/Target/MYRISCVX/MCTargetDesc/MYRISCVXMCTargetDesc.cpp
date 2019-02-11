@@ -37,7 +37,7 @@ using namespace llvm;
 
 /// Select the MYRISCVX Architecture Feature for the given triple and cpu name.
 /// The function will be called at command 'llvm-objdump -d' for MYRISCVX elf input.
-static StringRef selectMYRISCVXArchFeature(const Triple &TT, StringRef CPU) {
+std::string selectMYRISCVXArchFeature(const Triple &TT, StringRef CPU) {
   std::string MYRISCVXArchFeature;
   if (CPU.empty() || CPU == "generic") {
     if (TT.getArch() == Triple::myriscvx32 || TT.getArch() == Triple::myriscvx64) {
@@ -74,7 +74,7 @@ static MCSubtargetInfo *createMYRISCVXMCSubtargetInfo(const Triple &TT,
     if (!ArchFS.empty())
       ArchFS = ArchFS + "," + FS.str();
     else
-      ArchFS = FS;
+      ArchFS = FS.str();
   }
   return createMYRISCVXMCSubtargetInfoImpl(TT, CPU, ArchFS);
   // createMYRISCVXMCSubtargetInfoImpl defined in MYRISCVXGenSubtargetInfo.inc
