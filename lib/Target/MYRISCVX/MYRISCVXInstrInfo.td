@@ -254,6 +254,7 @@ def RET  : RetBase<GPR>;
 def ORI  : ArithLogicI<0b0010011, 0b110, "ori", or, uimm12, immZExt12, GPR>;
 def LUI  : ArithLogicU<0b0110111, "lui", simm20, immSExt12>;
 def ADD  : ArithLogicR<0b0110011, 0b000, "add", add, GPR>;
+def SUB  : ArithLogicR<0b0110011, 0b000, "sub", sub, GPR>;
 def SRLI : shift_rotate_imm32<0b0010011, 0b101, 0x00, "shli", shl>;
 
 

@@ -65,16 +65,21 @@ void MYRISCVXSEInstrInfo::adjustStackPtr(unsigned SP, int64_t Amount,
                                          MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator I) const {
   DebugLoc DL = I != MBB.end() ? I->getDebugLoc() : DebugLoc();
-  unsigned ADD  = MYRISCVX::ADD;
-  unsigned ADDI = MYRISCVX::ADDI;
 
-  if (isInt<16>(Amount)) {
+  if (isInt<12>(Amount)) {
     // addiu sp, sp, amount
-    BuildMI(MBB, I, DL, get(ADDI), SP).addReg(SP).addImm(Amount);
+    BuildMI(MBB, I, DL, get(MYRISCVX::ADDI), SP).addReg(SP).addImm(Amount);
   }
   else { // Expand immediate that doesn't fit in 16-bit.
+    // For numbers which are not 16bit integers we synthesize Amount inline
+    // then add or subtract it from sp.
+    unsigned Opc = MYRISCVX::ADD;
+    if (Amount < 0) {
+      Opc = MYRISCVX::SUB;
+      Amount = -Amount;
+    }
     unsigned Reg = loadImmediate(Amount, MBB, I, DL, nullptr);
-    BuildMI(MBB, I, DL, get(ADD), SP).addReg(SP).addReg(Reg, RegState::Kill);
+    BuildMI(MBB, I, DL, get(Opc), SP).addReg(SP).addReg(Reg, RegState::Kill);
   }
 }
 
