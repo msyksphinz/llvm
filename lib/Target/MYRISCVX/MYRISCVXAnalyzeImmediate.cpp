@@ -29,14 +29,14 @@ void MYRISCVXAnalyzeImmediate::ADDInstr(InstSeqLs &SeqLs, const Inst &I) {
 void MYRISCVXAnalyzeImmediate::GetInstSeqLsADDI(uint64_t Imm, unsigned RemSize,
                                                 InstSeqLs &SeqLs) {
   GetInstSeqLs((Imm + 0x8000ULL) & 0xffffffffffff0000ULL, RemSize, SeqLs);
-  ADDInstr(SeqLs, Inst(ADDI, Imm & 0xffffULL));
+  ADDInstr(SeqLs, Inst(MYRISCVX::ADDI, Imm & 0xffffULL));
 }
 
 
 void MYRISCVXAnalyzeImmediate::GetInstSeqLsORI(uint64_t Imm, unsigned RemSize,
                                                InstSeqLs &SeqLs) {
   GetInstSeqLs(Imm & 0xffffffffffff0000ULL, RemSize, SeqLs);
-  ADDInstr(SeqLs, Inst(ORI, Imm & 0xffffULL));
+  ADDInstr(SeqLs, Inst(MYRISCVX::ORI, Imm & 0xffffULL));
 }
 
 
@@ -44,7 +44,7 @@ void MYRISCVXAnalyzeImmediate::GetInstSeqLsSHL(uint64_t Imm, unsigned RemSize,
                                                InstSeqLs &SeqLs) {
   unsigned Shamt = countTrailingZeros(Imm);
   GetInstSeqLs(Imm >> Shamt, RemSize - Shamt, SeqLs);
-  ADDInstr(SeqLs, Inst(SHL, Shamt));
+  ADDInstr(SeqLs, Inst(MYRISCVX::SRL, Shamt));
 }
 
 
@@ -56,7 +56,7 @@ void MYRISCVXAnalyzeImmediate::GetInstSeqLs(uint64_t Imm, unsigned RemSize,
     return;
   // A single ADDI will do if RemSize <= 16.
   if (RemSize <= 16) {
-    ADDInstr(SeqLs, Inst(ADDI, MaskedImm));
+    ADDInstr(SeqLs, Inst(MYRISCVX::ADDI, MaskedImm));
     return;
   }
   // Shift if the lower 16-bit is cleared.
@@ -65,6 +65,7 @@ void MYRISCVXAnalyzeImmediate::GetInstSeqLs(uint64_t Imm, unsigned RemSize,
     return;
 
   }
+
   GetInstSeqLsADDI(Imm, RemSize, SeqLs);
   // If bit 15 is cleared, it doesn't make a difference whether the last
   // instruction is an ADDI or ORI. In that case, do not call GetInstSeqLsORI.
@@ -85,8 +86,8 @@ void MYRISCVXAnalyzeImmediate::GetInstSeqLs(uint64_t Imm, unsigned RemSize,
 void MYRISCVXAnalyzeImmediate::ReplaceADDISHLWithLUi(InstSeq &Seq) {
   // Check if the first two instructions are ADDI and SHL and the shift amount
   // is at least 16.
-  if ((Seq.size() < 2) || (Seq[0].Opc != ADDI) ||
-      (Seq[1].Opc != SHL) || (Seq[1].ImmOpnd < 16))
+  if ((Seq.size() < 2) || (Seq[0].Opc != MYRISCVX::ADDI) ||
+      (Seq[1].Opc != MYRISCVX::SRL) || (Seq[1].ImmOpnd < 16))
     return;
   // Sign-extend and shift operand of ADDI and see if it still fits in 16-bit.
   int64_t Imm = SignExtend64<16>(Seq[0].ImmOpnd);
@@ -94,7 +95,7 @@ void MYRISCVXAnalyzeImmediate::ReplaceADDISHLWithLUi(InstSeq &Seq) {
   if (!isInt<16>(ShiftedImm))
     return;
   // Replace the first instruction and erase the second.
-  Seq[0].Opc = LUi;
+  Seq[0].Opc = MYRISCVX::LUI;
   Seq[0].ImmOpnd = (unsigned)(ShiftedImm & 0xffff);
   Seq.erase(Seq.begin() + 1);
 }
@@ -119,6 +120,7 @@ void MYRISCVXAnalyzeImmediate::GetShortestSeq(InstSeqLs &SeqLs, InstSeq &Insts) 
 const MYRISCVXAnalyzeImmediate::InstSeq
 &MYRISCVXAnalyzeImmediate::Analyze(uint64_t Imm, unsigned Size,
                                    bool LastInstrIsADDI) {
+
   this->Size = Size;
   InstSeqLs SeqLs;
   // Get the list of instruction sequences.
