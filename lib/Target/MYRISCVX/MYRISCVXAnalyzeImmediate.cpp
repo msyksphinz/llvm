@@ -9,7 +9,7 @@
 #include "MYRISCVXAnalyzeImmediate.h"
 
 #include "MYRISCVX.h"
-#if CH >= CH3_5
+
 #include "llvm/Support/MathExtras.h"
 using namespace llvm;
 MYRISCVXAnalyzeImmediate::Inst::Inst(unsigned O, unsigned I) : Opc(O), ImmOpnd(I) {}
@@ -130,4 +130,3 @@ const MYRISCVXAnalyzeImmediate::InstSeq
   GetShortestSeq(SeqLs, Insts);
   return Insts;
 }
-#endif
