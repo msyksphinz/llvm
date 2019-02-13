@@ -98,11 +98,15 @@ MYRISCVXSEInstrInfo::loadImmediate(int64_t Imm, MachineBasicBlock &MBB,
   bool LastInstrIsADDiu = NewImm;
 
   MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
+
   // The first instruction can be a LUi, which is different from other
   // instructions (ADDiu, ORI and SLL) in that it does not have a register
   // operand.
   const TargetRegisterClass *RC = &MYRISCVX::GPRRegClass;
-  unsigned Reg = RegInfo.createVirtualRegister(RC);
+
+  // MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  // xxx: It's very temporal implementation
+  unsigned Reg = MYRISCVX::S0;
 
   const MYRISCVXAnalyzeImmediate::InstSeq &Seq =
       AnalyzeImm.Analyze(Imm, Size, LastInstrIsADDiu);
@@ -125,6 +129,7 @@ MYRISCVXSEInstrInfo::loadImmediate(int64_t Imm, MachineBasicBlock &MBB,
 
   if (LastInstrIsADDiu)
     *NewImm = Inst->ImmOpnd;
+
   return Reg;
 }
 
