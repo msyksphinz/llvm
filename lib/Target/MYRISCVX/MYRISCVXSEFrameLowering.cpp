@@ -152,8 +152,8 @@ void MYRISCVXSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   //@determineCalleeSaves-body
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
-  MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
-  MachineRegisterInfo& MRI = MF.getRegInfo();
+  // MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
+  // MachineRegisterInfo& MRI = MF.getRegInfo();
 
   if (MF.getFrameInfo().hasCalls())
     setAliasRegs(MF, SavedRegs, MYRISCVX::RA);
