@@ -270,14 +270,14 @@ def SDT_MYRISCVXDivRem : SDTypeProfile<0, 2,
                                   [SDTCisInt<0>,
                                   SDTCisSameAs<0, 1>]>;
 
-def MUL   : ArithLogicR<0b0110011, 0b000, "mul",    mul, GPR>;
-def MULH  : ArithLogicR<0b0110011, 0b001, "mulh",   mul, GPR>;
-def MULHSU: ArithLogicR<0b0110011, 0b010, "mulhsu", mul, GPR>;
-def MULHU : ArithLogicR<0b0110011, 0b011, "mulhu",  mul, GPR>;
-def DIV   : ArithLogicR<0b0110011, 0b100, "div",    sdiv, GPR>;
-def DIVU  : ArithLogicR<0b0110011, 0b101, "divu",   udiv, GPR>;
-def REM   : ArithLogicR<0b0110011, 0b110, "rem",    srem, GPR>;
-def REMU  : ArithLogicR<0b0110011, 0b111, "remu",   urem, GPR>;
+def MUL   : ArithLogicR<0b0110011, 0b000, "mul",    mul,   GPR>;
+def MULH  : ArithLogicR<0b0110011, 0b001, "mulh",   mulhs, GPR>;
+def MULHSU: ArithLogicR<0b0110011, 0b010, "mulhsu", mulhs, GPR>;
+def MULHU : ArithLogicR<0b0110011, 0b011, "mulhu",  mulhu, GPR>;
+def DIV   : ArithLogicR<0b0110011, 0b100, "div",    sdiv,  GPR>;
+def DIVU  : ArithLogicR<0b0110011, 0b101, "divu",   udiv,  GPR>;
+def REM   : ArithLogicR<0b0110011, 0b110, "rem",    srem,  GPR>;
+def REMU  : ArithLogicR<0b0110011, 0b111, "remu",   urem,  GPR>;
 
 //===----------------------------------------------------------------------===//
 // Instruction aliases
