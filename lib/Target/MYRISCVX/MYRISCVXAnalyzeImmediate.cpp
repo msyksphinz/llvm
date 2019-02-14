@@ -28,19 +28,19 @@ void MYRISCVXAnalyzeImmediate::ADDInstr(InstSeqLs &SeqLs, const Inst &I) {
 
 void MYRISCVXAnalyzeImmediate::GetInstSeqLsADDI(uint64_t Imm, unsigned RemSize,
                                                 InstSeqLs &SeqLs) {
-  GetInstSeqLs((Imm + 0x8000ULL) & 0xffffffffffff0000ULL, RemSize, SeqLs);
-  ADDInstr(SeqLs, Inst(MYRISCVX::ADDI, Imm & 0xffffULL));
+  GetInstSeqLs((Imm + 0x800ULL) & 0xfffffffffffff000ULL, RemSize, SeqLs);
+  ADDInstr(SeqLs, Inst(MYRISCVX::ADDI, Imm & 0x0fffULL));
 }
 
 
 void MYRISCVXAnalyzeImmediate::GetInstSeqLsORI(uint64_t Imm, unsigned RemSize,
                                                InstSeqLs &SeqLs) {
-  GetInstSeqLs(Imm & 0xffffffffffff0000ULL, RemSize, SeqLs);
-  ADDInstr(SeqLs, Inst(MYRISCVX::ORI, Imm & 0xffffULL));
+  GetInstSeqLs(Imm & 0xfffffffffffff000ULL, RemSize, SeqLs);
+  ADDInstr(SeqLs, Inst(MYRISCVX::ORI, Imm & 0x0fffULL));
 }
 
 
-void MYRISCVXAnalyzeImmediate::GetInstSeqLsSHL(uint64_t Imm, unsigned RemSize,
+void MYRISCVXAnalyzeImmediate::GetInstSeqLsSRL(uint64_t Imm, unsigned RemSize,
                                                InstSeqLs &SeqLs) {
   unsigned Shamt = countTrailingZeros(Imm);
   GetInstSeqLs(Imm >> Shamt, RemSize - Shamt, SeqLs);
@@ -54,22 +54,22 @@ void MYRISCVXAnalyzeImmediate::GetInstSeqLs(uint64_t Imm, unsigned RemSize,
   // Do nothing if Imm is 0.
   if (!MaskedImm)
     return;
-  // A single ADDI will do if RemSize <= 16.
-  if (RemSize <= 16) {
+  // A single ADDI will do if RemSize <= 12.
+  if (RemSize <= 12) {
     ADDInstr(SeqLs, Inst(MYRISCVX::ADDI, MaskedImm));
     return;
   }
-  // Shift if the lower 16-bit is cleared.
-  if (!(Imm & 0xffff)) {
-    GetInstSeqLsSHL(Imm, RemSize, SeqLs);
+  // Shift if the lower 12-bit is cleared.
+  if (!(Imm & 0x0fff)) {
+    GetInstSeqLsSRL(Imm, RemSize, SeqLs);
     return;
 
   }
 
   GetInstSeqLsADDI(Imm, RemSize, SeqLs);
-  // If bit 15 is cleared, it doesn't make a difference whether the last
+  // If bit 11 is cleared, it doesn't make a difference whether the last
   // instruction is an ADDI or ORI. In that case, do not call GetInstSeqLsORI.
-  if (Imm & 0x8000) {
+  if (Imm & 0x0800) {
     InstSeqLs SeqLsORI;
     GetInstSeqLsORI(Imm, RemSize, SeqLsORI);
     SeqLs.insert(SeqLs.end(), SeqLsORI.begin(), SeqLsORI.end());
@@ -77,26 +77,26 @@ void MYRISCVXAnalyzeImmediate::GetInstSeqLs(uint64_t Imm, unsigned RemSize,
 }
 
 
-// Replace a ADDI & SHL pair with a LUi.
+// Replace a ADDI & SRL pair with a LUI.
 // e.g. the following two instructions
 // ADDI 0x0111
-// SHL 18
+// SRL 18
 // are replaced with
-// LUi 0x444
-void MYRISCVXAnalyzeImmediate::ReplaceADDISHLWithLUi(InstSeq &Seq) {
-  // Check if the first two instructions are ADDI and SHL and the shift amount
-  // is at least 16.
+// LUI 0x444
+void MYRISCVXAnalyzeImmediate::ReplaceADDISRLWithLUI(InstSeq &Seq) {
+  // Check if the first two instructions are ADDI and SRL and the shift amount
+  // is at least 12.
   if ((Seq.size() < 2) || (Seq[0].Opc != MYRISCVX::ADDI) ||
-      (Seq[1].Opc != MYRISCVX::SRL) || (Seq[1].ImmOpnd < 16))
+      (Seq[1].Opc != MYRISCVX::SRL) || (Seq[1].ImmOpnd < 12))
     return;
-  // Sign-extend and shift operand of ADDI and see if it still fits in 16-bit.
-  int64_t Imm = SignExtend64<16>(Seq[0].ImmOpnd);
-  int64_t ShiftedImm = (uint64_t)Imm << (Seq[1].ImmOpnd - 16);
-  if (!isInt<16>(ShiftedImm))
+  // Sign-extend and shift operand of ADDI and see if it still fits in 12-bit.
+  int64_t Imm = SignExtend64<12>(Seq[0].ImmOpnd);
+  int64_t ShiftedImm = (uint64_t)Imm << (Seq[1].ImmOpnd - 12);
+  if (!isInt<12>(ShiftedImm))
     return;
   // Replace the first instruction and erase the second.
   Seq[0].Opc = MYRISCVX::LUI;
-  Seq[0].ImmOpnd = (unsigned)(ShiftedImm & 0xffff);
+  Seq[0].ImmOpnd = (unsigned)(ShiftedImm & 0x0fff);
   Seq.erase(Seq.begin() + 1);
 }
 
@@ -106,7 +106,7 @@ void MYRISCVXAnalyzeImmediate::GetShortestSeq(InstSeqLs &SeqLs, InstSeq &Insts) 
   // The length of an instruction sequence is at most 7.
   unsigned ShortestLength = 8;
   for (InstSeqLs::iterator S = SeqLs.begin(); S != SeqLs.end(); ++S) {
-    ReplaceADDISHLWithLUi(*S);
+    ReplaceADDISRLWithLUI(*S);
     assert(S->size() <= 7);
     if (S->size() < ShortestLength) {
       ShortestSeq = S;
