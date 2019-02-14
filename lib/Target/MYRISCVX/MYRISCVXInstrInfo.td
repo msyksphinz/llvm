@@ -256,9 +256,28 @@ def LUI  : ArithLogicU<0b0110111, "lui", simm20, immSExt12>;
 def ADD  : ArithLogicR<0b0110011, 0b000, "add", add, GPR>;
 def SUB  : ArithLogicR<0b0110011, 0b000, "sub", sub, GPR>;
 
+// sra is IR node for ashr llvm IR instruction of .bc
 def SRL  : shift_rotate_reg<0b0110011, 0b0000000, 0b101, 0x0, "srl", srl, GPR>;
-def SRLI : shift_rotate_imm32<0b0010011, 0b101, 0x00, "shli", shl>;
+def SLL  : shift_rotate_reg<0b0110011, 0b0000000, 0b001, 0x0, "sll", shl, GPR>;
+def SRA  : shift_rotate_reg<0b0110011, 0b0100000, 0b101, 0x0, "sra", sra, GPR>;
 
+def SRLI : shift_rotate_imm32<0b0010011, 0b101, 0x00, "shli", srl>;
+def SLLI : shift_rotate_imm32<0b0010011, 0b001, 0x00, "slli", shl>;
+def SRAI : shift_rotate_imm32<0b0010011, 0b101, 0x00, "srai", sra>;
+
+// Only op DAG can be disabled by ch4_1, data DAG cannot.
+def SDT_MYRISCVXDivRem : SDTypeProfile<0, 2,
+                                  [SDTCisInt<0>,
+                                  SDTCisSameAs<0, 1>]>;
+
+def MUL   : ArithLogicR<0b0110011, 0b000, "mul",    mul, GPR>;
+def MULH  : ArithLogicR<0b0110011, 0b001, "mulh",   mul, GPR>;
+def MULHSU: ArithLogicR<0b0110011, 0b010, "mulhsu", mul, GPR>;
+def MULHU : ArithLogicR<0b0110011, 0b011, "mulhu",  mul, GPR>;
+def DIV   : ArithLogicR<0b0110011, 0b100, "div",    sdiv, GPR>;
+def DIVU  : ArithLogicR<0b0110011, 0b101, "divu",   udiv, GPR>;
+def REM   : ArithLogicR<0b0110011, 0b110, "rem",    srem, GPR>;
+def REMU  : ArithLogicR<0b0110011, 0b111, "remu",   urem, GPR>;
 
 //===----------------------------------------------------------------------===//
 // Instruction aliases
