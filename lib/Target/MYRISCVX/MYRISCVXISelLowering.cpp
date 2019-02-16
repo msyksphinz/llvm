@@ -64,6 +64,10 @@ MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
   // Set up the register classes
   addRegisterClass(MVT::i32, &MYRISCVX::GPRRegClass);
 
+  // MYRISCVX Custom Operations
+  setOperationAction(ISD::ROTL, MVT::i32, Expand);
+  setOperationAction(ISD::ROTR, MVT::i32, Expand);
+
   //- Set .align 2
   // It will emit .align 2 later
   setMinFunctionAlignment(2);
