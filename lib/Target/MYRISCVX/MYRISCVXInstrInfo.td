@@ -225,6 +225,27 @@ class shift_rotate_reg<bits<7> opcode, bits<7> funct7, bits<3> funct3,
 }
 
 
+// SetCC
+class SetCC_R<bits<7> opcode, bits<3> funct3,
+              string instr_asm, PatFrag cond_op,
+              RegisterClass RC> :
+  FI<opcode, funct3, (outs GPR:$ra), (ins RC:$rb, RC:$rc),
+  !strconcat(instr_asm, "\t$ra, $rb, $rc"),
+  [(set GPR:$ra, (cond_op RC:$rb, RC:$rc))], IIAlu> {
+    let isReMaterializable = 1;
+}
+
+
+class SetCC_I<bits<7> opcode, bits<3> funct3,
+              string instr_asm, PatFrag cond_op,
+              Operand imm, PatLeaf imm_type, RegisterClass RC> :
+  FI<opcode, funct3, (outs GPR:$ra), (ins RC:$rb, imm:$imm12),
+  !strconcat(instr_asm, "\t$ra, $rb, $imm12"),
+  [(set GPR:$ra, (cond_op RC:$rb, imm_type:$imm12))], IIAlu> {
+    let isReMaterializable = 1;
+}
+
+
 let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
   def RetRA : MYRISCVXPseudo<(outs), (ins), "", [(MYRISCVXRet)]>;
 
@@ -251,19 +272,29 @@ def JALR : JumpFR<0b1100111, 0b000, "jalr", GPR>;
 // def : InstAlias<"jr $rs1", (JALR ZERO, GPR:$rs1, 0)>;
 def RET  : RetBase<GPR>;
 
-def ORI  : ArithLogicI<0b0010011, 0b110, "ori", or, uimm12, immZExt12, GPR>;
+def XORI : ArithLogicI<0b0010011, 0b110, "xori", xor, uimm12, immZExt12, GPR>;
+def ORI  : ArithLogicI<0b0010011, 0b110, "ori",  or,  uimm12, immZExt12, GPR>;
+def ANDI : ArithLogicI<0b0010011, 0b111, "andi", and, uimm12, immZExt12, GPR>;
+
 def LUI  : ArithLogicU<0b0110111, "lui", simm20, immSExt12>;
 def ADD  : ArithLogicR<0b0110011, 0b000, "add", add, GPR>;
 def SUB  : ArithLogicR<0b0110011, 0b000, "sub", sub, GPR>;
 
-// sra is IR node for ashr llvm IR instruction of .bc
-def SRL  : shift_rotate_reg<0b0110011, 0b0000000, 0b101, 0x0, "srl", srl, GPR>;
 def SLL  : shift_rotate_reg<0b0110011, 0b0000000, 0b001, 0x0, "sll", shl, GPR>;
+def AND  : ArithLogicR<0b0110011, 0b111, "and", and, GPR>;
+def SRL  : shift_rotate_reg<0b0110011, 0b0000000, 0b101, 0x0, "srl", srl, GPR>;
 def SRA  : shift_rotate_reg<0b0110011, 0b0100000, 0b101, 0x0, "sra", sra, GPR>;
+def OR   : ArithLogicR<0b0110011, 0b110, "or",  or,  GPR>;
+def XOR  : ArithLogicR<0b0110011, 0b100, "xor", xor, GPR>;
 
 def SRLI : shift_rotate_imm32<0b0010011, 0b101, 0x00, "shli", srl>;
 def SLLI : shift_rotate_imm32<0b0010011, 0b001, 0x00, "slli", shl>;
 def SRAI : shift_rotate_imm32<0b0010011, 0b101, 0x00, "srai", sra>;
+
+def SLTI  : SetCC_I<0b0010011, 0b010, "slti",  setlt,  simm12, immSExt12, GPR>;
+def SLTIU : SetCC_I<0b0010011, 0b011, "sltiu", setult, simm12, immSExt12, GPR>;
+def SLT   : SetCC_R<0b0110011, 0b010, "slt",  setlt,  GPR>;
+def SLTU  : SetCC_R<0b0110011, 0b011, "sltu", setult, GPR>;
 
 // Only op DAG can be disabled by ch4_1, data DAG cannot.
 def SDT_MYRISCVXDivRem : SDTypeProfile<0, 2,
