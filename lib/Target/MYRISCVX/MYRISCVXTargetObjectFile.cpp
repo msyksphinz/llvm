@@ -35,3 +35,69 @@ void MYRISCVXTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &T
                                                ELF::SHF_WRITE | ELF::SHF_ALLOC);
   this->TM = &static_cast<const MYRISCVXTargetMachine &>(TM);
 }
+
+
+// A address must be loaded from a small section if its size is less than the
+// small section size threshold. Data in this section must be addressed using
+// gp_rel operator.
+static bool IsInSmallSection(uint64_t Size) {
+  return Size > 0 && Size <= SSThreshold;
+}
+
+
+bool MYRISCVXTargetObjectFile::
+IsGlobalInSmallSection(const GlobalObject *GV,
+                       const TargetMachine &TM) const {
+  if (GV->isDeclaration() || GV->hasAvailableExternallyLinkage())
+    return false;
+  return IsGlobalInSmallSection(GV, TM, getKindForGlobal(GV, TM));
+}
+
+
+/// IsGlobalInSmallSection - Return true if this global address should be
+/// placed into small data/bss section.
+bool MYRISCVXTargetObjectFile::
+IsGlobalInSmallSection(const GlobalObject *GV, const TargetMachine &TM,
+                       SectionKind Kind) const {
+  return (IsGlobalInSmallSectionImpl(GV, TM) &&
+          (Kind.isData() || Kind.isBSS() || Kind.isCommon()));
+}
+
+
+/// Return true if this global address should be placed into small data/bss
+/// section. This method does all the work, except for checking the section
+/// kind.
+bool MYRISCVXTargetObjectFile::
+IsGlobalInSmallSectionImpl(const GlobalObject *GV,
+                           const TargetMachine &TM) const {
+  const MYRISCVXSubtarget &Subtarget =
+      *static_cast<const MYRISCVXTargetMachine &>(TM).getSubtargetImpl();
+
+  // Return if small section is not available.
+  if (!Subtarget.useSmallSection())
+    return false;
+  // Only global variables, not functions.
+  const GlobalVariable *GVA = dyn_cast<GlobalVariable>(GV);
+  if (!GVA)
+    return false;
+  Type *Ty = GV->getValueType();
+  return IsInSmallSection(
+      GV->getParent()->getDataLayout().getTypeAllocSize(Ty));
+}
+
+
+MCSection *
+MYRISCVXTargetObjectFile::SelectSectionForGlobal(const GlobalObject *GV,
+                                                 SectionKind Kind, Mangler &Mang,
+                                                 const TargetMachine &TM) const {
+  // TODO: Could also support "weak" symbols as well with ".gnu.linkonce.s.*"
+  // sections?
+  // Handle Small Section classification here.
+  if (Kind.isBSS() && IsGlobalInSmallSection(GV, TM, Kind))
+    return SmallBSSSection;
+  if (Kind.isData() && IsGlobalInSmallSection(GV, TM, Kind))
+    return SmallDataSection;
+  // Otherwise, we work the same as ELF.
+  const GlobalObject *GO = GV->getBaseObject();
+  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, Kind, TM);
+}

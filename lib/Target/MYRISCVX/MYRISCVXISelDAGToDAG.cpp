@@ -76,6 +76,22 @@ SelectAddr(SDNode *Parent, SDValue Addr, SDValue &Base, SDValue &Offset) {
     Offset = CurDAG->getTargetConstant(0, DL, ValTy);
     return true;
   }
+
+
+  // on PIC code Load GA
+  if (Addr.getOpcode() == MYRISCVXISD::Wrapper) {
+    Base   = Addr.getOperand(0);
+    Offset = Addr.getOperand(1);
+    return true;
+  }
+
+  //@static
+  if (TM.getRelocationModel() != Reloc::PIC_) {
+    if ((Addr.getOpcode() == ISD::TargetExternalSymbol ||
+        Addr.getOpcode() == ISD::TargetGlobalAddress))
+      return false;
+  }
+
   Base = Addr;
   Offset = CurDAG->getTargetConstant(0, DL, ValTy);
   return true;
@@ -102,8 +118,22 @@ void MYRISCVXDAGToDAGISel::Select(SDNode *Node) {
     return;
   switch(Opcode) {
     default: break;
+      // Get target GOT address.
+    case ISD::GLOBAL_OFFSET_TABLE:
+      ReplaceNode(Node, getGlobalBaseReg());
+      return;
   }
 
   // Select the default instruction
   SelectCode(Node);
+}
+
+
+/// getGlobalBaseReg - Output the instructions required to put the
+/// GOT address into a register.
+SDNode *MYRISCVXDAGToDAGISel::getGlobalBaseReg() {
+  unsigned GlobalBaseReg = MF->getInfo<MYRISCVXFunctionInfo>()->getGlobalBaseReg();
+  return CurDAG->getRegister(GlobalBaseReg, getTargetLowering()->getPointerTy(
+      CurDAG->getDataLayout()))
+      .getNode();
 }

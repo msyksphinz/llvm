@@ -30,6 +30,7 @@ namespace llvm {
      : MF(MF),
        VarArgsFrameIndex(0),
        MaxCallFrameSize(0),
+       GlobalBaseReg(0),
        SRetReturnReg(0), CallsEhReturn(false), CallsEhDwarf(false)
     {}
     ~MYRISCVXFunctionInfo();
@@ -59,12 +60,22 @@ namespace llvm {
     unsigned getMaxCallFrameSize() const { return MaxCallFrameSize; }
     void setMaxCallFrameSize(unsigned S) { MaxCallFrameSize = S; }
 
- private:
+    bool globalBaseRegFixed() const;
+    bool globalBaseRegSet() const;
+    unsigned getGlobalBaseReg();
+
+   private:
     virtual void anchor();
     MachineFunction& MF;
     /// VarArgsFrameIndex - FrameIndex for start of varargs area.
     int VarArgsFrameIndex;
     unsigned MaxCallFrameSize;
+
+    /// GlobalBaseReg - keeps track of the virtual register initialized for
+    /// use as the global base register. This is used for PIC in some PIC
+    /// relocation models.
+    unsigned GlobalBaseReg;
+    int GPFI; // Index of the frame object for restoring $gp
 
     /// SRetReturnReg - Some subtargets require that sret lowering includes
     /// returning the value of the returned struct in a register. This field

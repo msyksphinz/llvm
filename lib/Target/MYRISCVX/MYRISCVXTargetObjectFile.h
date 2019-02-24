@@ -19,8 +19,23 @@ namespace llvm {
     MCSection *SmallDataSection;
     MCSection *SmallBSSSection;
     const MYRISCVXTargetMachine *TM;
- public:
+
+   public:
     void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+
+    /// IsGlobalInSmallSection - Return true if this global address should be
+    /// placed into small data/bss section.
+    bool IsGlobalInSmallSection(const GlobalObject *GV,
+                                const TargetMachine &TM) const;
+    bool IsGlobalInSmallSection(const GlobalObject *GV,
+                                const TargetMachine &TM, SectionKind Kind) const;
+
+    bool IsGlobalInSmallSectionImpl(const GlobalObject *GV,
+                                    const TargetMachine &TM) const;
+
+    MCSection *SelectSectionForGlobal(const GlobalObject *GV, SectionKind Kind,
+                                      Mangler &Mang,
+                                      const TargetMachine &TM) const;
   };
 } // end namespace llvm
 

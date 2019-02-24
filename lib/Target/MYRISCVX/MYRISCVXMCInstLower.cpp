@@ -22,6 +22,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+
 using namespace llvm;
 MYRISCVXMCInstLower::MYRISCVXMCInstLower(MYRISCVXAsmPrinter &asmprinter)
     : AsmPrinter(asmprinter) {}
@@ -36,6 +37,30 @@ static void CreateMCInst(MCInst& Inst, unsigned Opc, const MCOperand& Opnd0,
   Inst.addOperand(Opnd1);
   if (Opnd2.isValid())
     Inst.addOperand(Opnd2);
+}
+
+
+// Lower ".cpload $reg" to
+// "lui $gp, %hi(_gp_disp)"
+// "addiu $gp, $gp, %lo(_gp_disp)"
+// "addu $gp, $gp, $t9"
+void MYRISCVXMCInstLower::LowerCPLOAD(SmallVector<MCInst, 4>& MCInsts) {
+  MCOperand GPReg = MCOperand::createReg(MYRISCVX::GP);
+  MCOperand T9Reg = MCOperand::createReg(MYRISCVX::T9);
+  StringRef SymName("_gp_disp");
+  const MCSymbol *Sym = Ctx->getOrCreateSymbol(SymName);
+  const MYRISCVXMCExpr *MCSym;
+
+  MCSym = MYRISCVXMCExpr::create(Sym, MYRISCVXMCExpr::CEK_ABS_HI, *Ctx);
+  MCOperand SymHi = MCOperand::createExpr(MCSym);
+  MCSym = MYRISCVXMCExpr::create(Sym, MYRISCVXMCExpr::CEK_ABS_LO, *Ctx);
+  MCOperand SymLo = MCOperand::createExpr(MCSym);
+
+  MCInsts.resize(3);
+
+  CreateMCInst(MCInsts[0], MYRISCVX::LUI, GPReg, SymHi);
+  CreateMCInst(MCInsts[1], MYRISCVX::ORI, GPReg, GPReg, SymLo);
+  CreateMCInst(MCInsts[2], MYRISCVX::ADD, GPReg, GPReg, T9Reg);
 }
 
 

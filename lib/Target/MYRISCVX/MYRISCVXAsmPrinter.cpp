@@ -191,14 +191,32 @@ void MYRISCVXAsmPrinter::EmitFunctionEntryLabel() {
 /// the first basic block in the function.
 void MYRISCVXAsmPrinter::EmitFunctionBodyStart() {
   MCInstLowering.Initialize(&MF->getContext());
+
   emitFrameDirective();
+  bool EmitCPLoad = (MF->getTarget().getRelocationModel() == Reloc::PIC_) &&
+    MYRISCVXFI->globalBaseRegSet() &&
+    MYRISCVXFI->globalBaseRegFixed();
+  if (MYRISCVXNoCpload)
+    EmitCPLoad = false;
+
   if (OutStreamer->hasRawTextSupport()) {
     SmallString<128> Str;
     raw_svector_ostream OS(Str);
     printSavedRegsBitmask(OS);
     OutStreamer->EmitRawText(OS.str());
     OutStreamer->EmitRawText(StringRef("\t.set\tnoreorder"));
+    // Emit .cpload directive if needed.
+    if (EmitCPLoad)
+      OutStreamer->EmitRawText(StringRef("\t.cpload\t$t9"));
     OutStreamer->EmitRawText(StringRef("\t.set\tnomacro"));
+    // if (MYRISCVXFI->getEmitNOAT())
+    //   OutStreamer->EmitRawText(StringRef("\t.set\tnoat"));
+  } else if (EmitCPLoad) {
+    SmallVector<MCInst, 4> MCInsts;
+    MCInstLowering.LowerCPLOAD(MCInsts);
+    for (SmallVector<MCInst, 4>::iterator I = MCInsts.begin();
+       I != MCInsts.end(); ++I)
+      OutStreamer->EmitInstruction(*I, getSubtargetInfo());
   }
 }
 

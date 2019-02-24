@@ -60,6 +60,9 @@ getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   for (unsigned I = 0; I < array_lengthof(ReservedCPURegs); ++I)
     Reserved.set(ReservedCPURegs[I]);
+
+  Reserved.set(MYRISCVX::GP);
+
   return Reserved;
 }
 
