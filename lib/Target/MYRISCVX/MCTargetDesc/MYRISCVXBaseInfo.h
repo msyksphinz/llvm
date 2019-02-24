@@ -15,6 +15,8 @@
 #pragma once
 
 #include "MYRISCVXMCTargetDesc.h"
+#include "MYRISCVXFixupKinds.h"
+
 #include "llvm/MC/MCExpr.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"

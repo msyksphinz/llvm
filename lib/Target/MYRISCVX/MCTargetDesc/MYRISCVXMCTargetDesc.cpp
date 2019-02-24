@@ -108,15 +108,41 @@ static MCInstrAnalysis *createMYRISCVXMCInstrAnalysis(const MCInstrInfo *Info) {
   return new MYRISCVXMCInstrAnalysis(Info);
 }
 
+static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
+                                    std::unique_ptr<MCAsmBackend> &&MAB,
+                                    std::unique_ptr<MCObjectWriter> &&OW,
+                                    std::unique_ptr<MCCodeEmitter> &&Emitter,
+                                    bool RelaxAll) {
+  return createELFStreamer(Context, std::move(MAB), OS,
+                           std::move(Emitter), RelaxAll);
+}
+
+
+static MCTargetStreamer *createMYRISCVXAsmTargetStreamer(MCStreamer &S,
+                                                         formatted_raw_ostream &OS,
+                                                         MCInstPrinter *InstPrint,
+                                                         bool isVerboseAsm) {
+  return new MYRISCVXTargetAsmStreamer(S, OS);
+}
+
 //@2 {
 extern "C" void LLVMInitializeMYRISCVXTargetMC() {
   for (Target *T : {&TheMYRISCVX32Target, &TheMYRISCVX64Target}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn X(*T, createMYRISCVXMCAsmInfo);
+
     // Register the MC instruction info.
     TargetRegistry::RegisterMCInstrInfo(*T, createMYRISCVXMCInstrInfo);
+
     // Register the MC register info.
     TargetRegistry::RegisterMCRegInfo(*T, createMYRISCVXMCRegisterInfo);
+
+    // Register the elf streamer.
+    TargetRegistry::RegisterELFStreamer(*T, createMCStreamer);
+
+    // Register the asm target streamer.
+    TargetRegistry::RegisterAsmTargetStreamer(*T, createMYRISCVXAsmTargetStreamer);
+
     // Register the MC subtarget info.
     TargetRegistry::RegisterMCSubtargetInfo(*T,
                                             createMYRISCVXMCSubtargetInfo);
@@ -125,6 +151,17 @@ extern "C" void LLVMInitializeMYRISCVXTargetMC() {
     // Register the MCInstPrinter.
     TargetRegistry::RegisterMCInstPrinter(*T,
                                           createMYRISCVXMCInstPrinter);
+    // Register the MC Code Emitter
+    TargetRegistry::RegisterMCCodeEmitter(TheMYRISCVXTarget,
+                                          createMYRISCVXMCCodeEmitterEB);
+    TargetRegistry::RegisterMCCodeEmitter(TheMYRISCVXelTarget,
+                                          createMYRISCVXMCCodeEmitterEL);
+
+    // Register the asm backend.
+    TargetRegistry::RegisterMCAsmBackend(TheMYRISCVXTarget,
+                                         createMYRISCVXAsmBackendEB32);
+    TargetRegistry::RegisterMCAsmBackend(TheMYRISCVXelTarget,
+                                         createMYRISCVXAsmBackendEL32);
   }
 }
 //@2 }

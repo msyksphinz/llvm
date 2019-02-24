@@ -29,10 +29,28 @@ class StringRef;
 class Target;
 class Triple;
 
-class raw_ostream;
+class raw_pwrite_stream;
 
 extern Target TheMYRISCVX32Target;
 extern Target TheMYRISCVX64Target;
+
+MCCodeEmitter *createMYRISCVXMCCodeEmitterEB(const MCInstrInfo &MCII,
+                                             const MCRegisterInfo &MRI,
+                                             MCContext &Ctx);
+
+MCCodeEmitter *createMYRISCVXMCCodeEmitterEL(const MCInstrInfo &MCII,
+                                             const MCRegisterInfo &MRI,
+                                             MCContext &Ctx);
+
+MCAsmBackend *createMYRISCVXAsmBackendEB32(const Target &T,
+                                           const MCRegisterInfo &MRI,
+                                           const Triple &TT, StringRef CPU);
+
+MCAsmBackend *createMYRISCVXAsmBackendEL32(const Target &T,
+                                           const MCRegisterInfo &MRI,
+                                           const Triple &TT, StringRef CPU);
+
+MCObjectWriter *createMYRISCVXELFObjectWriter(const Triple &TT);
 
 } // End llvm namespace
 
