@@ -43,10 +43,10 @@ static void CreateMCInst(MCInst& Inst, unsigned Opc, const MCOperand& Opnd0,
 // Lower ".cpload $reg" to
 // "lui $gp, %hi(_gp_disp)"
 // "addiu $gp, $gp, %lo(_gp_disp)"
-// "addu $gp, $gp, $t9"
+// "addu $gp, $gp, $tp"
 void MYRISCVXMCInstLower::LowerCPLOAD(SmallVector<MCInst, 4>& MCInsts) {
   MCOperand GPReg = MCOperand::createReg(MYRISCVX::GP);
-  MCOperand T9Reg = MCOperand::createReg(MYRISCVX::T9);
+  MCOperand TPReg = MCOperand::createReg(MYRISCVX::TP);
   StringRef SymName("_gp_disp");
   const MCSymbol *Sym = Ctx->getOrCreateSymbol(SymName);
   const MYRISCVXMCExpr *MCSym;
@@ -60,7 +60,7 @@ void MYRISCVXMCInstLower::LowerCPLOAD(SmallVector<MCInst, 4>& MCInsts) {
 
   CreateMCInst(MCInsts[0], MYRISCVX::LUI, GPReg, SymHi);
   CreateMCInst(MCInsts[1], MYRISCVX::ORI, GPReg, GPReg, SymLo);
-  CreateMCInst(MCInsts[2], MYRISCVX::ADD, GPReg, GPReg, T9Reg);
+  CreateMCInst(MCInsts[2], MYRISCVX::ADD, GPReg, GPReg, TPReg);
 }
 
 
