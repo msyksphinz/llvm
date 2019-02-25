@@ -15,6 +15,7 @@
 #pragma once
 
 #include "MCTargetDesc/MYRISCVXABIInfo.h"
+#include "MCTargetDesc/MYRISCVXBaseInfo.h"
 #include "MYRISCVX.h"
 
 #include "llvm/CodeGen/CallingConvLower.h"
@@ -72,6 +73,85 @@ class MYRISCVXTargetLowering : public TargetLowering {
   const char *getTargetNodeName(unsigned Opcode) const override;
 
  protected:
+  SDValue getGlobalReg(SelectionDAG &DAG, EVT Ty) const;
+
+  // Lower Operand specifics
+  SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const;
+
+  // This method creates the following nodes, which are necessary for
+  // computing a local symbol's address:
+  //
+  // (add (load (wrapper $gp, %got(sym)), %lo(sym))
+  template<class NodeTy>
+  SDValue getAddrLocal(NodeTy *N, EVT Ty, SelectionDAG &DAG) const {
+    SDLoc DL(N);
+    unsigned GOTFlag = MYRISCVXII::MO_GOT;
+    SDValue GOT = DAG.getNode(MYRISCVXISD::Wrapper, DL, Ty, getGlobalReg(DAG, Ty),
+                              getTargetNode(N, Ty, DAG, GOTFlag));
+    SDValue Load =
+        DAG.getLoad(Ty, DL, DAG.getEntryNode(), GOT,
+                    MachinePointerInfo::getGOT(DAG.getMachineFunction()));
+    unsigned LoFlag = MYRISCVXII::MO_ABS_LO;
+    SDValue Lo = DAG.getNode(MYRISCVXISD::Lo, DL, Ty,
+                             getTargetNode(N, Ty, DAG, LoFlag));
+    return DAG.getNode(ISD::ADD, DL, Ty, Load, Lo);
+  }
+
+
+  //@getAddrGlobal {
+  // This method creates the following nodes, which are necessary for
+  // computing a global symbol's address:
+  //
+  // (load (wrapper $gp, %got(sym)))
+  template<class NodeTy>
+  SDValue getAddrGlobal(NodeTy *N, EVT Ty, SelectionDAG &DAG,
+                        unsigned Flag, SDValue Chain,
+                        const MachinePointerInfo &PtrInfo) const {
+    SDLoc DL(N);
+    SDValue Tgt = DAG.getNode(MYRISCVXISD::Wrapper, DL, Ty, getGlobalReg(DAG, Ty),
+                              getTargetNode(N, Ty, DAG, Flag));
+    return DAG.getLoad(Ty, DL, Chain, Tgt, PtrInfo);
+  }
+
+
+  //@getAddrGlobal }
+  //@getAddrGlobalLargeGOT {
+  // This method creates the following nodes, which are necessary for
+  // computing a global symbol's address in large-GOT mode:
+  //
+  // (load (wrapper (add %hi(sym), $gp), %lo(sym)))
+  template<class NodeTy>
+  SDValue getAddrGlobalLargeGOT(NodeTy *N, EVT Ty, SelectionDAG &DAG,
+                                unsigned HiFlag, unsigned LoFlag,
+                                SDValue Chain,
+                                const MachinePointerInfo &PtrInfo) const {
+    SDLoc DL(N);
+    SDValue Hi = DAG.getNode(MYRISCVXISD::Hi, DL, Ty,
+                             getTargetNode(N, Ty, DAG, HiFlag));
+    Hi = DAG.getNode(ISD::ADD, DL, Ty, Hi, getGlobalReg(DAG, Ty));
+    SDValue Wrapper = DAG.getNode(MYRISCVXISD::Wrapper, DL, Ty, Hi,
+                                  getTargetNode(N, Ty, DAG, LoFlag));
+    return DAG.getLoad(Ty, DL, Chain, Wrapper, PtrInfo);
+  }
+
+
+  //@getAddrGlobalLargeGOT }
+  //@getAddrNonPIC
+  // This method creates the following nodes, which are necessary for
+  // computing a symbol's address in non-PIC mode:
+  //
+  // (add %hi(sym), %lo(sym))
+  template<class NodeTy>
+  SDValue getAddrNonPIC(NodeTy *N, EVT Ty, SelectionDAG &DAG) const {
+    SDLoc DL(N);
+    SDValue Hi = getTargetNode(N, Ty, DAG, MYRISCVXII::MO_ABS_HI);
+    SDValue Lo = getTargetNode(N, Ty, DAG, MYRISCVXII::MO_ABS_LO);
+
+    return DAG.getNode(ISD::ADD, DL, Ty,
+                       DAG.getNode(MYRISCVXISD::Hi, DL, Ty, Hi),
+                       DAG.getNode(MYRISCVXISD::Lo, DL, Ty, Lo));
+  }
+
   /// ByValArgInfo - Byval argument information.
   struct ByValArgInfo {
     unsigned FirstIdx; // Index of the first register used.
@@ -137,7 +217,14 @@ class MYRISCVXTargetLowering : public TargetLowering {
   const MYRISCVXABIInfo &ABI;
 
  private:
-  // Lower Operand specifics
+  // Create a TargetGlobalAddress node.
+  SDValue getTargetNode(GlobalAddressSDNode *N, EVT Ty, SelectionDAG &DAG,
+                        unsigned Flag) const;
+
+  // Create a TargetExternalSymbol node.
+  SDValue getTargetNode(ExternalSymbolSDNode *N, EVT Ty, SelectionDAG &DAG,
+                        unsigned Flag) const;
+
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   //- must be exist even without function all
   SDValue

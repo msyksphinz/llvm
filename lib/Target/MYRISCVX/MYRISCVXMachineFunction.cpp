@@ -20,3 +20,18 @@ bool FixGlobalBaseReg;
 
 MYRISCVXFunctionInfo::~MYRISCVXFunctionInfo() {}
 void MYRISCVXFunctionInfo::anchor() { }
+
+
+bool MYRISCVXFunctionInfo::globalBaseRegFixed() const {
+  return FixGlobalBaseReg;
+}
+
+
+bool MYRISCVXFunctionInfo::globalBaseRegSet() const {
+  return GlobalBaseReg;
+}
+
+
+unsigned MYRISCVXFunctionInfo::getGlobalBaseReg() {
+  return GlobalBaseReg = MYRISCVX::GP;
+}

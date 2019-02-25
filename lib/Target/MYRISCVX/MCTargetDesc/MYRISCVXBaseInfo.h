@@ -43,9 +43,11 @@ namespace llvm {
       /// address.
       MO_ABS_HI,
       MO_ABS_LO,
+      MO_GOT16,
+      MO_GOT,
       /// MO_GOT_HI16/LO16 - Relocations used for large GOTs.
       MO_GOT_HI16,
-      MO_GOT_LO16
+      MO_GOT_LO16,
     }; // enum TOF {
 
     enum {

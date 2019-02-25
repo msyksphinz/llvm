@@ -65,5 +65,7 @@ namespace llvm {
     }
 
     virtual void processFunctionAfterISel(MachineFunction &MF) = 0;
+
+    SDNode *getGlobalBaseReg();
   };
 }

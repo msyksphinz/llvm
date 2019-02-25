@@ -28,11 +28,16 @@ namespace llvm {
     typedef MachineOperand::MachineOperandType MachineOperandType;
     MCContext *Ctx;
     MYRISCVXAsmPrinter &AsmPrinter;
+ private:
+    MCOperand LowerSymbolOperand(const MachineOperand &MO,
+                                 MachineOperandType MOTy, unsigned Offset) const;
 
  public:
     MYRISCVXMCInstLower(MYRISCVXAsmPrinter &asmprinter);
     void Initialize(MCContext* C);
+
     void Lower(const MachineInstr *MI, MCInst &OutMI) const;
+    void LowerCPLOAD(SmallVector<MCInst, 4>& MCInsts);
     MCOperand LowerOperand(const MachineOperand& MO, unsigned offset = 0) const;
   };
 

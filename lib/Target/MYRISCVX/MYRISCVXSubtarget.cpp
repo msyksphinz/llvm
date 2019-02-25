@@ -30,6 +30,20 @@ using namespace llvm;
 
 extern bool FixGlobalBaseReg;
 
+static cl::opt<bool> UseSmallSectionOpt
+("myriscvx-use-small-section", cl::Hidden, cl::init(false),
+ cl::desc("Use small section. Only work when -relocation-model="
+          "static. pic always not use small section."));
+static cl::opt<bool> ReserveGPOpt
+("myriscvx-reserve-gp", cl::Hidden, cl::init(false),
+ cl::desc("Never allocate $gp to variable"));
+static cl::opt<bool> NoCploadOpt
+("myriscvx-no-cpload", cl::Hidden, cl::init(false),
+ cl::desc("No issue .cpload"));
+bool MYRISCVXReserveGP;
+bool MYRISCVXNoCpload;
+
+
 void MYRISCVXSubtarget::anchor() { }
 //@1 {
 MYRISCVXSubtarget::MYRISCVXSubtarget(const Triple &TT, const std::string &CPU,
@@ -43,10 +57,17 @@ MYRISCVXSubtarget::MYRISCVXSubtarget(const Triple &TT, const std::string &CPU,
         MYRISCVXInstrInfo::create(initializeSubtargetDependencies(CPU, FS, TM))),
     FrameLowering(MYRISCVXFrameLowering::create(*this)),
     TLInfo(MYRISCVXTargetLowering::create(TM, *this)) {
+  // Set UseSmallSection.
+  UseSmallSection = UseSmallSectionOpt;
+  MYRISCVXReserveGP = ReserveGPOpt;
+  MYRISCVXNoCpload = NoCploadOpt;
 }
+
+
 bool MYRISCVXSubtarget::isPositionIndependent() const {
   return TM.isPositionIndependent();
 }
+
 MYRISCVXSubtarget &
 MYRISCVXSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
                                                    const TargetMachine &TM) {
