@@ -76,7 +76,7 @@ class MYRISCVXTargetLowering : public TargetLowering {
   SDValue getGlobalReg(SelectionDAG &DAG, EVT Ty) const;
 
   // Lower Operand specifics
-  SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
   // This method creates the following nodes, which are necessary for
   // computing a local symbol's address:
