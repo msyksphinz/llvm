@@ -136,14 +136,16 @@ bool MYRISCVXAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
 
 // MCAsmBackend
 MCAsmBackend *llvm::createMYRISCVXAsmBackendEL32(const Target &T,
+                                                 const MCSubtargetInfo &STI,
                                                  const MCRegisterInfo &MRI,
-                                                 const Triple &TT, StringRef CPU) {
-  return new MYRISCVXAsmBackend(T, TT.getOS(), /*IsLittle*/true);
+                                                 const MCTargetOptions &Options) {
+  return new MYRISCVXAsmBackend(T, MRI, STI.getTargetTriple(), STI.getCPU());
 }
 
 
 MCAsmBackend *llvm::createMYRISCVXAsmBackendEB32(const Target &T,
+                                                 const MCSubtargetInfo &STI,
                                                  const MCRegisterInfo &MRI,
-                                                 const Triple &TT, StringRef CPU) {
+                                                 const MCTargetOptions &Options) {
   return new MYRISCVXAsmBackend(T, MRI, STI.getTargetTriple(), STI.getCPU());
 }

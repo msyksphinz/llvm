@@ -15,6 +15,7 @@
 #include "MYRISCVXMCTargetDesc.h"
 #include "MYRISCVXTargetObjectFile.h"
 #include "MYRISCVXTargetStreamer.h"
+
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -31,5 +32,5 @@ MYRISCVXTargetStreamer::MYRISCVXTargetStreamer(MCStreamer &S)
 }
 
 MYRISCVXTargetAsmStreamer::MYRISCVXTargetAsmStreamer(MCStreamer &S,
-                                             formatted_raw_ostream &OS)
+                                                     formatted_raw_ostream &OS)
     : MYRISCVXTargetStreamer(S), OS(OS) {}

@@ -16,19 +16,21 @@
 
 #include "llvm/Support/DataTypes.h"
 
+#include <memory>
+
 namespace llvm {
 class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
-class MCObjectWriter;
+class MCObjectTargetWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
+class MCTargetOptions;
 class StringRef;
-
 class Target;
 class Triple;
-
+class raw_ostream;
 class raw_pwrite_stream;
 
 extern Target TheMYRISCVX32Target;
@@ -43,14 +45,17 @@ MCCodeEmitter *createMYRISCVXMCCodeEmitterEL(const MCInstrInfo &MCII,
                                              MCContext &Ctx);
 
 MCAsmBackend *createMYRISCVXAsmBackendEB32(const Target &T,
+                                           const MCSubtargetInfo &STI,
                                            const MCRegisterInfo &MRI,
-                                           const Triple &TT, StringRef CPU);
+                                           const MCTargetOptions &Options);
 
 MCAsmBackend *createMYRISCVXAsmBackendEL32(const Target &T,
+                                           const MCSubtargetInfo &STI,
                                            const MCRegisterInfo &MRI,
-                                           const Triple &TT, StringRef CPU);
+                                           const MCTargetOptions &Options);
 
-MCObjectWriter *createMYRISCVXELFObjectWriter(const Triple &TT);
+std::unique_ptr<MCObjectTargetWriter>
+createMYRISCVXELFObjectWriter(const Triple &TT);
 
 } // End llvm namespace
 

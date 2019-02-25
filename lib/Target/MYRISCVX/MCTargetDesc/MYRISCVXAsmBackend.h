@@ -30,7 +30,9 @@ namespace llvm {
     Triple TheTriple;
 
    public:
-    MYRISCVXAsmBackend(const Target &T, const MCRegisterInfo &MRI, const Triple &TT,
+    MYRISCVXAsmBackend(const Target &T,
+                       const MCRegisterInfo &MRI,
+                       const Triple &TT,
                        StringRef CPU)
         : MCAsmBackend(TT.isLittleEndian() ? support::little : support::big),
           TheTriple(TT) {}
@@ -43,7 +45,7 @@ namespace llvm {
                     uint64_t Value, bool IsResolved,
                     const MCSubtargetInfo *STI) const override;
 
-    Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
+    // Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
     const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
     unsigned getNumFixupKinds() const override {

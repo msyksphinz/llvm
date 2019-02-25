@@ -34,16 +34,20 @@
 #undef GET_INSTRMAP_INFO
 
 namespace llvm {
+
 MCCodeEmitter *llvm::createMYRISCVXMCCodeEmitterEB(const MCInstrInfo &MCII,
                                                    const MCRegisterInfo &MRI,
                                                    MCContext &Ctx) {
   return new MYRISCVXMCCodeEmitter(MCII, Ctx, false);
 }
+
+
 MCCodeEmitter *llvm::createMYRISCVXMCCodeEmitterEL(const MCInstrInfo &MCII,
                                                    const MCRegisterInfo &MRI,
                                                    MCContext &Ctx) {
   return new MYRISCVXMCCodeEmitter(MCII, Ctx, true);
 }
+
 } // End of namespace llvm
 
 
@@ -69,12 +73,7 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
                   const MCSubtargetInfo &STI) const
 {
   uint32_t Binary = getBinaryCodeForInstr(MI, Fixups, STI);
-  // Check for unimplemented opcodes.
-  // Unfortunately in MYRISCVX both NOT and SLL will come in with Binary == 0
-  // so we have to special check for them.
-  unsigned Opcode = MI.getOpcode();
-  if ((Opcode != MYRISCVX::NOP) && (Opcode != MYRISCVX::SHL) && !Binary)
-    llvm_unreachable("unimplemented opcode in encodeInstruction()");
+
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   uint64_t TSFlags = Desc.TSFlags;
   // Pseudo instructions don't get encoded and shouldn't be here

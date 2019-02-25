@@ -11,6 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 #include "MYRISCVXMCTargetDesc.h"
+#include "MYRISCVXTargetStreamer.h"
+#include "InstPrinter/MYRISCVXInstPrinter.h"
+#include "MYRISCVXMCAsmInfo.h"
+
 #include "llvm/MC/MachineLocation.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -23,9 +27,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/TargetRegistry.h"
-
-#include "InstPrinter/MYRISCVXInstPrinter.h"
-#include "MYRISCVXMCAsmInfo.h"
 
 using namespace llvm;
 #define GET_INSTRINFO_MC_DESC
@@ -113,7 +114,7 @@ static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
                                     std::unique_ptr<MCObjectWriter> &&OW,
                                     std::unique_ptr<MCCodeEmitter> &&Emitter,
                                     bool RelaxAll) {
-  return createELFStreamer(Context, std::move(MAB), OS,
+  return createELFStreamer(Context, std::move(MAB), std::move(OW),
                            std::move(Emitter), RelaxAll);
 }
 
@@ -152,15 +153,11 @@ extern "C" void LLVMInitializeMYRISCVXTargetMC() {
     TargetRegistry::RegisterMCInstPrinter(*T,
                                           createMYRISCVXMCInstPrinter);
     // Register the MC Code Emitter
-    TargetRegistry::RegisterMCCodeEmitter(TheMYRISCVXTarget,
-                                          createMYRISCVXMCCodeEmitterEB);
-    TargetRegistry::RegisterMCCodeEmitter(TheMYRISCVXelTarget,
+    TargetRegistry::RegisterMCCodeEmitter(*T,
                                           createMYRISCVXMCCodeEmitterEL);
 
     // Register the asm backend.
-    TargetRegistry::RegisterMCAsmBackend(TheMYRISCVXTarget,
-                                         createMYRISCVXAsmBackendEB32);
-    TargetRegistry::RegisterMCAsmBackend(TheMYRISCVXelTarget,
+    TargetRegistry::RegisterMCAsmBackend(*T,
                                          createMYRISCVXAsmBackendEL32);
   }
 }

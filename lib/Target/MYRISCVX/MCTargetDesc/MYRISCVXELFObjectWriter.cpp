@@ -113,7 +113,7 @@ MYRISCVXELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
 
 
 std::unique_ptr<MCObjectTargetWriter>
-createMYRISCVXELFObjectWriter (const Triple &TT) {
+llvm::createMYRISCVXELFObjectWriter (const Triple &TT) {
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
   return llvm::make_unique<MYRISCVXELFObjectWriter>(OSABI);
 }

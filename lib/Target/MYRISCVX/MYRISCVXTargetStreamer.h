@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_CPU0_CPU0TARGETSTREAMER_H
-#define LLVM_LIB_TARGET_CPU0_CPU0TARGETSTREAMER_H
+#ifndef LLVM_LIB_TARGET_MYRISCVX_MYRISCVXTARGETSTREAMER_H
+#define LLVM_LIB_TARGET_MYRISCVX_MYRISCVXTARGETSTREAMER_H
 
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -16,17 +16,17 @@
 
 namespace llvm {
 
-class Cpu0TargetStreamer : public MCTargetStreamer {
-public:
-  Cpu0TargetStreamer(MCStreamer &S);
+class MYRISCVXTargetStreamer : public MCTargetStreamer {
+ public:
+  MYRISCVXTargetStreamer(MCStreamer &S);
 };
 
 // This part is for ascii assembly output
-class Cpu0TargetAsmStreamer : public Cpu0TargetStreamer {
+class MYRISCVXTargetAsmStreamer : public MYRISCVXTargetStreamer {
   formatted_raw_ostream &OS;
 
-public:
-  Cpu0TargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);
+ public:
+  MYRISCVXTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);
 };
 
 }
