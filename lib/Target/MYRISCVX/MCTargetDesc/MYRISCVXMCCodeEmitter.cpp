@@ -35,16 +35,16 @@
 
 namespace llvm {
 
-MCCodeEmitter *llvm::createMYRISCVXMCCodeEmitterEB(const MCInstrInfo &MCII,
-                                                   const MCRegisterInfo &MRI,
-                                                   MCContext &Ctx) {
+MCCodeEmitter *createMYRISCVXMCCodeEmitterEB(const MCInstrInfo &MCII,
+                                             const MCRegisterInfo &MRI,
+                                             MCContext &Ctx) {
   return new MYRISCVXMCCodeEmitter(MCII, Ctx, false);
 }
 
 
-MCCodeEmitter *llvm::createMYRISCVXMCCodeEmitterEL(const MCInstrInfo &MCII,
-                                                   const MCRegisterInfo &MRI,
-                                                   MCContext &Ctx) {
+MCCodeEmitter *createMYRISCVXMCCodeEmitterEL(const MCInstrInfo &MCII,
+                                             const MCRegisterInfo &MRI,
+                                             MCContext &Ctx) {
   return new MYRISCVXMCCodeEmitter(MCII, Ctx, true);
 }
 

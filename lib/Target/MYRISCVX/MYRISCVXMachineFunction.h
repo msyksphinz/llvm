@@ -32,7 +32,8 @@ namespace llvm {
        MaxCallFrameSize(0),
        GlobalBaseReg(0),
        SRetReturnReg(0), CallsEhReturn(false), CallsEhDwarf(false)
-    {}
+    {
+    }
     ~MYRISCVXFunctionInfo();
     int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
     void setVarArgsFrameIndex(int Index) { VarArgsFrameIndex = Index; }

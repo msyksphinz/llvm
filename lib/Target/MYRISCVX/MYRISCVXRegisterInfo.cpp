@@ -61,6 +61,11 @@ getReservedRegs(const MachineFunction &MF) const {
   for (unsigned I = 0; I < array_lengthof(ReservedCPURegs); ++I)
     Reserved.set(ReservedCPURegs[I]);
 
+#ifdef ENABLE_GPRESTORE //1
+  const MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
+  // Reserve GP if globalBaseRegFixed()
+  if (MYRISCVXFI->globalBaseRegFixed())
+#endif
   Reserved.set(MYRISCVX::GP);
 
   return Reserved;

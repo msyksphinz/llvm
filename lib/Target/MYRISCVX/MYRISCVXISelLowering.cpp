@@ -189,19 +189,20 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
 }
 
 
-SDValue MYRISCVXTargetLowering::
-lowerGlobalAddress(SDValue Op,
-                   SelectionDAG &DAG) const {
+SDValue MYRISCVXTargetLowering::lowerGlobalAddress(SDValue Op,
+                                                   SelectionDAG &DAG) const {
   //@lowerGlobalAddress }
   SDLoc DL(Op);
   const MYRISCVXTargetObjectFile *TLOF =
       static_cast<const MYRISCVXTargetObjectFile *>(
           getTargetMachine().getObjFileLowering());
   //@lga 1 {
+
   EVT Ty = Op.getValueType();
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
   const GlobalValue *GV = N->getGlobal();
   //@lga 1 }
+
   if (!isPositionIndependent()) {
     //@ %gp_rel relocation
     const GlobalObject *GO = GV->getBaseObject();
@@ -216,8 +217,10 @@ lowerGlobalAddress(SDValue Op,
     //@ %hi/%lo relocation
     return getAddrNonPIC(N, Ty, DAG);
   }
+
   if (GV->hasInternalLinkage() || (GV->hasLocalLinkage() && !isa<Function>(GV)))
     return getAddrLocal(N, Ty, DAG);
+
   //@large section
   const GlobalObject *GO = GV->getBaseObject();
   if (!TLOF->IsGlobalInSmallSection(GO, getTargetMachine()))
