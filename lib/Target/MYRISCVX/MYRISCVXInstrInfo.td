@@ -126,8 +126,15 @@ class AlignedStore<PatFrag Node> :
   }]>;
 
 // Load/Store PatFrags.
-def load_a  : AlignedLoad<load>;
-def store_a : AlignedStore<store>;
+def load_a        : AlignedLoad<load>;
+def sextloadi8_a  : AlignedLoad<sextloadi8>;
+def zextloadi8_a  : AlignedLoad<zextloadi8>;
+def sextloadi16_a : AlignedLoad<sextloadi16>;
+def zextloadi16_a : AlignedLoad<zextloadi16>;
+def extloadi16_a  : AlignedLoad<extloadi16>;
+
+def store_a         : AlignedStore<store>;
+def truncstorei16_a : AlignedStore<truncstorei16>;
 
 //===----------------------------------------------------------------------===//
 // Instructions specific format
@@ -283,8 +290,15 @@ let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
 
 /// Load and Store Instructions
 /// aligned
-defm LW : LoadM32 <0b0000011, 0b010, "lw", load_a >;
-defm SW : StoreM32<0b0100011, 0b010, "sw", store_a>;
+defm LB  : LoadM32<0b0000011, 0b000, "lb" , sextloadi8_a  >;
+defm LH  : LoadM32<0b0000011, 0b001, "lh" , sextloadi16_a >;
+defm LW  : LoadM32<0b0000011, 0b010, "lw" , load_a        >;
+defm LBU : LoadM32<0b0000011, 0b100, "lbu", zextloadi8_a  >;
+defm LHU : LoadM32<0b0000011, 0b101, "lhu", zextloadi16_a >;
+
+defm SB  : StoreM32<0b0100011, 0b000, "sb", truncstorei8    >;
+defm SH  : StoreM32<0b0100011, 0b001, "sh", truncstorei16_a >;
+defm SW  : StoreM32<0b0100011, 0b010, "sw", store_a         >;
 
 /// Arithmetic Instructions (ALU Immediate)
 // IR "add" defined in include/llvm/Target/TargetSelectionDAG.td, line 315 (def add).
