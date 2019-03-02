@@ -134,6 +134,7 @@ def zextloadi16_a : AlignedLoad<zextloadi16>;
 def extloadi16_a  : AlignedLoad<extloadi16>;
 
 def store_a         : AlignedStore<store>;
+def truncstorei8_a  : AlignedStore<truncstorei8>;
 def truncstorei16_a : AlignedStore<truncstorei16>;
 
 //===----------------------------------------------------------------------===//
@@ -290,15 +291,15 @@ let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
 
 /// Load and Store Instructions
 /// aligned
-defm LB  : LoadM32<0b0000011, 0b000, "lb" , sextloadi8_a  >;
-defm LH  : LoadM32<0b0000011, 0b001, "lh" , sextloadi16_a >;
-defm LW  : LoadM32<0b0000011, 0b010, "lw" , load_a        >;
-defm LBU : LoadM32<0b0000011, 0b100, "lbu", zextloadi8_a  >;
-defm LHU : LoadM32<0b0000011, 0b101, "lhu", zextloadi16_a >;
+defm LB  : LoadM32<0b0000011, 0b000, "lb" , sextloadi8_a >;
+defm LH  : LoadM32<0b0000011, 0b001, "lh" , sextloadi16_a>;
+defm LW  : LoadM32<0b0000011, 0b010, "lw" , load_a       >;
+defm LBU : LoadM32<0b0000011, 0b100, "lbu", zextloadi8_a >;
+defm LHU : LoadM32<0b0000011, 0b101, "lhu", zextloadi16_a>;
 
-defm SB  : StoreM32<0b0100011, 0b000, "sb", truncstorei8    >;
-defm SH  : StoreM32<0b0100011, 0b001, "sh", truncstorei16_a >;
-defm SW  : StoreM32<0b0100011, 0b010, "sw", store_a         >;
+defm SB  : StoreM32<0b0100011, 0b000, "sb", truncstorei8_a >;
+defm SH  : StoreM32<0b0100011, 0b001, "sh", truncstorei16_a>;
+defm SW  : StoreM32<0b0100011, 0b010, "sw", store_a        >;
 
 /// Arithmetic Instructions (ALU Immediate)
 // IR "add" defined in include/llvm/Target/TargetSelectionDAG.td, line 315 (def add).
@@ -361,7 +362,7 @@ def REMU  : ArithLogicR<0b0110011, 0b111, "remu",   urem,  GPR>;
 // FrameIndexes are legalized when they are operands from load/store
 // instructions. The same not happens for stack address copies, so an
 // add op with mem ComplexPattern is used and the stack address copy
-// can be matched. It's similar to Sparc LEA_ADDRi
+// can be matched. It's similar to Sparc LEA_ADDRI
 def LEA_ADDI : EffectiveAddress<"addi\t$ra, $addr", GPR, mem_ea> {
   let isCodeGenOnly = 1;
 }
@@ -413,3 +414,9 @@ class WrapperPat<SDNode node, Instruction ORiOp, RegisterClass RC>:
           (ORiOp RC:$gp, node:$in)>;
 
 def : WrapperPat<tglobaladdr, ORI, GPR>;
+
+def : Pat<(i32 (extloadi1  addr:$src)), (LBU addr:$src)>;
+def : Pat<(i32 (extloadi8  addr:$src)), (LBU addr:$src)>;
+def : Pat<(i32 (extloadi16 addr:$src)), (LHU addr:$src)>;
+// peepholes
+def : Pat<(store (i32 0), addr:$dst), (SW ZERO, addr:$dst)>;
