@@ -58,18 +58,31 @@ void MYRISCVXSEDAGToDAGISel::selectAddESubE(unsigned MOp, SDValue InFlag,
 
   SDNode *Carry;
 
-  if (Subtarget->hasMYRISCVX32II()) {
-    Carry = CurDAG->getMachineNode(MYRISCVX::SLTu, DL, VT, Ops);
-  } else {
-    SDNode *StatusWord = CurDAG->getMachineNode(MYRISCVX::CMP, DL, VT, Ops);
-    SDValue Constant1 = CurDAG->getTargetConstant(1, DL, VT);
-    Carry = CurDAG->getMachineNode(MYRISCVX::ANDi, DL, VT,
-                                   SDValue(StatusWord,0), Constant1);
-  }
+  Carry = CurDAG->getMachineNode(MYRISCVX::SLTU, DL, VT, Ops);
 
-  SDNode *AddCarry = CurDAG->getMachineNode(MYRISCVX::ADDu, DL, VT,
+  SDNode *AddCarry = CurDAG->getMachineNode(MYRISCVX::ADD, DL, VT,
                                             SDValue(Carry,0), RHS);
   CurDAG->SelectNodeTo(Node, MOp, VT, MVT::Glue, LHS, SDValue(AddCarry,0));
+}
+
+
+/// Select multiply instructions.
+std::pair<SDNode *, SDNode *>
+MYRISCVXSEDAGToDAGISel::selectMULT(SDNode *N, unsigned Opc, const SDLoc &DL, EVT Ty,
+                                   bool HasLo, bool HasHi) {
+  SDNode *Lo = 0, *Hi = 0;
+  SDNode *Mul = CurDAG->getMachineNode(Opc, DL, MVT::Glue, N->getOperand(0),
+                                       N->getOperand(1));
+  SDValue InFlag = SDValue(Mul, 0);
+  if (HasLo) {
+    Lo = CurDAG->getMachineNode(MYRISCVX::MFLO, DL,
+                                Ty, MVT::Glue, InFlag);
+    InFlag = SDValue(Lo, 1);
+  }
+  if (HasHi)
+    Hi = CurDAG->getMachineNode(MYRISCVX::MFHI, DL,
+                                Ty, InFlag);
+  return std::make_pair(Lo, Hi);
 }
 
 
@@ -91,18 +104,18 @@ bool MYRISCVXSEDAGToDAGISel::trySelect(SDNode *Node) {
     default: break;
     case ISD::SUBE: {
       SDValue InFlag = Node->getOperand(2);
-      selectAddESubE(MYRISCVX::SUBu, InFlag, InFlag.getOperand(0), DL, Node);
+      selectAddESubE(MYRISCVX::SUB, InFlag, InFlag.getOperand(0), DL, Node);
       return true;
     }
     case ISD::ADDE: {
       SDValue InFlag = Node->getOperand(2);
-      selectAddESubE(MYRISCVX::ADDu, InFlag, InFlag.getValue(0), DL, Node);
+      selectAddESubE(MYRISCVX::ADD, InFlag, InFlag.getValue(0), DL, Node);
       return true;
     }
       /// Mul with two results
     case ISD::SMUL_LOHI:
     case ISD::UMUL_LOHI: {
-      MultOpc = (Opcode == ISD::UMUL_LOHI ? MYRISCVX::MULTu : MYRISCVX::MULT);
+      MultOpc = (Opcode == ISD::UMUL_LOHI ? MYRISCVX::MUL : MYRISCVX::MUL);
       std::pair<SDNode*, SDNode*> LoHi =
           selectMULT(Node, MultOpc, DL, NodeTy, true, true);
       if (!SDValue(Node, 0).use_empty())
