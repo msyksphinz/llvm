@@ -72,6 +72,8 @@ class MYRISCVXTargetLowering : public TargetLowering {
   // DAG node.
   const char *getTargetNodeName(unsigned Opcode) const override;
 
+  bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
+
  protected:
   SDValue getGlobalReg(SelectionDAG &DAG, EVT Ty) const;
 
