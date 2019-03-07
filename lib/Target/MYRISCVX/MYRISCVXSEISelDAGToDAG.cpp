@@ -70,19 +70,16 @@ void MYRISCVXSEDAGToDAGISel::selectAddESubE(unsigned MOp, SDValue InFlag,
 std::pair<SDNode *, SDNode *>
 MYRISCVXSEDAGToDAGISel::selectMULT(SDNode *N, unsigned Opc, const SDLoc &DL, EVT Ty,
                                    bool HasLo, bool HasHi) {
-  SDNode *Lo = 0, *Hi = 0;
-  SDNode *Mul = CurDAG->getMachineNode(Opc, DL, MVT::Glue, N->getOperand(0),
-                                       N->getOperand(1));
-  SDValue InFlag = SDValue(Mul, 0);
-  if (HasLo) {
-    Lo = CurDAG->getMachineNode(MYRISCVX::MFLO, DL,
-                                Ty, MVT::Glue, InFlag);
-    InFlag = SDValue(Lo, 1);
+  SDNode *MulHi = 0;
+  SDNode *MulLo = CurDAG->getMachineNode(Opc, DL, MVT::Glue,
+                                         N->getOperand(0),
+                                         N->getOperand(1));
+  if (HasHi) {
+    MulHi = CurDAG->getMachineNode(MYRISCVX::MULH, DL, Ty, MVT::Glue,
+                                   N->getOperand(0),
+                                   N->getOperand(1));
   }
-  if (HasHi)
-    Hi = CurDAG->getMachineNode(MYRISCVX::MFHI, DL,
-                                Ty, InFlag);
-  return std::make_pair(Lo, Hi);
+  return std::make_pair(MulHi, MulLo);
 }
 
 

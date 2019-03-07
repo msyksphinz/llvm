@@ -328,3 +328,9 @@ SDValue MYRISCVXTargetLowering::getTargetNode(ExternalSymbolSDNode *N, EVT Ty,
                                               unsigned Flag) const {
   return DAG.getTargetExternalSymbol(N->getSymbol(), Ty, Flag);
 }
+
+bool
+MYRISCVXTargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
+  // The MYRISCVX target isn't yet aware of offsets.
+  return false;
+}
