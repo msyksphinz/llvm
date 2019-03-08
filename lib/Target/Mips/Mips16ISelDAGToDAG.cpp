@@ -195,6 +195,10 @@ bool Mips16DAGToDAGISel::trySelect(SDNode *Node) {
   /// Mul with two results
   case ISD::SMUL_LOHI:
   case ISD::UMUL_LOHI: {
+
+    dbgs() << "Before SMUL Node : ";
+    Node->dump(CurDAG);
+
     MultOpc = (Opcode == ISD::UMUL_LOHI ? Mips::MultuRxRy16 : Mips::MultRxRy16);
     std::pair<SDNode *, SDNode *> LoHi =
         selectMULT(Node, MultOpc, DL, NodeTy, true, true);
@@ -205,6 +209,10 @@ bool Mips16DAGToDAGISel::trySelect(SDNode *Node) {
       ReplaceUses(SDValue(Node, 1), SDValue(LoHi.second, 0));
 
     CurDAG->RemoveDeadNode(Node);
+
+    dbgs() << "Final SMUL Node : ";
+    Node->dump(CurDAG);
+
     return true;
   }
 

@@ -34,8 +34,7 @@ namespace llvm {
                                     const TargetMachine &TM) const;
 
     MCSection *SelectSectionForGlobal(const GlobalObject *GV, SectionKind Kind,
-                                      Mangler &Mang,
-                                      const TargetMachine &TM) const;
+                                      const TargetMachine &TM) const override;
   };
 } // end namespace llvm
 

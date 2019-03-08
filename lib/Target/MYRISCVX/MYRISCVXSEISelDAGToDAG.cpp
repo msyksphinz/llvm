@@ -33,6 +33,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
+#include <iostream>
+
 using namespace llvm;
 #define DEBUG_TYPE "MYRISCVX-isel"
 
@@ -56,10 +58,7 @@ void MYRISCVXSEDAGToDAGISel::selectAddESubE(unsigned MOp, SDValue InFlag,
   SDValue LHS = Node->getOperand(0), RHS = Node->getOperand(1);
   EVT VT = LHS.getValueType();
 
-  SDNode *Carry;
-
-  Carry = CurDAG->getMachineNode(MYRISCVX::SLTU, DL, VT, Ops);
-
+  SDNode *Carry = CurDAG->getMachineNode(MYRISCVX::SLTU, DL, VT, Ops);
   SDNode *AddCarry = CurDAG->getMachineNode(MYRISCVX::ADD, DL, VT,
                                             SDValue(Carry,0), RHS);
   CurDAG->SelectNodeTo(Node, MOp, VT, MVT::Glue, LHS, SDValue(AddCarry,0));
@@ -70,15 +69,14 @@ void MYRISCVXSEDAGToDAGISel::selectAddESubE(unsigned MOp, SDValue InFlag,
 std::pair<SDNode *, SDNode *>
 MYRISCVXSEDAGToDAGISel::selectMULT(SDNode *N, unsigned Opc, const SDLoc &DL, EVT Ty,
                                    bool HasLo, bool HasHi) {
-  SDNode *MulHi = 0;
+  SDNode *MulHi = nullptr;
   SDNode *MulLo = CurDAG->getMachineNode(Opc, DL, MVT::Glue,
                                          N->getOperand(0),
                                          N->getOperand(1));
-  if (HasHi) {
-    MulHi = CurDAG->getMachineNode(MYRISCVX::MULH, DL, Ty, MVT::Glue,
-                                   N->getOperand(0),
-                                   N->getOperand(1));
-  }
+  MulHi = CurDAG->getMachineNode(MYRISCVX::MULH, DL, MVT::Glue,
+                                 N->getOperand(0),
+                                 N->getOperand(1));
+
   return std::make_pair(MulHi, MulLo);
 }
 
@@ -96,34 +94,42 @@ bool MYRISCVXSEDAGToDAGISel::trySelect(SDNode *Node) {
   // tablegen selection should be handled here.
 
   EVT NodeTy = Node->getValueType(0);
-  unsigned MultOpc;
   switch(Opcode) {
     default: break;
+
     case ISD::SUBE: {
       SDValue InFlag = Node->getOperand(2);
       selectAddESubE(MYRISCVX::SUB, InFlag, InFlag.getOperand(0), DL, Node);
       return true;
     }
+
     case ISD::ADDE: {
       SDValue InFlag = Node->getOperand(2);
       selectAddESubE(MYRISCVX::ADD, InFlag, InFlag.getValue(0), DL, Node);
       return true;
     }
+
       /// Mul with two results
-    case ISD::SMUL_LOHI:
-    case ISD::UMUL_LOHI: {
-      MultOpc = (Opcode == ISD::UMUL_LOHI ? MYRISCVX::MUL : MYRISCVX::MUL);
-      std::pair<SDNode*, SDNode*> LoHi =
-          selectMULT(Node, MultOpc, DL, NodeTy, true, true);
-      if (!SDValue(Node, 0).use_empty())
-        ReplaceUses(SDValue(Node, 0), SDValue(LoHi.first, 0));
-      if (!SDValue(Node, 1).use_empty())
-        ReplaceUses(SDValue(Node, 1), SDValue(LoHi.second, 0));
-      CurDAG->RemoveDeadNode(Node);
-      return true;
-    }
+    // case ISD::SMUL_LOHI:
+    // case ISD::UMUL_LOHI: {
+    //
+    //   unsigned MultOpc = (Opcode == ISD::UMUL_LOHI ? MYRISCVX::MUL : MYRISCVX::MUL);
+    //
+    //   std::pair<SDNode*, SDNode*> LoHi =
+    //       selectMULT(Node, MultOpc, DL, NodeTy, true, true);
+    //
+    //   if (!SDValue(Node, 0).use_empty())
+    //     ReplaceUses(SDValue(Node, 0), SDValue(LoHi.first, 0));
+    //
+    //   if (!SDValue(Node, 1).use_empty())
+    //     ReplaceUses(SDValue(Node, 1), SDValue(LoHi.second, 0));
+    //
+    //   CurDAG->RemoveDeadNode(Node);
+    //
+    //   return true;
+    // }
   }
-  return true;
+  return false;
 }
 
 

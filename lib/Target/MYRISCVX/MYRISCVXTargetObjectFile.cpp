@@ -87,8 +87,7 @@ IsGlobalInSmallSectionImpl(const GlobalObject *GV,
 
 
 MCSection *
-MYRISCVXTargetObjectFile::SelectSectionForGlobal(const GlobalObject *GV,
-                                                 SectionKind Kind, Mangler &Mang,
+MYRISCVXTargetObjectFile::SelectSectionForGlobal(const GlobalObject *GV, SectionKind Kind,
                                                  const TargetMachine &TM) const {
   // TODO: Could also support "weak" symbols as well with ".gnu.linkonce.s.*"
   // sections?

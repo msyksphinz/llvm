@@ -65,7 +65,7 @@ SelectAddr(SDNode *Parent, SDValue Addr, SDValue &Base, SDValue &Offset) {
   if (Parent && (LS = dyn_cast<LSBaseSDNode>(Parent))) {
     EVT VT = LS->getMemoryVT();
     if (VT.getSizeInBits() / 8 > LS->getAlignment()) {
-      assert("Unaligned loads/stores not supported for this type.");
+      assert(0 && "Unaligned loads/stores not supported for this type.");
       if (VT == MVT::f32)
         return false;
     }
@@ -105,7 +105,10 @@ void MYRISCVXDAGToDAGISel::Select(SDNode *Node) {
   //@Select }
   unsigned Opcode = Node->getOpcode();
   // Dump information about the Node being selected
-  dbgs() << "Selecting: "; Node->dump(CurDAG); dbgs() << "\n";
+
+  dbgs() << "Selecting: ";
+  Node->dump(CurDAG);
+
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
     dbgs() << "== "; Node->dump(CurDAG); dbgs() << "\n";

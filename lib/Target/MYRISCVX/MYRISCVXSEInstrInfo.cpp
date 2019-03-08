@@ -162,3 +162,16 @@ loadRegFromStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   BuildMI(MBB, I, DL, get(Opc), DestReg).addFrameIndex(FI).addImm(Offset)
       .addMemOperand(MMO);
 }
+
+
+void MYRISCVXSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
+                                      MachineBasicBlock::iterator MBBI,
+                                      const DebugLoc &DL, unsigned DstReg,
+                                      unsigned SrcReg, bool KillSrc) const {
+  if (MYRISCVX::GPRRegClass.contains(DstReg, SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(MYRISCVX::ADDI), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc))
+        .addImm(0);
+    return;
+  }
+}

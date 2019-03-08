@@ -83,7 +83,7 @@ eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
+  // MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
 
   unsigned i = 0;
   while (!MI.getOperand(i).isFI()) {
@@ -131,7 +131,7 @@ eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
   // If MI is not a debug value, make sure Offset fits in the 16-bit immediate
   // field.
   if (!MI.isDebugValue() && !isInt<16>(Offset)) {
-    assert("(!MI.isDebugValue() && !isInt<16>(Offset))");
+    assert(0 && "(!MI.isDebugValue() && !isInt<16>(Offset))");
   }
   MI.getOperand(i).ChangeToRegister(FrameReg, false);
   MI.getOperand(i+1).ChangeToImmediate(Offset);
