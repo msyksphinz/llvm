@@ -82,6 +82,13 @@ MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
   }
 
+  // MYRISCVX doesn't have sext_inreg, replace them with shl/sra.
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1 , Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i8 , Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i16 , Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i32 , Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::Other , Expand);
+
   setOperationAction(ISD::SMUL_LOHI, MVT::i32, Expand);
   setOperationAction(ISD::UMUL_LOHI, MVT::i32, Expand);
 
@@ -336,4 +343,11 @@ bool
 MYRISCVXTargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
   // The MYRISCVX target isn't yet aware of offsets.
   return false;
+}
+
+EVT MYRISCVXTargetLowering::getSetCCResultType(const DataLayout &, LLVMContext &,
+                                               EVT VT) const {
+  if (!VT.isVector())
+    return MVT::i32;
+  return VT.changeVectorElementTypeToInteger();
 }

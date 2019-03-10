@@ -240,6 +240,11 @@ class MYRISCVXTargetLowering : public TargetLowering {
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals,
                       const SDLoc &dl, SelectionDAG &DAG) const override;
+
+  /// getSetCCResultType - get the ISD::SETCC result ValueType
+  EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
+                         EVT VT) const override;
+
 };
 
 
