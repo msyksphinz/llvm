@@ -86,8 +86,7 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
 }
 
 
-//@CH8_1 {
-/// getBranch16TargetOpValue - Return binary encoding of the branch
+/// getBranch12TargetOpValue - Return binary encoding of the branch
 /// target operand. If the machine operand requires relocation,
 /// record the relocation and return zero.
 unsigned MYRISCVXMCCodeEmitter::
@@ -98,11 +97,11 @@ getBranch12TargetOpValue(const MCInst &MI, unsigned OpNo,
 }
 
 
-/// getBranch24TargetOpValue - Return binary encoding of the branch
+/// getBranch20TargetOpValue - Return binary encoding of the branch
 /// target operand. If the machine operand requires relocation,
 /// record the relocation and return zero.
 unsigned MYRISCVXMCCodeEmitter::
-getBranch24TargetOpValue(const MCInst &MI, unsigned OpNo,
+getBranch20TargetOpValue(const MCInst &MI, unsigned OpNo,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const {
   return 0;
