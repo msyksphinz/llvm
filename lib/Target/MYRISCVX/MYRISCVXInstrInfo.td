@@ -169,6 +169,17 @@ class ArithLogicI<bits<7> opcode, bits<3> funct3,
 }
 
 
+// Branch insntructions with 2 register operands.
+class CBranch12<bits<7> opcode, bits<3> funct3,
+                string instr_asm,
+                Operand Od, PatLeaf imm_type, PatFrag cond_op, RegisterClass RC> :
+  FB<opcode, funct3, (outs), (ins RC:$ra, RC:$rb, Od:$imm12),
+  !strconcat(instr_asm, "\t$ra, $rb, $imm12"),
+  [(brcond (i32 (cond_op RC:$ra, RC:$rb)), bb:$imm12)], IIAlu> {
+    let isReMaterializable = 1;
+}
+
+
 // Arithmetic and logical instructions with 3 register operands.
 class ArithLogicU<bits<7> opcode,
                   string instr_asm, Operand Od, PatLeaf imm_type> :
@@ -281,6 +292,7 @@ let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
   def RetRA : MYRISCVXPseudo<(outs), (ins), "", [(MYRISCVXRet)]>;
 
 
+
 //===----------------------------------------------------------------------===//
 // Instruction definition
 //===----------------------------------------------------------------------===//
@@ -344,6 +356,13 @@ def : Pat<(setule GPR:$rs1, GPR:$rs2), (XORI (SLTU GPR:$rs2, GPR:$rs1), 1)>;
 def : Pat<(setgt  GPR:$rs1, GPR:$rs2), (SLT GPR:$rs2, GPR:$rs1)>;
 def : Pat<(setge  GPR:$rs1, GPR:$rs2), (XORI (SLT GPR:$rs1, GPR:$rs2), 1)>;
 def : Pat<(setle  GPR:$rs1, GPR:$rs2), (XORI (SLT GPR:$rs2, GPR:$rs1), 1)>;
+
+def BEQ     : CBranch12<0b1100011, 0b000, "beq" , simm12, immSExt12, seteq,  GPR>;
+def BNE     : CBranch12<0b1100011, 0b001, "bne" , simm12, immSExt12, setne,  GPR>;
+def BLT     : CBranch12<0b1100011, 0b100, "blt" , simm12, immSExt12, setlt,  GPR>;
+def BGE     : CBranch12<0b1100011, 0b101, "bge" , simm12, immSExt12, setge,  GPR>;
+def BLTU    : CBranch12<0b1100011, 0b110, "bltu", simm12, immSExt12, setlt, GPR>;
+def BGEU    : CBranch12<0b1100011, 0b111, "bgeu", simm12, immSExt12, setge, GPR>;
 
 // Only op DAG can be disabled by ch4_1, data DAG cannot.
 def SDT_MYRISCVXDivRem : SDTypeProfile<0, 2,
@@ -420,3 +439,43 @@ def : Pat<(i32 (extloadi8  addr:$src)), (LBU addr:$src)>;
 def : Pat<(i32 (extloadi16 addr:$src)), (LHU addr:$src)>;
 // peepholes
 def : Pat<(store (i32 0), addr:$dst), (SW ZERO, addr:$dst)>;
+
+
+// brcond for slt instruction
+multiclass BrcondPatsSlt<RegisterClass RC, Instruction BEQOp, Instruction BNEOp,
+                      Instruction SLTOp, Instruction SLTuOp, Instruction SLTiOp,
+                      Instruction SLTiuOp, Register ZEROReg> {
+def : Pat<(brcond (i32 (setne RC:$lhs, 0)), bb:$dst),
+              (BNEOp RC:$lhs, ZEROReg, bb:$dst)>;
+def : Pat<(brcond (i32 (seteq RC:$lhs, 0)), bb:$dst),
+              (BEQOp RC:$lhs, ZEROReg, bb:$dst)>;
+
+def : Pat<(brcond (i32 (seteq RC:$lhs, RC:$rhs)), bb:$dst),
+              (BEQOp RC:$lhs, RC:$rhs, bb:$dst)>;
+def : Pat<(brcond (i32 (setueq RC:$lhs, RC:$rhs)), bb:$dst),
+              (BEQOp RC:$lhs, RC:$rhs, bb:$dst)>;
+def : Pat<(brcond (i32 (setne RC:$lhs, RC:$rhs)), bb:$dst),
+              (BNEOp RC:$lhs, RC:$rhs, bb:$dst)>;
+def : Pat<(brcond (i32 (setune RC:$lhs, RC:$rhs)), bb:$dst),
+              (BNEOp RC:$lhs, RC:$rhs, bb:$dst)>;
+def : Pat<(brcond (i32 (setlt RC:$lhs, RC:$rhs)), bb:$dst),
+              (BNE (SLTOp RC:$lhs, RC:$rhs), ZERO, bb:$dst)>;
+def : Pat<(brcond (i32 (setult RC:$lhs, RC:$rhs)), bb:$dst),
+              (BNE (SLTuOp RC:$lhs, RC:$rhs), ZERO, bb:$dst)>;
+def : Pat<(brcond (i32 (setgt RC:$lhs, RC:$rhs)), bb:$dst),
+              (BNE (SLTOp RC:$rhs, RC:$lhs), ZERO, bb:$dst)>;
+def : Pat<(brcond (i32 (setugt RC:$lhs, RC:$rhs)), bb:$dst),
+              (BNE (SLTuOp RC:$rhs, RC:$lhs), ZERO, bb:$dst)>;
+def : Pat<(brcond (i32 (setle RC:$lhs, RC:$rhs)), bb:$dst),
+              (BEQ (SLTOp RC:$rhs, RC:$lhs), ZERO, bb:$dst)>;
+def : Pat<(brcond (i32 (setule RC:$lhs, RC:$rhs)), bb:$dst),
+              (BEQ (SLTuOp RC:$rhs, RC:$lhs), ZERO, bb:$dst)>;
+def : Pat<(brcond (i32 (setge RC:$lhs, RC:$rhs)), bb:$dst),
+              (BEQ (SLTOp RC:$lhs, RC:$rhs), ZERO, bb:$dst)>;
+def : Pat<(brcond (i32 (setuge RC:$lhs, RC:$rhs)), bb:$dst),
+              (BEQ (SLTuOp RC:$lhs, RC:$rhs), ZERO, bb:$dst)>;
+def : Pat<(brcond RC:$cond, bb:$dst),
+              (BNEOp RC:$cond, ZEROReg, bb:$dst)>;
+}
+
+defm : BrcondPatsSlt<GPR, BEQ, BNE, SLT, SLTU, SLTI, SLTIU, ZERO>;
