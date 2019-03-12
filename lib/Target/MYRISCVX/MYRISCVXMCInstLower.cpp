@@ -32,8 +32,8 @@ void MYRISCVXMCInstLower::Initialize(MCContext* C) {
 
 
 MCOperand MYRISCVXMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
-                                              MachineOperandType MOTy,
-                                              unsigned Offset) const {
+                                                  MachineOperandType MOTy,
+                                                  unsigned Offset) const {
   MCSymbolRefExpr::VariantKind Kind = MCSymbolRefExpr::VK_None;
   MYRISCVXMCExpr::MYRISCVXExprKind TargetKind = MYRISCVXMCExpr::CEK_None;
   const MCSymbol *Symbol;
@@ -69,12 +69,24 @@ MCOperand MYRISCVXMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   }
 
   switch (MOTy) {
-  case MachineOperand::MO_GlobalAddress:
-    Symbol = AsmPrinter.getSymbol(MO.getGlobal());
-    Offset += MO.getOffset();
-    break;
+    case MachineOperand::MO_GlobalAddress:
+      Symbol = AsmPrinter.getSymbol(MO.getGlobal());
+      Offset += MO.getOffset();
+      break;
+    case MachineOperand::MO_MachineBasicBlock:
+      Symbol = MO.getMBB()->getSymbol();
+      break;
 
-  default:
+    case MachineOperand::MO_BlockAddress:
+      Symbol = AsmPrinter.GetBlockAddressSymbol(MO.getBlockAddress());
+      Offset += MO.getOffset();
+      break;
+
+    case MachineOperand::MO_JumpTableIndex:
+      Symbol = AsmPrinter.GetJTISymbol(MO.getIndex());
+      break;
+
+    default:
     llvm_unreachable("<unknown operand type>");
   }
 
@@ -145,6 +157,9 @@ MCOperand MYRISCVXMCInstLower::LowerOperand(const MachineOperand& MO,
       return MCOperand::createReg(MO.getReg());
     case MachineOperand::MO_Immediate:
       return MCOperand::createImm(MO.getImm() + offset);
+    case MachineOperand::MO_MachineBasicBlock:
+    case MachineOperand::MO_JumpTableIndex:
+    case MachineOperand::MO_BlockAddress:
     case MachineOperand::MO_GlobalAddress:
       return LowerSymbolOperand(MO, MOTy, offset);
     case MachineOperand::MO_RegisterMask:
