@@ -47,10 +47,10 @@ namespace llvm {
     uint64_t getBinaryCodeForInstr(const MCInst &MI,
                                    SmallVectorImpl<MCFixup> &Fixups,
                                    const MCSubtargetInfo &STI) const;
-    // getBranch16TargetOpValue - Return binary encoding of the branch
+    // getBranch12TargetOpValue - Return binary encoding of the branch
     // target operand, such as BEQ, BNE. If the machine operand
     // requires relocation, record the relocation and return zero.
-    unsigned getBranch16TargetOpValue(const MCInst &MI, unsigned OpNo,
+    unsigned getBranch12TargetOpValue(const MCInst &MI, unsigned OpNo,
                                       SmallVectorImpl<MCFixup> &Fixups,
                                       const MCSubtargetInfo &STI) const;
     // getBranch24TargetOpValue - Return binary encoding of the branch

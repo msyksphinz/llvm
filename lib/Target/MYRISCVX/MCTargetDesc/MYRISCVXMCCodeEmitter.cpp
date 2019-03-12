@@ -91,7 +91,7 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
 /// target operand. If the machine operand requires relocation,
 /// record the relocation and return zero.
 unsigned MYRISCVXMCCodeEmitter::
-getBranch16TargetOpValue(const MCInst &MI, unsigned OpNo,
+getBranch12TargetOpValue(const MCInst &MI, unsigned OpNo,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const {
   return 0;

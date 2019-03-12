@@ -161,7 +161,7 @@ class FU<bits<7> opcode,
 //@class FU }
 
 
-//@class FU {
+//@class FB {
 //===----------------------------------------------------------------------===//
 // B-Type instruction class in MYRISCVX : <|opcode|ra|rb|cx|>
 //===----------------------------------------------------------------------===//
@@ -171,6 +171,8 @@ class FB<bits<7> opcode, bits<3> funct3,
          InstrItinClass itin>: MYRISCVXInst<outs, ins, asmstr, pattern, itin, FrmI>
 {
   bits<12> imm12;
+  bits<5> rs2;
+  bits<5> rs1;
 
   let Opcode = opcode;
 
@@ -179,7 +181,7 @@ class FB<bits<7> opcode, bits<3> funct3,
   let Inst{11-8}  = imm12{3-0};
   let Inst{7}     = imm12{10};
 }
-//@class FU }
+//@class FB }
 
 
 // MYRISCVX Pseudo Instructions Format

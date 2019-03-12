@@ -42,6 +42,13 @@ include "MYRISCVXInstrFormats.td"
 // MYRISCVX Operand, Complex Patterns and Transformations Definitions.
 //===----------------------------------------------------------------------===//
 
+// BEQ, BNE
+def brtarget12    : Operand<OtherVT> {
+  let EncoderMethod = "getBranch12TargetOpValue";
+  let OperandType   = "OPERAND_PCREL";
+  let DecoderMethod = "DecodeBranch12Target";
+}
+
 // Instruction operand types
 // Signed Operand
 def simm12 : Operand<i32> {
@@ -172,13 +179,15 @@ class ArithLogicI<bits<7> opcode, bits<3> funct3,
 // Branch insntructions with 2 register operands.
 class CBranch12<bits<7> opcode, bits<3> funct3,
                 string instr_asm,
-                Operand Od, PatLeaf imm_type, PatFrag cond_op, RegisterClass RC> :
-  FB<opcode, funct3, (outs), (ins RC:$ra, RC:$rb, Od:$imm12),
+                PatFrag cond_op, RegisterClass RC> :
+  FB<opcode, funct3, (outs), (ins RC:$ra, RC:$rb, brtarget12:$imm12),
   !strconcat(instr_asm, "\t$ra, $rb, $imm12"),
-  [(brcond (i32 (cond_op RC:$ra, RC:$rb)), bb:$imm12)], IIAlu> {
-    let isReMaterializable = 1;
+  [], IIAlu> {
+    let isBranch = 1;
+    let isTerminator = 1;
 }
 
+//  [(brcond (i32 (cond_op RC:$ra, RC:$rb)), bb:$imm12)], IIAlu> {
 
 // Arithmetic and logical instructions with 3 register operands.
 class ArithLogicU<bits<7> opcode,
@@ -357,12 +366,12 @@ def : Pat<(setgt  GPR:$rs1, GPR:$rs2), (SLT GPR:$rs2, GPR:$rs1)>;
 def : Pat<(setge  GPR:$rs1, GPR:$rs2), (XORI (SLT GPR:$rs1, GPR:$rs2), 1)>;
 def : Pat<(setle  GPR:$rs1, GPR:$rs2), (XORI (SLT GPR:$rs2, GPR:$rs1), 1)>;
 
-def BEQ     : CBranch12<0b1100011, 0b000, "beq" , simm12, immSExt12, seteq,  GPR>;
-def BNE     : CBranch12<0b1100011, 0b001, "bne" , simm12, immSExt12, setne,  GPR>;
-def BLT     : CBranch12<0b1100011, 0b100, "blt" , simm12, immSExt12, setlt,  GPR>;
-def BGE     : CBranch12<0b1100011, 0b101, "bge" , simm12, immSExt12, setge,  GPR>;
-def BLTU    : CBranch12<0b1100011, 0b110, "bltu", simm12, immSExt12, setlt, GPR>;
-def BGEU    : CBranch12<0b1100011, 0b111, "bgeu", simm12, immSExt12, setge, GPR>;
+def BEQ     : CBranch12<0b1100011, 0b000, "beq" , seteq,  GPR>;
+def BNE     : CBranch12<0b1100011, 0b001, "bne" , setne,  GPR>;
+def BLT     : CBranch12<0b1100011, 0b100, "blt" , setlt,  GPR>;
+def BGE     : CBranch12<0b1100011, 0b101, "bge" , setge,  GPR>;
+def BLTU    : CBranch12<0b1100011, 0b110, "bltu", setult, GPR>;
+def BGEU    : CBranch12<0b1100011, 0b111, "bgeu", setuge, GPR>;
 
 // Only op DAG can be disabled by ch4_1, data DAG cannot.
 def SDT_MYRISCVXDivRem : SDTypeProfile<0, 2,
@@ -450,7 +459,7 @@ def : Pat<(brcond (i32 (setne RC:$lhs, 0)), bb:$dst),
 def : Pat<(brcond (i32 (seteq RC:$lhs, 0)), bb:$dst),
               (BEQOp RC:$lhs, ZEROReg, bb:$dst)>;
 
-def : Pat<(brcond (i32 (seteq RC:$lhs, RC:$rhs)), bb:$dst),
+def : Pat<(brcond (i32 (seteq GPR:$lhs, GPR:$rhs)), bb:$dst),
               (BEQOp RC:$lhs, RC:$rhs, bb:$dst)>;
 def : Pat<(brcond (i32 (setueq RC:$lhs, RC:$rhs)), bb:$dst),
               (BEQOp RC:$lhs, RC:$rhs, bb:$dst)>;
