@@ -49,6 +49,13 @@ def brtarget12    : Operand<OtherVT> {
   let DecoderMethod = "DecodeBranch12Target";
 }
 
+// JAL
+def brtarget20    : Operand<OtherVT> {
+  let EncoderMethod = "getBranch20TargetOpValue";
+  let OperandType   = "OPERAND_PCREL";
+  let DecoderMethod = "DecodeBranch20Target";
+}
+
 // Instruction operand types
 // Signed Operand
 def simm12 : Operand<i32> {
@@ -176,7 +183,7 @@ class ArithLogicI<bits<7> opcode, bits<3> funct3,
 }
 
 
-// Branch insntructions with 2 register operands.
+// Branch instructions with 2 register operands.
 class CBranch12<bits<7> opcode, bits<3> funct3,
                 string instr_asm,
                 PatFrag cond_op, RegisterClass RC> :
@@ -187,7 +194,15 @@ class CBranch12<bits<7> opcode, bits<3> funct3,
     let isTerminator = 1;
 }
 
-//  [(brcond (i32 (cond_op RC:$ra, RC:$rb)), bb:$imm12)], IIAlu> {
+class UncondBranch<bits<7> opcode, string instr_asm>:
+  FJ<opcode, (outs), (ins brtarget20:$addr),
+  !strconcat(instr_asm, "\t$addr"), [(br bb:$addr)], IIAlu> {
+    let isBranch = 1;
+    let isTerminator = 1;
+    let isBarrier = 1;
+    let hasDelaySlot = 0;
+}
+
 
 // Arithmetic and logical instructions with 3 register operands.
 class ArithLogicU<bits<7> opcode,
@@ -373,6 +388,9 @@ def BGE     : CBranch12<0b1100011, 0b101, "bge" , setge,  GPR>;
 def BLTU    : CBranch12<0b1100011, 0b110, "bltu", setult, GPR>;
 def BGEU    : CBranch12<0b1100011, 0b111, "bgeu", setuge, GPR>;
 
+let isCall = 1 in
+def JAL : UncondBranch<0b1101111, "jal">;
+
 // Only op DAG can be disabled by ch4_1, data DAG cannot.
 def SDT_MYRISCVXDivRem : SDTypeProfile<0, 2,
                                   [SDTCisInt<0>,
@@ -459,7 +477,7 @@ def : Pat<(brcond (i32 (setne RC:$lhs, 0)), bb:$dst),
 def : Pat<(brcond (i32 (seteq RC:$lhs, 0)), bb:$dst),
               (BEQOp RC:$lhs, ZEROReg, bb:$dst)>;
 
-def : Pat<(brcond (i32 (seteq GPR:$lhs, GPR:$rhs)), bb:$dst),
+def : Pat<(brcond (i32 (seteq RC:$lhs, RC:$rhs)), bb:$dst),
               (BEQOp RC:$lhs, RC:$rhs, bb:$dst)>;
 def : Pat<(brcond (i32 (setueq RC:$lhs, RC:$rhs)), bb:$dst),
               (BEQOp RC:$lhs, RC:$rhs, bb:$dst)>;

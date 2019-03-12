@@ -184,6 +184,27 @@ class FB<bits<7> opcode, bits<3> funct3,
 //@class FB }
 
 
+//@class FJ {
+//===----------------------------------------------------------------------===//
+// J-Type instruction class in MYRISCVX : <|opcode|ra|rb|cx|>
+//===----------------------------------------------------------------------===//
+
+class FJ<bits<7> opcode,
+         dag outs, dag ins, string asmstr, list<dag> pattern,
+         InstrItinClass itin>: MYRISCVXInst<outs, ins, asmstr, pattern, itin, FrmI>
+{
+  bits<20> imm20;
+
+  let Opcode = opcode;
+
+  let Inst{31}    = imm20{19};
+  let Inst{30-21} = imm20{9-0};
+  let Inst{20}    = imm20{10};
+  let Inst{19-12} = imm20{18-11};
+}
+//@class FJ }
+
+
 // MYRISCVX Pseudo Instructions Format
 class MYRISCVXPseudo<dag outs, dag ins, string asmstr, list<dag> pattern>:
                      MYRISCVXInst<outs, ins, asmstr, pattern, IIPseudo, Pseudo> {
