@@ -151,5 +151,6 @@ TargetPassConfig *MYRISCVXTargetMachine::createPassConfig(PassManagerBase &PM) {
 void MYRISCVXPassConfig::addPreEmitPass() {
   MYRISCVXTargetMachine &TM = getMYRISCVXTargetMachine();
   addPass(createMYRISCVXLongBranchPass(TM));
+  addPass(createMYRISCVXDelJmpPass(TM));
   return;
 }
