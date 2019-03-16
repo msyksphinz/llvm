@@ -210,11 +210,19 @@ MYRISCVXTargetLowering::LowerReturn(SDValue Chain,
 
 
 SDValue MYRISCVXTargetLowering::
+lowerSELECT(SDValue Op, SelectionDAG &DAG) const
+{
+  return Op;
+}
+
+
+SDValue MYRISCVXTargetLowering::
 LowerOperation(SDValue Op, SelectionDAG &DAG) const
 {
   switch (Op.getOpcode())
   {
-  case ISD::GlobalAddress:      return lowerGlobalAddress(Op, DAG);
+    case ISD::GlobalAddress: return lowerGlobalAddress(Op, DAG);
+    case ISD::SELECT:        return lowerSELECT(Op, DAG);
   }
   return SDValue();
 }
