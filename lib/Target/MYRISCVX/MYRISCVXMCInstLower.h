@@ -39,6 +39,15 @@ namespace llvm {
     void Lower(const MachineInstr *MI, MCInst &OutMI) const;
     void LowerCPLOAD(SmallVector<MCInst, 4>& MCInsts);
     MCOperand LowerOperand(const MachineOperand& MO, unsigned offset = 0) const;
+
+    MCOperand createSub(MachineBasicBlock *BB1, MachineBasicBlock *BB2,
+                        MYRISCVXMCExpr::MYRISCVXExprKind Kind) const;
+    void lowerLongBranchLUI(const MachineInstr *MI, MCInst &OutMI) const;
+    void lowerLongBranchADDI(const MachineInstr *MI, MCInst &OutMI,
+                             int Opcode,
+                             MYRISCVXMCExpr::MYRISCVXExprKind Kind) const;
+    bool lowerLongBranch(const MachineInstr *MI, MCInst &OutMI) const;
+
   };
 
 }

@@ -21,6 +21,8 @@
 namespace llvm {
   class MYRISCVXTargetMachine;
   class FunctionPass;
+
+  FunctionPass *createMYRISCVXLongBranchPass(MYRISCVXTargetMachine &TM);
 } // end namespace llvm;
 
 #endif

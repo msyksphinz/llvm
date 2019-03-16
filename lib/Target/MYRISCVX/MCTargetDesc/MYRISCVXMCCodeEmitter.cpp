@@ -117,6 +117,16 @@ unsigned MYRISCVXMCCodeEmitter::
 getJumpTargetOpValue(const MCInst &MI, unsigned OpNo,
                      SmallVectorImpl<MCFixup> &Fixups,
                      const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  // If the destination is an immediate, divide by 4.
+  if (MO.isImm()) return MO.getImm()>>2;
+
+  assert(MO.isExpr() &&
+         "getJumpTargetOpValue expects only expressions or an immediate");
+
+  const MCExpr *Expr = MO.getExpr();
+  Fixups.push_back(MCFixup::create(0, Expr,
+                                   MCFixupKind(MYRISCVX::fixup_MYRISCVX_PCREL_LO12_S)));
   return 0;
 }
 

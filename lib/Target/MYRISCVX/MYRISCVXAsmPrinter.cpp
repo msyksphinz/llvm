@@ -63,7 +63,7 @@ void MYRISCVXAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   MachineBasicBlock::const_instr_iterator I = MI->getIterator();
   MachineBasicBlock::const_instr_iterator E = MI->getParent()->instr_end();
   do {
-    if (I->isPseudo())
+    if (I->isPseudo() && !isLongBranchPseudo(I->getOpcode()))
       llvm_unreachable("Pseudo opcode found in EmitInstruction()");
     MCInst TmpInst0;
     MCInstLowering.Lower(&*I, TmpInst0);
@@ -263,4 +263,10 @@ void MYRISCVXAsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
 extern "C" void LLVMInitializeMYRISCVXAsmPrinter() {
   RegisterAsmPrinter<MYRISCVXAsmPrinter> X(TheMYRISCVX32Target);
   RegisterAsmPrinter<MYRISCVXAsmPrinter> Y(TheMYRISCVX64Target);
+}
+
+
+bool MYRISCVXAsmPrinter::isLongBranchPseudo(int Opcode) const {
+  return (Opcode == MYRISCVX::LONG_BRANCH_LUI ||
+          Opcode == MYRISCVX::LONG_BRANCH_ADDI);
 }

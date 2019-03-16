@@ -175,3 +175,14 @@ void MYRISCVXSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 }
+
+
+/// getOppositeBranchOpc - Return the inverse of the specified
+/// opcode, e.g. turning BEQ to BNE.
+unsigned MYRISCVXSEInstrInfo::getOppositeBranchOpc(unsigned Opc) const {
+  switch (Opc) {
+    default: llvm_unreachable("Illegal opcode!");
+    case MYRISCVX::BEQ: return MYRISCVX::BNE;
+    case MYRISCVX::BNE: return MYRISCVX::BEQ;
+  }
+}

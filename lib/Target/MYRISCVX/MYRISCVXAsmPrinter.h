@@ -58,5 +58,7 @@ namespace llvm {
     void EmitFunctionBodyEnd() override;
     void EmitStartOfAsmFile(Module &M) override;
     void PrintDebugValueComment(const MachineInstr *MI, raw_ostream &OS);
+
+    bool isLongBranchPseudo(int Opcode) const;
   };
 }

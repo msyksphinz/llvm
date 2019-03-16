@@ -59,9 +59,10 @@ namespace llvm {
                      const DebugLoc &DL, unsigned DstReg, unsigned SrcReg,
                      bool KillSrc) const override;
 
+    unsigned getOppositeBranchOpc(unsigned Opc) const override;
+
    private:
     void expandRetLR(MachineBasicBlock &MBB, MachineBasicBlock::iterator I) const;
-
   };
 
 }

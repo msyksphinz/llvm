@@ -126,6 +126,8 @@ class MYRISCVXPassConfig : public TargetPassConfig {
   const MYRISCVXSubtarget &getMYRISCVXSubtarget() const {
     return *getMYRISCVXTargetMachine().getSubtargetImpl();
   }
+
+  void addPreEmitPass() override;
 };
 
 } // namespace
@@ -140,4 +142,14 @@ bool MYRISCVXPassConfig::addInstSelector() {
 
 TargetPassConfig *MYRISCVXTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new MYRISCVXPassConfig(*this, PM);
+}
+
+
+// Implemented by targets that want to run passes immediately before
+// machine code is emitted. return true if -print-machineinstrs should
+// print out the code after the passes.
+void MYRISCVXPassConfig::addPreEmitPass() {
+  MYRISCVXTargetMachine &TM = getMYRISCVXTargetMachine();
+  addPass(createMYRISCVXLongBranchPass(TM));
+  return;
 }

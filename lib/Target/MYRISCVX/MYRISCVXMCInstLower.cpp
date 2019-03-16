@@ -170,11 +170,67 @@ MCOperand MYRISCVXMCInstLower::LowerOperand(const MachineOperand& MO,
 
 
 void MYRISCVXMCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
+  if (lowerLongBranch(MI, OutMI))
+    return;
+
   OutMI.setOpcode(MI->getOpcode());
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI->getOperand(i);
     MCOperand MCOp = LowerOperand(MO);
     if (MCOp.isValid())
       OutMI.addOperand(MCOp);
+  }
+}
+
+
+MCOperand MYRISCVXMCInstLower::createSub(MachineBasicBlock *BB1,
+                                         MachineBasicBlock *BB2,
+                                         MYRISCVXMCExpr::MYRISCVXExprKind Kind) const {
+  const MCSymbolRefExpr *Sym1 = MCSymbolRefExpr::create(BB1->getSymbol(), *Ctx);
+  const MCSymbolRefExpr *Sym2 = MCSymbolRefExpr::create(BB2->getSymbol(), *Ctx);
+  const MCBinaryExpr *Sub = MCBinaryExpr::createSub(Sym1, Sym2, *Ctx);
+  return MCOperand::createExpr(MYRISCVXMCExpr::create(Kind, Sub, *Ctx));
+}
+
+
+void MYRISCVXMCInstLower::
+lowerLongBranchLUI(const MachineInstr *MI, MCInst &OutMI) const {
+  OutMI.setOpcode(MYRISCVX::LUI);
+  // Lower register operand.
+  OutMI.addOperand(LowerOperand(MI->getOperand(0)));
+  // Create %hi($tgt-$baltgt).
+  OutMI.addOperand(createSub(MI->getOperand(1).getMBB(),
+                             MI->getOperand(2).getMBB(),
+                             MYRISCVXMCExpr::CEK_ABS_HI));
+}
+
+
+void MYRISCVXMCInstLower::
+lowerLongBranchADDI(const MachineInstr *MI, MCInst &OutMI, int Opcode,
+                     MYRISCVXMCExpr::MYRISCVXExprKind Kind) const {
+  OutMI.setOpcode(Opcode);
+  // Lower two register operands.
+  for (unsigned I = 0, E = 2; I != E; ++I) {
+    const MachineOperand &MO = MI->getOperand(I);
+    OutMI.addOperand(LowerOperand(MO));
+  }
+  // Create %lo($tgt-$baltgt) or %hi($tgt-$baltgt).
+  OutMI.addOperand(createSub(MI->getOperand(2).getMBB(),
+                             MI->getOperand(3).getMBB(), Kind));
+}
+
+
+bool MYRISCVXMCInstLower::lowerLongBranch(const MachineInstr *MI,
+                                          MCInst &OutMI) const {
+  switch (MI->getOpcode()) {
+    default:
+      return false;
+    case MYRISCVX::LONG_BRANCH_LUI:
+      lowerLongBranchLUI(MI, OutMI);
+      return true;
+    case MYRISCVX::LONG_BRANCH_ADDI:
+      lowerLongBranchADDI(MI, OutMI, MYRISCVX::ADDI,
+                           MYRISCVXMCExpr::CEK_ABS_LO);
+      return true;
   }
 }

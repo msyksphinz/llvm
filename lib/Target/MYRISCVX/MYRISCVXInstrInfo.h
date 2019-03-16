@@ -36,6 +36,9 @@ namespace llvm {
     /// always be able to get register info as well (through this method).
     ///
     virtual const MYRISCVXRegisterInfo &getRegisterInfo() const = 0;
+
+    virtual unsigned getOppositeBranchOpc(unsigned Opc) const = 0;
+
     /// Return the number of bytes of code the specified instruction may be.
     unsigned GetInstSizeInBytes(const MachineInstr &MI) const;
 

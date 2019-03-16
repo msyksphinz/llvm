@@ -56,6 +56,13 @@ def brtarget20    : Operand<OtherVT> {
   let DecoderMethod = "DecodeBranch20Target";
 }
 
+// JMP
+def jmptarget    : Operand<OtherVT> {
+  let EncoderMethod = "getJumpTargetOpValue";
+  let OperandType = "OPERAND_PCREL";
+}
+
+
 // Instruction operand types
 // Signed Operand
 def simm12 : Operand<i32> {
@@ -121,6 +128,18 @@ def shamt : Operand<i32>;
 // since load and store instructions from stack used it.
 def addr :
   ComplexPattern<iPTR, 2, "SelectAddr", [frameindex], [SDNPWantParent]>;
+
+// We need these two pseudo instructions to avoid offset calculation for long
+// branches. See the comment in file Cpu0LongBranch.cpp for detailed
+// explanation.
+// Expands to: lui $dst, %hi($tgt - $baltgt)
+def LONG_BRANCH_LUI : MYRISCVXPseudo<(outs GPR:$dst),
+    (ins jmptarget:$tgt, jmptarget:$baltgt), "", []>;
+
+// Expands to: addiu $dst, $src, %lo($tgt - $baltgt)
+def LONG_BRANCH_ADDI : MYRISCVXPseudo<(outs GPR:$dst),
+    (ins GPR:$src, jmptarget:$tgt, jmptarget:$baltgt), "", []>;
+
 
 //===----------------------------------------------------------------------===//
 // Pattern fragment for load/store
