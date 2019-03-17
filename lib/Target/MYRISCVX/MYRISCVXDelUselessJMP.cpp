@@ -10,7 +10,6 @@
 // Simple pass to fills delay slots with useful instructions.
 //
 //===----------------------------------------------------------------------===//
-#pragma once
 
 #include "MYRISCVX.h"
 

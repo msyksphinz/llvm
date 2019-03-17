@@ -51,7 +51,8 @@ enum NodeType {
   DivRemU,
   Wrapper,
   DynAlloc,
-  Sync
+  Sync,
+  SELECT_CC
 };
 }
 
@@ -246,6 +247,10 @@ class MYRISCVXTargetLowering : public TargetLowering {
   /// getSetCCResultType - get the ISD::SETCC result ValueType
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
+
+  MachineBasicBlock *
+  EmitInstrWithCustomInserter(MachineInstr &MI,
+                              MachineBasicBlock *BB) const override;
 
 };
 

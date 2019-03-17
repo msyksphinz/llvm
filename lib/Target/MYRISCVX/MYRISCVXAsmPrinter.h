@@ -60,5 +60,11 @@ namespace llvm {
     void PrintDebugValueComment(const MachineInstr *MI, raw_ostream &OS);
 
     bool isLongBranchPseudo(int Opcode) const;
+
+    bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
+                                     const MachineInstr *MI);
+
+  // Wrapper needed for tblgenned pseudo lowering.
+    bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const;
   };
 }

@@ -16,11 +16,18 @@
 //===----------------------------------------------------------------------===//
 
 def SDT_MYRISCVXRet : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
+def SDT_MYRISCVXSelectCC   : SDTypeProfile<1, 5, [SDTCisSameAs<1, 2>,
+                                               SDTCisSameAs<0, 4>,
+                                               SDTCisSameAs<4, 5>]>;
+
+// def SDT_MYRISCVXSelect : SDTypeProfile<1, 3, []>;
 
 // Return
 def MYRISCVXRet : SDNode<"MYRISCVXISD::Ret", SDTNone,
                          [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
+def SelectCC : SDNode<"MYRISCVXISD::SELECT_CC", SDT_MYRISCVXSelectCC,
+                      [SDNPInGlue]>;
 
 // Hi and Lo nodes are used to handle global addresses. Used on
 // MYRISCVXISelLowering to lower stuff like GlobalAddress, ExternalSymbol
@@ -365,6 +372,9 @@ def JALR : JumpFR<0b1100111, 0b000, "jalr", GPR>;
 // def : InstAlias<"jr $rs1", (JALR ZERO, GPR:$rs1, 0)>;
 def RET  : RetBase<GPR>;
 
+let isCall = 1 in
+def JAL : UncondBranch<0b1101111, "jal">;
+
 def XORI : ArithLogicI<0b0010011, 0b110, "xori", xor, uimm12, immZExt12, GPR>;
 def ORI  : ArithLogicI<0b0010011, 0b110, "ori",  or,  uimm12, immZExt12, GPR>;
 def ANDI : ArithLogicI<0b0010011, 0b111, "andi", and, uimm12, immZExt12, GPR>;
@@ -407,8 +417,44 @@ def BGE     : CBranch12<0b1100011, 0b101, "bge" , setge,  GPR>;
 def BLTU    : CBranch12<0b1100011, 0b110, "bltu", setult, GPR>;
 def BGEU    : CBranch12<0b1100011, 0b111, "bgeu", setuge, GPR>;
 
-let isCall = 1 in
-def JAL : UncondBranch<0b1101111, "jal">;
+// An extra pattern is needed for a brcond without a setcc (i.e. where the
+// condition was calculated elsewhere).
+def : Pat<(brcond GPR:$cond, bb:$imm12), (BNE GPR:$cond, ZERO, bb:$imm12)>;
+
+def PseudoBR : MYRISCVXPseudo<(outs), (ins brtarget20:$imm20), "", [(br bb:$imm20)]>,
+               PseudoInstExpansion<(JAL brtarget20:$imm20)>;
+
+def PseudoBRIND : MYRISCVXPseudo<(outs), (ins GPR:$rs1, simm12:$imm12), "", []>,
+                  PseudoInstExpansion<(JALR GPR:$rs1)>;
+
+def : Pat<(brind GPR:$rs1), (PseudoBRIND GPR:$rs1, 0)>;
+
+// def : Pat<(brind (add GPR:$rs1, simm12:$imm12)),
+//           (PseudoBRIND GPR:$rs1, simm12:$imm12)>;
+
+let usesCustomInserter = 1 in
+class SelectCC_rrirr<RegisterClass RC, RegisterClass cmpty>
+    : MYRISCVXPseudo<(outs RC:$dst),
+             (ins cmpty:$lhs, cmpty:$rhs, simm12:$imm,
+              RC:$truev, RC:$falsev),
+              "",
+             [(set RC:$dst,
+               (SelectCC cmpty:$lhs,
+                         cmpty:$rhs,
+                         (i32 imm:$imm),
+                         RC:$truev,
+                         RC:$falsev))]>;
+
+// class Select_rrirr<RegisterClass RC>
+//     : MYRISCVXPseudo<(outs RC:$dst),
+//              (ins GPR:$cond, RC:$truev, RC:$falsev),
+//               "",
+//              [(set RC:$dst,
+//                (Select GPR:$cond, RC:$truev, RC:$falsev))]>;
+
+def Select_GPR_Using_CC_GPR : SelectCC_rrirr<GPR, GPR>;
+// def Select_GPR_Using_GPR    : Select_rrirr<GPR>;
+
 
 // Only op DAG can be disabled by ch4_1, data DAG cannot.
 def SDT_MYRISCVXDivRem : SDTypeProfile<0, 2,

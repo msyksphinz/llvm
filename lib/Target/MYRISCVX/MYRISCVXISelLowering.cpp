@@ -51,6 +51,7 @@ const char *MYRISCVXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     case MYRISCVXISD::DivRem:     return "MYRISCVXISD::DivRem";
     case MYRISCVXISD::DivRemU:    return "MYRISCVXISD::DivRemU";
     case MYRISCVXISD::Wrapper:    return "MYRISCVXISD::Wrapper";
+    case MYRISCVXISD::SELECT_CC:  return "MYRISCVXISD::SELECT_CC";
     default:                      return NULL;
   }
 }
@@ -102,10 +103,8 @@ MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
   setOperationAction(ISD::BR_CC, MVT::f32, Expand);
   setOperationAction(ISD::BR_CC, MVT::f64, Expand);
 
-  setOperationAction(ISD::SELECT, MVT::i32, Custom);
-
+  setOperationAction(ISD::SELECT,    MVT::i32, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::i32, Expand);
-  setOperationAction(ISD::SELECT_CC, MVT::Other, Expand);
 
   //- Set .align 2
   // It will emit .align 2 later
@@ -217,7 +216,20 @@ MYRISCVXTargetLowering::LowerReturn(SDValue Chain,
 SDValue MYRISCVXTargetLowering::
 lowerSELECT(SDValue Op, SelectionDAG &DAG) const
 {
-  return Op;
+  SDValue CondV = Op.getOperand(0);
+  SDValue TrueV = Op.getOperand(1);
+  SDValue FalseV = Op.getOperand(2);
+  SDLoc DL(Op);
+
+  // (select condv, truev, falsev)
+  // -> (myriscvxisd::select_cc condv, zero, setne, truev, falsev)
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i32);
+  SDValue SetNE = DAG.getConstant(ISD::SETNE, DL, MVT::i32);
+
+  SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
+  SDValue Ops[] = {CondV, Zero, SetNE, TrueV, FalseV};
+
+  return DAG.getNode(MYRISCVXISD::SELECT_CC, DL, VTs, Ops);
 }
 
 
@@ -368,4 +380,99 @@ EVT MYRISCVXTargetLowering::getSetCCResultType(const DataLayout &, LLVMContext &
   if (!VT.isVector())
     return MVT::i32;
   return VT.changeVectorElementTypeToInteger();
+}
+
+
+// Return the RISC-V branch opcode that matches the given DAG integer
+// condition code. The CondCode must be one of those supported by the RISC-V
+// ISA (see normaliseSetCC).
+static unsigned getBranchOpcodeForIntCondCode(ISD::CondCode CC) {
+  switch (CC) {
+  default:
+    llvm_unreachable("Unsupported CondCode");
+  case ISD::SETEQ:
+    return MYRISCVX::BEQ;
+  case ISD::SETNE:
+    return MYRISCVX::BNE;
+  case ISD::SETLT:
+    return MYRISCVX::BLT;
+  case ISD::SETGE:
+    return MYRISCVX::BGE;
+  case ISD::SETULT:
+    return MYRISCVX::BLTU;
+  case ISD::SETUGE:
+    return MYRISCVX::BGEU;
+  }
+}
+
+
+MachineBasicBlock *
+MYRISCVXTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
+                                                 MachineBasicBlock *BB) const {
+  dbgs() << "MYRISCVXTargetLowering::EmitInstrWithCustomInserter\n";
+
+  switch (MI.getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected instr type to insert");
+    case MYRISCVX::Select_GPR_Using_CC_GPR:
+      break;
+  }
+
+  // To "insert" a SELECT instruction, we actually have to insert the triangle
+  // control-flow pattern.  The incoming instruction knows the destination vreg
+  // to set, the condition code register to branch on, the true/false values to
+  // select between, and the condcode to use to select the appropriate branch.
+  //
+  // We produce the following control flow:
+  //     HeadMBB
+  //     |  \
+  //     |  IfFalseMBB
+  //     | /
+  //    TailMBB
+  const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
+  const BasicBlock *LLVM_BB = BB->getBasicBlock();
+  DebugLoc DL = MI.getDebugLoc();
+  MachineFunction::iterator I = ++BB->getIterator();
+
+  MachineBasicBlock *HeadMBB = BB;
+  MachineFunction *F = BB->getParent();
+  MachineBasicBlock *TailMBB = F->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *IfFalseMBB = F->CreateMachineBasicBlock(LLVM_BB);
+
+  F->insert(I, IfFalseMBB);
+  F->insert(I, TailMBB);
+  // Move all remaining instructions to TailMBB.
+  TailMBB->splice(TailMBB->begin(), HeadMBB,
+                  std::next(MachineBasicBlock::iterator(MI)), HeadMBB->end());
+  // Update machine-CFG edges by transferring all successors of the current
+  // block to the new block which will contain the Phi node for the select.
+  TailMBB->transferSuccessorsAndUpdatePHIs(HeadMBB);
+  // Set the successors for HeadMBB.
+  HeadMBB->addSuccessor(IfFalseMBB);
+  HeadMBB->addSuccessor(TailMBB);
+
+  // Insert appropriate branch.
+  unsigned LHS = MI.getOperand(1).getReg();
+  unsigned RHS = MI.getOperand(2).getReg();
+  auto CC = static_cast<ISD::CondCode>(MI.getOperand(3).getImm());
+  unsigned Opcode = getBranchOpcodeForIntCondCode(CC);
+
+  BuildMI(HeadMBB, DL, TII.get(Opcode))
+    .addReg(LHS)
+    .addReg(RHS)
+    .addMBB(TailMBB);
+
+  // IfFalseMBB just falls through to TailMBB.
+  IfFalseMBB->addSuccessor(TailMBB);
+
+  // %Result = phi [ %TrueValue, HeadMBB ], [ %FalseValue, IfFalseMBB ]
+  BuildMI(*TailMBB, TailMBB->begin(), DL, TII.get(MYRISCVX::PHI),
+          MI.getOperand(0).getReg())
+      .addReg(MI.getOperand(4).getReg())
+      .addMBB(HeadMBB)
+      .addReg(MI.getOperand(5).getReg())
+      .addMBB(IfFalseMBB);
+
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
+  return TailMBB;
 }

@@ -20,7 +20,16 @@
 
 namespace llvm {
   class MYRISCVXTargetMachine;
+  class AsmPrinter;
   class FunctionPass;
+  class MCInst;
+  class MCOperand;
+  class MachineInstr;
+  class MachineOperand;
+  class PassRegistry;
+
+  bool LowerMYRISCVXMachineOperandToMCOperand(const MachineOperand &MO,
+                                            MCOperand &MCOp, const AsmPrinter &AP);
 
   FunctionPass *createMYRISCVXLongBranchPass(MYRISCVXTargetMachine &TM);
   FunctionPass *createMYRISCVXDelJmpPass(MYRISCVXTargetMachine &TM);

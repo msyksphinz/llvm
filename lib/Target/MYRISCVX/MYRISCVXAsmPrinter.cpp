@@ -48,9 +48,20 @@ bool MYRISCVXAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 }
 
 
+bool MYRISCVXAsmPrinter::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
+  MCOp = MCInstLowering.LowerOperand(MO);
+  return MCOp.isValid();
+}
+
+
+#include "MYRISCVXGenMCPseudoLowering.inc"
 //@EmitInstruction {
 //- EmitInstruction() must exists or will have run time error.
 void MYRISCVXAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+  // Do any auto-generated pseudo lowerings.
+  if (emitPseudoExpansionLowering(*OutStreamer, MI))
+    return;
+
   //@EmitInstruction body {
   if (MI->isDebugValue()) {
     SmallString<128> Str;
@@ -63,8 +74,14 @@ void MYRISCVXAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   MachineBasicBlock::const_instr_iterator I = MI->getIterator();
   MachineBasicBlock::const_instr_iterator E = MI->getParent()->instr_end();
   do {
-    if (I->isPseudo() && !isLongBranchPseudo(I->getOpcode()))
+    // Do any auto-generated pseudo lowerings.
+    if (emitPseudoExpansionLowering(*OutStreamer, &*I))
+      continue;
+
+    if (I->isPseudo() && !isLongBranchPseudo(I->getOpcode())) {
+      dbgs() << "opcode = " << I->getOpcode() << '\n';
       llvm_unreachable("Pseudo opcode found in EmitInstruction()");
+    }
     MCInst TmpInst0;
     MCInstLowering.Lower(&*I, TmpInst0);
     OutStreamer->EmitInstruction(TmpInst0, getSubtargetInfo());
