@@ -417,21 +417,6 @@ def BGE     : CBranch12<0b1100011, 0b101, "bge" , setge,  GPR>;
 def BLTU    : CBranch12<0b1100011, 0b110, "bltu", setult, GPR>;
 def BGEU    : CBranch12<0b1100011, 0b111, "bgeu", setuge, GPR>;
 
-// An extra pattern is needed for a brcond without a setcc (i.e. where the
-// condition was calculated elsewhere).
-def : Pat<(brcond GPR:$cond, bb:$imm12), (BNE GPR:$cond, ZERO, bb:$imm12)>;
-
-def PseudoBR : MYRISCVXPseudo<(outs), (ins brtarget20:$imm20), "", [(br bb:$imm20)]>,
-               PseudoInstExpansion<(JAL brtarget20:$imm20)>;
-
-def PseudoBRIND : MYRISCVXPseudo<(outs), (ins GPR:$rs1, simm12:$imm12), "", []>,
-                  PseudoInstExpansion<(JALR GPR:$rs1)>;
-
-def : Pat<(brind GPR:$rs1), (PseudoBRIND GPR:$rs1, 0)>;
-
-// def : Pat<(brind (add GPR:$rs1, simm12:$imm12)),
-//           (PseudoBRIND GPR:$rs1, simm12:$imm12)>;
-
 let usesCustomInserter = 1 in
 class SelectCC_rrirr<RegisterClass RC, RegisterClass cmpty>
     : MYRISCVXPseudo<(outs RC:$dst),
@@ -445,16 +430,7 @@ class SelectCC_rrirr<RegisterClass RC, RegisterClass cmpty>
                          RC:$truev,
                          RC:$falsev))]>;
 
-// class Select_rrirr<RegisterClass RC>
-//     : MYRISCVXPseudo<(outs RC:$dst),
-//              (ins GPR:$cond, RC:$truev, RC:$falsev),
-//               "",
-//              [(set RC:$dst,
-//                (Select GPR:$cond, RC:$truev, RC:$falsev))]>;
-
 def Select_GPR_Using_CC_GPR : SelectCC_rrirr<GPR, GPR>;
-// def Select_GPR_Using_GPR    : Select_rrirr<GPR>;
-
 
 // Only op DAG can be disabled by ch4_1, data DAG cannot.
 def SDT_MYRISCVXDivRem : SDTypeProfile<0, 2,
