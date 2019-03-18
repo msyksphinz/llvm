@@ -69,6 +69,10 @@ MCOperand MYRISCVXMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   }
 
   switch (MOTy) {
+    case MachineOperand::MO_ExternalSymbol:
+      Symbol = AsmPrinter.GetExternalSymbolSymbol(MO.getSymbolName());
+      Offset += MO.getOffset();
+      break;
     case MachineOperand::MO_GlobalAddress:
       Symbol = AsmPrinter.getSymbol(MO.getGlobal());
       Offset += MO.getOffset();
@@ -161,6 +165,7 @@ MCOperand MYRISCVXMCInstLower::LowerOperand(const MachineOperand& MO,
     case MachineOperand::MO_JumpTableIndex:
     case MachineOperand::MO_BlockAddress:
     case MachineOperand::MO_GlobalAddress:
+    case MachineOperand::MO_ExternalSymbol:
       return LowerSymbolOperand(MO, MOTy, offset);
     case MachineOperand::MO_RegisterMask:
       break;
