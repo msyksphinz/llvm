@@ -23,5 +23,8 @@ namespace llvm {
                                       const MYRISCVXSubtarget &STI);
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
  private:
+    bool isEligibleForTailCallOptimization(const MYRISCVXCC &MYRISCVXCCInfo,
+                                           unsigned NextStackOffset,
+                                           const MYRISCVXFunctionInfo& FI) const override;
   };
 }

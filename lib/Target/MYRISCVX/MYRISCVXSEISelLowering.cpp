@@ -53,3 +53,20 @@ llvm::createMYRISCVXSETargetLowering(const MYRISCVXTargetMachine &TM,
                                      const MYRISCVXSubtarget &STI) {
   return new MYRISCVXSETargetLowering(TM, STI);
 }
+
+
+bool MYRISCVXSETargetLowering::
+isEligibleForTailCallOptimization(const MYRISCVXCC &MYRISCVXCCInfo,
+                                  unsigned NextStackOffset,
+                                  const MYRISCVXFunctionInfo& FI) const {
+  if (!EnableMYRISCVXTailCalls)
+    return false;
+
+  // Return false if either the callee or caller has a byval argument.
+  if (MYRISCVXCCInfo.hasByValArg() || FI.hasByvalArg())
+    return false;
+
+  // Return true if the callee's argument area is no larger than the
+  // caller's.
+  return NextStackOffset <= FI.getIncomingArgSize();
+}
