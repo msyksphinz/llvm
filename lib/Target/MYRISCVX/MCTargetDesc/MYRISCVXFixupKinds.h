@@ -42,6 +42,8 @@ namespace llvm {
       // fixup_MYRISCVX_PCREL_LO12_S - 12-bit fixup corresponding to pcrel_lo(foo) for
       // the S-type store instructions
       fixup_MYRISCVX_PCREL_LO12_S,
+      // resulting in - R_MYRISCVX_CALL16.
+      fixup_MYRISCVX_CALL16,
       // Marker
       LastTargetFixupKind,
       NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind

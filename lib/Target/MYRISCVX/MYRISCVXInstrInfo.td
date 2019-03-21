@@ -19,8 +19,8 @@ def SDT_MYRISCVXRet : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 def SDT_MYRISCVXSelectCC   : SDTypeProfile<1, 5, [SDTCisSameAs<1, 2>,
                                                SDTCisSameAs<0, 4>,
                                                SDTCisSameAs<4, 5>]>;
+def SDT_MYRISCVXJmpLink : SDTypeProfile<0, 2, [SDTCisVT<1, iPTR>]>;
 
-// def SDT_MYRISCVXSelect : SDTypeProfile<1, 3, []>;
 
 // Return
 def MYRISCVXRet : SDNode<"MYRISCVXISD::Ret", SDTNone,
@@ -38,6 +38,11 @@ def MYRISCVXGPRel : SDNode<"MYRISCVXISD::GPRel", SDTIntUnaryOp>;
 
 def MYRISCVXWrapper : SDNode<"MYRISCVXISD::Wrapper", SDTIntBinOp>;
 def RelocPIC : Predicate<"TM.getRelocationModel() == Reloc::PIC_">;
+
+// Call
+def MYRISCVXJmpLink : SDNode<"MYRISCVXISD::JmpLink",SDT_MYRISCVXJmpLink,
+                         [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
+                         SDNPVariadic]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction format superclass
@@ -137,7 +142,7 @@ def addr :
   ComplexPattern<iPTR, 2, "SelectAddr", [frameindex], [SDNPWantParent]>;
 
 // We need these two pseudo instructions to avoid offset calculation for long
-// branches. See the comment in file Cpu0LongBranch.cpp for detailed
+// branches. See the comment in file MYRISCVXLongBranch.cpp for detailed
 // explanation.
 // Expands to: lui $dst, %hi($tgt - $baltgt)
 def LONG_BRANCH_LUI : MYRISCVXPseudo<(outs GPR:$dst),
@@ -342,6 +347,19 @@ let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
   def RetRA : MYRISCVXPseudo<(outs), (ins), "", [(MYRISCVXRet)]>;
 
 
+class IsTailCall {
+  bit isCall = 1;
+  bit isTerminator = 1;
+  bit isReturn = 1;
+  bit isBarrier = 1;
+  bit hasExtraSrcRegAllocReq = 1;
+  bit isCodeGenOnly = 1;
+}
+
+def calltarget : Operand<iPTR> {
+  let EncoderMethod = "getJumpTargetOpValue";
+}
+
 
 //===----------------------------------------------------------------------===//
 // Instruction definition
@@ -454,6 +472,27 @@ def LEA_ADDI : EffectiveAddress<"addi\t$ra, $addr", GPR, mem_ea> {
   let isCodeGenOnly = 1;
 }
 
+// Jump and Link (Call)
+let isCall=1, hasDelaySlot=0 in {
+  //@JumpLink {
+  class JumpLink<bits<7> opcode, bits<3> funct3, string instr_asm, RegisterClass RC>:
+    FJ<opcode, (outs), (ins calltarget:$target, variable_ops),
+       !strconcat(instr_asm, "\t$target"), [(MYRISCVXJmpLink RC:$rd, imm:$target)],
+       IIBranch> {
+    }
+  //@JumpLink }
+  class JumpLinkReg<bits<7> opcode, bits<3> funct3, string instr_asm,
+                    RegisterClass RC>:
+    FI<opcode, funct3, (outs RC:$rd), (ins RC:$rb, variable_ops),
+       !strconcat(instr_asm, "\t$rb"), [(MYRISCVXJmpLink RC:$rd, RC:$rb)], IIBranch> {
+  }
+}
+
+
+def : Pat<(MYRISCVXJmpLink RA, (i32 tglobaladdr:$dst)),
+          (JALR tglobaladdr:$dst)>;
+def : Pat<(MYRISCVXJmpLink RA, (i32 texternalsym:$dst)),
+          (JALR texternalsym:$dst)>;
 
 //===----------------------------------------------------------------------===//
 // Instruction aliases

@@ -28,6 +28,8 @@ namespace llvm {
  public:
  MYRISCVXFunctionInfo(MachineFunction& MF)
      : MF(MF),
+       InArgFIRange(std::make_pair(-1, 0)),
+       OutArgFIRange(std::make_pair(-1, 0)), GPFI(0), DynAllocFI(0),
        VarArgsFrameIndex(0),
        MaxCallFrameSize(0),
        GlobalBaseReg(0),
@@ -65,6 +67,14 @@ namespace llvm {
     bool globalBaseRegSet() const;
     unsigned getGlobalBaseReg();
 
+    bool isInArgFI(int FI) const {
+      return FI <= InArgFIRange.first && FI >= InArgFIRange.second;
+    }
+    void setLastInArgFI(int FI) { InArgFIRange.second = FI; }
+    bool isOutArgFI(int FI) const {
+      return FI <= OutArgFIRange.first && FI >= OutArgFIRange.second;
+    }
+
    private:
     virtual void anchor();
     MachineFunction& MF;
@@ -94,6 +104,18 @@ namespace llvm {
     /// Frame objects for spilling eh data registers.
     int EhDataRegFI[2];
 
+    int getGPFI() const { return GPFI; }
+    void setGPFI(int FI) { GPFI = FI; }
+    bool isGPFI(int FI) const { return GPFI && GPFI == FI; }
+    bool isDynAllocFI(int FI) const { return DynAllocFI && DynAllocFI == FI; }
+
+    // Range of frame object indices.
+    // InArgFIRange: Range of indices of all frame objects created during call to
+    // LowerFormalArguments.
+    // OutArgFIRange: Range of indices of all frame objects created during call to
+    // LowerCall except for the frame object for restoring $gp.
+    std::pair<int, int> InArgFIRange, OutArgFIRange;
+    mutable int DynAllocFI; // Frame index of dynamically allocated stack area.
   };
   //@1 }
 } // end of namespace llvm

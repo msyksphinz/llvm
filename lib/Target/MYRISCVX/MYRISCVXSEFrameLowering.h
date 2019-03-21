@@ -30,6 +30,11 @@ namespace llvm {
     void determineCalleeSaves(MachineFunction &MF,
                               BitVector &SavedRegs,
                               RegScavenger *RS) const override;
+
+    bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MI,
+                                   const std::vector<CalleeSavedInfo> &CSI,
+                                   const TargetRegisterInfo *TRI) const override;
   };
 
 } // End llvm namespace

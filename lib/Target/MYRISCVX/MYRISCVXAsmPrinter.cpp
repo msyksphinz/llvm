@@ -41,6 +41,43 @@
 using namespace llvm;
 #define DEBUG_TYPE "MYRISCVX-asm-printer"
 
+//@adjustFixupValue {
+// Prepare value for the target space for it
+static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
+                                 MCContext *Ctx = nullptr) {
+
+  unsigned Kind = Fixup.getKind();
+
+  // Add/subtract and shift
+  switch (Kind) {
+  default:
+    return 0;
+  case FK_GPRel_4:
+  case FK_Data_4:
+  case MYRISCVX::fixup_MYRISCVX_CALL16:
+  case MYRISCVX::fixup_MYRISCVX_LO16:
+  case MYRISCVX::fixup_MYRISCVX_GOT_LO16:
+    break;
+  case MYRISCVX::fixup_MYRISCVX_PCREL_LO12_I:
+  case MYRISCVX::fixup_MYRISCVX_PCREL_LO12_S:
+    // So far we are only using this type for branches and jump.
+    // For branches we start 1 instruction after the branch
+    // so the displacement will be one instruction size less.
+    Value -= 4;
+    break;
+  case MYRISCVX::fixup_MYRISCVX_HI16:
+  case MYRISCVX::fixup_MYRISCVX_GOT:
+  case MYRISCVX::fixup_MYRISCVX_GOT_HI16:
+    // Get the higher 16-bits. Also add 1 if bit 15 is 1.
+    Value = ((Value + 0x8000) >> 16) & 0xffff;
+    break;
+  }
+
+  return Value;
+}
+//@adjustFixupValue }
+
+
 bool MYRISCVXAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
   AsmPrinter::runOnMachineFunction(MF);
