@@ -21,9 +21,12 @@ def SDT_MYRISCVXSelectCC   : SDTypeProfile<1, 5, [SDTCisSameAs<1, 2>,
                                                SDTCisSameAs<4, 5>]>;
 def SDT_MYRISCVXJmpLink : SDTypeProfile<0, 2, [SDTCisVT<1, iPTR>]>;
 
+def SDT_MYRISCVXCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>]>;
+def SDT_MYRISCVXCallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
+
 
 // Return
-def MYRISCVXRet : SDNode<"MYRISCVXISD::Ret", SDTNone,
+def MYRISCVXRet : SDNode<"MYRISCVXISD::Ret", SDT_MYRISCVXRet,
                          [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 def SelectCC : SDNode<"MYRISCVXISD::SELECT_CC", SDT_MYRISCVXSelectCC,
@@ -43,9 +46,6 @@ def RelocPIC : Predicate<"TM.getRelocationModel() == Reloc::PIC_">;
 def MYRISCVXJmpLink : SDNode<"MYRISCVXISD::JmpLink",SDT_MYRISCVXJmpLink,
                          [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                          SDNPVariadic]>;
-
-def SDT_MYRISCVXCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>]>;
-def SDT_MYRISCVXCallSeqEnd : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction format superclass
@@ -289,8 +289,8 @@ multiclass StoreM32<bits<7> opcode, bits<3> funct3, string instr_asm, PatFrag Op
 let isBranch=1, isTerminator=1, isBarrier=1, imm12=0, hasDelaySlot = 0,
 isIndirectBranch = 1 in
 class JumpFR<bits<7> opcode, bits<3> funct3, string instr_asm, RegisterClass RC>:
-  FI<opcode, funct3, (outs), (ins RC:$ra),
-     instr_asm, [(brind RC:$ra)], IIBranch> {
+  FI<opcode, funct3, (outs RC:$rd), (ins RC:$ra),
+     !strconcat(instr_asm, "\t$rd, $ra"), [(MYRISCVXJmpLink RC:$rd, RC:$ra)], IIBranch> {
   let rd    = 0;  // Zero
   let rs1   = 1;  // RA
   let imm12 = 0;
@@ -353,7 +353,7 @@ class SetCC_I<bits<7> opcode, bits<3> funct3,
 
 
 let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
-  def RetRA : MYRISCVXPseudo<(outs), (ins), "", [(MYRISCVXRet)]>;
+  def RetRA : MYRISCVXPseudo<(outs), (ins), "", [(MYRISCVXRet RA)]>;
 
 
 class IsTailCall {
@@ -371,12 +371,12 @@ def calltarget : Operand<iPTR> {
 
 
 // As stack alignment is always done with addiu, we need a 16-bit immediate
-let Defs = [SP], Uses = [SP] in {
+// let Defs = [SP], Uses = [SP] in {
 def ADJCALLSTACKDOWN : MYRISCVXPseudo<(outs), (ins simm12:$amt1, simm12:$amt2), "",
                                       [(callseq_start timm:$amt1, timm:$amt2)]>;
 def ADJCALLSTACKUP   : MYRISCVXPseudo<(outs), (ins simm12:$amt1, simm12:$amt2), "",
                                       [(callseq_end timm:$amt1, timm:$amt2)]>;
-}
+//}
 
 //@def CPRESTORE {
 // When handling PIC code the assembler needs .cpload and .cprestore
@@ -499,27 +499,27 @@ def LEA_ADDI : EffectiveAddress<"addi\t$ra, $addr", GPR, mem_ea> {
   let isCodeGenOnly = 1;
 }
 
-// Jump and Link (Call)
-let isCall=1, hasDelaySlot=0 in {
-  //@JumpLink {
-  class JumpLink<bits<7> opcode, bits<3> funct3, string instr_asm, RegisterClass RC>:
-    FJ<opcode, (outs), (ins calltarget:$target, variable_ops),
-       !strconcat(instr_asm, "\t$target"), [(MYRISCVXJmpLink RC:$rd, imm:$target)],
-       IIBranch> {
-    }
-  //@JumpLink }
-  class JumpLinkReg<bits<7> opcode, bits<3> funct3, string instr_asm,
-                    RegisterClass RC>:
-    FI<opcode, funct3, (outs RC:$rd), (ins RC:$rb, variable_ops),
-       !strconcat(instr_asm, "\t$rb"), [(MYRISCVXJmpLink RC:$rd, RC:$rb)], IIBranch> {
-  }
-}
+// // Jump and Link (Call)
+// let isCall=1, hasDelaySlot=0 in {
+//   //@JumpLink {
+//   class JumpLink<bits<7> opcode, bits<3> funct3, string instr_asm, RegisterClass RC>:
+//     FJ<opcode, (outs), (ins calltarget:$target, variable_ops),
+//        !strconcat(instr_asm, "\t$target"), [(MYRISCVXJmpLink RC:$rd, imm:$target)],
+//        IIBranch> {
+//     }
+//   //@JumpLink }
+//   class JumpLinkReg<bits<7> opcode, bits<3> funct3, string instr_asm,
+//                     RegisterClass RC>:
+//     FI<opcode, funct3, (outs RC:$rd), (ins RC:$rb, variable_ops),
+//        !strconcat(instr_asm, "\t$rb"), [(MYRISCVXJmpLink RC:$rd, RC:$rb)], IIBranch> {
+//   }
+// }
 
 
-def : Pat<(MYRISCVXJmpLink RA, (i32 tglobaladdr:$dst)),
-          (JALR tglobaladdr:$dst)>;
-def : Pat<(MYRISCVXJmpLink RA, (i32 texternalsym:$dst)),
-          (JALR texternalsym:$dst)>;
+def : Pat<(MYRISCVXJmpLink GPR:$rd, (i32 tglobaladdr:$dst)),
+          (JALR GPR:$rd, tglobaladdr:$dst)>;
+def : Pat<(MYRISCVXJmpLink GPR:$rd, (i32 texternalsym:$dst)),
+          (JALR GPR:$rd, texternalsym:$dst)>;
 
 //===----------------------------------------------------------------------===//
 // Instruction aliases
