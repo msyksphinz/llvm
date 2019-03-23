@@ -75,6 +75,14 @@ namespace llvm {
       return FI <= OutArgFIRange.first && FI >= OutArgFIRange.second;
     }
 
+    /// Create a MachinePointerInfo that has an ExternalSymbolPseudoSourceValue
+    /// object representing a GOT entry for an external function.
+    MachinePointerInfo callPtrInfo(const char *ES);
+
+    /// Create a MachinePointerInfo that has a GlobalValuePseudoSourceValue object
+    /// representing a GOT entry for a global function.
+    MachinePointerInfo callPtrInfo(const GlobalValue *GV);
+
    private:
     virtual void anchor();
     MachineFunction& MF;
@@ -111,11 +119,13 @@ namespace llvm {
 
     // Range of frame object indices.
     // InArgFIRange: Range of indices of all frame objects created during call to
+
     // LowerFormalArguments.
     // OutArgFIRange: Range of indices of all frame objects created during call to
     // LowerCall except for the frame object for restoring $gp.
     std::pair<int, int> InArgFIRange, OutArgFIRange;
     mutable int DynAllocFI; // Frame index of dynamically allocated stack area.
+
   };
   //@1 }
 } // end of namespace llvm

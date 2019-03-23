@@ -35,3 +35,12 @@ bool MYRISCVXFunctionInfo::globalBaseRegSet() const {
 unsigned MYRISCVXFunctionInfo::getGlobalBaseReg() {
   return GlobalBaseReg = MYRISCVX::GP;
 }
+
+MachinePointerInfo MYRISCVXFunctionInfo::callPtrInfo(const char *ES) {
+  return MachinePointerInfo(MF.getPSVManager().getExternalSymbolCallEntry(ES));
+}
+
+
+MachinePointerInfo MYRISCVXFunctionInfo::callPtrInfo(const GlobalValue *GV) {
+  return MachinePointerInfo(MF.getPSVManager().getGlobalValueCallEntry(GV));
+}

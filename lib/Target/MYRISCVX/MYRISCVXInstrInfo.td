@@ -44,6 +44,9 @@ def MYRISCVXJmpLink : SDNode<"MYRISCVXISD::JmpLink",SDT_MYRISCVXJmpLink,
                          [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                          SDNPVariadic]>;
 
+def SDT_MYRISCVXCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>]>;
+def SDT_MYRISCVXCallSeqEnd : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction format superclass
 //===----------------------------------------------------------------------===//
@@ -151,6 +154,12 @@ def LONG_BRANCH_LUI : MYRISCVXPseudo<(outs GPR:$dst),
 // Expands to: addiu $dst, $src, %lo($tgt - $baltgt)
 def LONG_BRANCH_ADDI : MYRISCVXPseudo<(outs GPR:$dst),
     (ins GPR:$src, jmptarget:$tgt, jmptarget:$baltgt), "", []>;
+
+// These are target-independent nodes, but have target-specific formats.
+def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_MYRISCVXCallSeqStart,
+                           [SDNPHasChain, SDNPOutGlue]>;
+def callseq_end : SDNode<"ISD::CALLSEQ_END", SDT_MYRISCVXCallSeqEnd,
+                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
 
 //===----------------------------------------------------------------------===//
@@ -359,6 +368,24 @@ class IsTailCall {
 def calltarget : Operand<iPTR> {
   let EncoderMethod = "getJumpTargetOpValue";
 }
+
+
+// As stack alignment is always done with addiu, we need a 16-bit immediate
+let Defs = [SP], Uses = [SP] in {
+def ADJCALLSTACKDOWN : MYRISCVXPseudo<(outs), (ins simm12:$amt1, simm12:$amt2), "",
+                                      [(callseq_start timm:$amt1, timm:$amt2)]>;
+def ADJCALLSTACKUP   : MYRISCVXPseudo<(outs), (ins simm12:$amt1, simm12:$amt2), "",
+                                      [(callseq_end timm:$amt1, timm:$amt2)]>;
+}
+
+//@def CPRESTORE {
+// When handling PIC code the assembler needs .cpload and .cprestore
+// directives. If the real instructions corresponding these directives
+// are used, we have the same behavior, but get also a bunch of warnings
+// from the assembler.
+let hasSideEffects = 0 in
+def CPRESTORE : MYRISCVXPseudo<(outs), (ins simm12:$loc, GPR:$gp),
+                            ".cprestore\t$loc", []>;
 
 
 //===----------------------------------------------------------------------===//
