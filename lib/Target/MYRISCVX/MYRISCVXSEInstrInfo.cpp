@@ -56,7 +56,7 @@ bool MYRISCVXSEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
 void MYRISCVXSEInstrInfo::expandRetLR(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator I) const {
-  BuildMI(MBB, I, I->getDebugLoc(), get(MYRISCVX::RET)).addReg(MYRISCVX::RA).addImm(0);
+  BuildMI(MBB, I, I->getDebugLoc(), get(MYRISCVX::JALR)).addReg(MYRISCVX::RA);
 }
 
 
