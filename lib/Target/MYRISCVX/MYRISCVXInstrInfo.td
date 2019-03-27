@@ -503,7 +503,7 @@ def LEA_ADDI : EffectiveAddress<"addi\t$ra, $addr", GPR, mem_ea> {
 let isCall=1, hasDelaySlot=0 in {
   //@JumpLink {
   class JumpLink<bits<7> opcode, string instr_asm, DAGOperand opnd>:
-    FJ<opcode, (outs), (ins opnd:$target, variable_ops),
+    FJ<opcode, (outs), (ins opnd:$target),
        !strconcat(instr_asm, "\t$target"), [(MYRISCVXJmpLink tglobaladdr:$target)],
        IIBranch> {
     }
@@ -515,7 +515,7 @@ let isCall=1, hasDelaySlot=0 in {
   // }
 }
 
-def JAL : JumpLink<0b1101111, "jal", GPR>;
+def JAL : JumpLink<0b1101111, "jal", calltarget>;
 
 def : Pat<(MYRISCVXJmpLink (i32 tglobaladdr:$dst)),
           (JAL tglobaladdr:$dst)>;
@@ -614,3 +614,7 @@ def : Pat<(brcond RC:$cond, bb:$dst),
 }
 
 defm : BrcondPatsSlt<GPR, BEQ, BNE, SLT, SLTU, SLTI, SLTIU, ZERO>;
+
+let isBarrier = 1, isBranch = 1, isTerminator = 1 in
+def PseudoBR : MYRISCVXPseudo<(outs), (ins calltarget:$simm20), "", [(br bb:$simm20)]>,
+               PseudoInstExpansion<(JAL calltarget:$simm20)>;
