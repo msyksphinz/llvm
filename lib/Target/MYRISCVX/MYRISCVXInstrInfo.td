@@ -15,7 +15,6 @@
 // MYRISCVX profiles and nodes
 //===----------------------------------------------------------------------===//
 
-def SDT_MYRISCVXRet : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 def SDT_MYRISCVXSelectCC   : SDTypeProfile<1, 5, [SDTCisSameAs<1, 2>,
                                                SDTCisSameAs<0, 4>,
                                                SDTCisSameAs<4, 5>]>;
@@ -26,7 +25,7 @@ def SDT_MYRISCVXCallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]
 
 
 // Return
-def MYRISCVXRet : SDNode<"MYRISCVXISD::Ret", SDT_MYRISCVXRet,
+def MYRISCVXRet : SDNode<"MYRISCVXISD::Ret", SDTNone,
                          [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 def SelectCC : SDNode<"MYRISCVXISD::SELECT_CC", SDT_MYRISCVXSelectCC,
@@ -353,7 +352,7 @@ class SetCC_I<bits<7> opcode, bits<3> funct3,
 
 
 let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
-  def RetRA : MYRISCVXPseudo<(outs), (ins), "", [(MYRISCVXRet RA)]>;
+  def RetRA : MYRISCVXPseudo<(outs), (ins), "", [(MYRISCVXRet)]>;
 
 
 class IsTailCall {
