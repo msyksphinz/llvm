@@ -22,7 +22,7 @@
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
-#define DEBUG_TYPE "MYRISCVX"
+#define DEBUG_TYPE "myriscvx"
 extern "C" void LLVMInitializeMYRISCVXTarget() {
   // Register the target.
   RegisterTargetMachine<MYRISCVXTargetMachine> X(TheMYRISCVX32Target);

@@ -36,7 +36,7 @@
 #include <iostream>
 
 using namespace llvm;
-#define DEBUG_TYPE "MYRISCVX-isel"
+#define DEBUG_TYPE "myriscvx-isel"
 
 bool MYRISCVXSEDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &static_cast<const MYRISCVXSubtarget &>(MF.getSubtarget());

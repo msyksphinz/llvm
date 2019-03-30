@@ -29,7 +29,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 using namespace llvm;
-#define DEBUG_TYPE "MYRISCVX-long-branch"
+#define DEBUG_TYPE "myriscvx-long-branch"
 
 STATISTIC(LongBranches, "Number of long branches.");
 static cl::opt<bool> ForceLongBranch(

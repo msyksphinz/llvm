@@ -15,7 +15,7 @@
 #include "MYRISCVXSERegisterInfo.h"
 
 using namespace llvm;
-#define DEBUG_TYPE "MYRISCVX-reg-info"
+#define DEBUG_TYPE "myriscvx-reg-info"
 MYRISCVXSERegisterInfo::MYRISCVXSERegisterInfo(const MYRISCVXSubtarget &ST)
     : MYRISCVXRegisterInfo(ST) {}
 

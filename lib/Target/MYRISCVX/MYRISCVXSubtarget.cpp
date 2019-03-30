@@ -23,7 +23,7 @@
 #include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
-#define DEBUG_TYPE "MYRISCVX-subtarget"
+#define DEBUG_TYPE "myriscvx-subtarget"
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
 #include "MYRISCVXGenSubtargetInfo.inc"

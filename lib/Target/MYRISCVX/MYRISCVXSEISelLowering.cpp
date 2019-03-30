@@ -25,10 +25,10 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
 using namespace llvm;
-#define DEBUG_TYPE "MYRISCVX-isel"
+#define DEBUG_TYPE "myriscvx-isel"
 
 static cl::opt<bool>
-EnableMYRISCVXTailCalls("enable-MYRISCVX-tail-calls", cl::Hidden,
+EnableMYRISCVXTailCalls("enable-myriscvx-tail-calls", cl::Hidden,
                         cl::desc("MYRISCVX: Enable tail calls."), cl::init(false));
 
 //@MYRISCVXSETargetLowering {

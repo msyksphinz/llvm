@@ -36,7 +36,7 @@
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
-#define DEBUG_TYPE "MYRISCVX-isel"
+#define DEBUG_TYPE "myriscvx-isel"
 
 //===----------------------------------------------------------------------===//
 // Instruction Selector Implementation

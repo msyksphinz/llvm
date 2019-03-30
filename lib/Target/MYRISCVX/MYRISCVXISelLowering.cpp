@@ -35,7 +35,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-#define DEBUG_TYPE "MYRISCVX-lower"
+#define DEBUG_TYPE "myriscvx-lower"
 
 STATISTIC(NumTailCalls, "Number of tail calls");
 

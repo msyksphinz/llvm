@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "MYRISCVX-reg-info"
+#define DEBUG_TYPE "myriscvx-reg-info"
 #include "MYRISCVXRegisterInfo.h"
 #include "MYRISCVX.h"
 #include "MYRISCVXSubtarget.h"

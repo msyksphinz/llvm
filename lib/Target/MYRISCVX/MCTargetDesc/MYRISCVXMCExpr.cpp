@@ -17,7 +17,7 @@
 #include "llvm/MC/MCSymbolELF.h"
 
 using namespace llvm;
-#define DEBUG_TYPE "MYRISCVXmcexpr"
+#define DEBUG_TYPE "myriscvxmcexpr"
 
 const MYRISCVXMCExpr *MYRISCVXMCExpr::create(MYRISCVXMCExpr::MYRISCVXExprKind Kind,
                                              const MCExpr *Expr, MCContext &Ctx) {

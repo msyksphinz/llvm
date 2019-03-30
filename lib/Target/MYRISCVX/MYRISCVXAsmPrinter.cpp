@@ -39,7 +39,7 @@
 #include "llvm/Target/TargetOptions.h"
 
 using namespace llvm;
-#define DEBUG_TYPE "MYRISCVX-asm-printer"
+#define DEBUG_TYPE "myriscvx-asm-printer"
 
 //@adjustFixupValue {
 // Prepare value for the target space for it
