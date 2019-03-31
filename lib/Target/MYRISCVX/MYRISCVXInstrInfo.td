@@ -23,6 +23,9 @@ def SDT_MYRISCVXJmpLink : SDTypeProfile<0, 1, [SDTCisVT<0, iPTR>]>;
 def SDT_MYRISCVXCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>]>;
 def SDT_MYRISCVXCallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
 
+// Tail call
+def MYRISCVXTailCall : SDNode<"MYRISCVXISD::TailCall", SDT_MYRISCVXJmpLink,
+                   [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 // Return
 def MYRISCVXRet : SDNode<"MYRISCVXISD::Ret", SDTNone,
@@ -413,8 +416,6 @@ def ADDI : ArithLogicI<0b0010011, 0b000, "addi", add, simm12, immSExt12, GPR>;
 
 /// Arithmetic Instructions (3-Operand, R-Type)
 def JALR : JumpFR<0b1100111, 0b000, "jalr", GPR>;
-// def : InstAlias<"jr $rs1", (JALR ZERO, GPR:$rs1, 0)>;
-// def RET  : RetBase<GPR>;
 
 let isCall = 1 in
 // def JAL : UncondBranch<0b1101111, "jal">;
@@ -520,6 +521,26 @@ def : Pat<(MYRISCVXJmpLink (i32 tglobaladdr:$dst)),
           (JAL tglobaladdr:$dst)>;
 def : Pat<(MYRISCVXJmpLink (i32 texternalsym:$dst)),
           (JAL texternalsym:$dst)>;
+
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1,
+    hasExtraSrcRegAllocReq = 1 in {
+  class TailCall<Instruction JumpInst> :
+    MYRISCVXPseudo<(outs), (ins calltarget:$target), "", []>,
+    PseudoInstExpansion<(JumpInst calltarget:$target)>;
+  class TailCallReg<RegisterClass RO, Instruction JRInst,
+    RegisterClass ResRO = RO> :
+    MYRISCVXPseudo<(outs), (ins RO:$rs), "", [(MYRISCVXTailCall RO:$rs)]>,
+    PseudoInstExpansion<(JRInst ResRO:$rs)>;
+}
+
+
+def TAILCALL   : TailCall<JAL>;
+def TAILCALL_R : TailCallReg<GPR, JALR>;
+
+def : Pat<(MYRISCVXTailCall (iPTR tglobaladdr:$dst)),
+          (TAILCALL tglobaladdr:$dst)>;
+def : Pat<(MYRISCVXTailCall (iPTR texternalsym:$dst)),
+          (TAILCALL texternalsym:$dst)>;
 
 //===----------------------------------------------------------------------===//
 // Instruction aliases
