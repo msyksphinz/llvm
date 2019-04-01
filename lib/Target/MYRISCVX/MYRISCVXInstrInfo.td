@@ -587,7 +587,12 @@ class WrapperPat<SDNode node, Instruction ORiOp, RegisterClass RC>:
       Pat<(MYRISCVXWrapper RC:$gp, node:$in),
           (ORiOp RC:$gp, node:$in)>;
 
-def : WrapperPat<tglobaladdr, ORI, GPR>;
+def : WrapperPat<tglobaladdr    , ORI, GPR>;
+def : WrapperPat<tconstpool     , ORI, GPR>;
+def : WrapperPat<texternalsym   , ORI, GPR>;
+def : WrapperPat<tblockaddress  , ORI, GPR>;
+def : WrapperPat<tjumptable     , ORI, GPR>;
+def : WrapperPat<tglobaltlsaddr , ORI, GPR>;
 
 def : Pat<(i32 (extloadi1  addr:$src)), (LBU addr:$src)>;
 def : Pat<(i32 (extloadi8  addr:$src)), (LBU addr:$src)>;

@@ -87,6 +87,16 @@ namespace llvm {
     virtual void anchor();
     MachineFunction& MF;
     /// VarArgsFrameIndex - FrameIndex for start of varargs area.
+
+    // LowerFormalArguments.
+    // OutArgFIRange: Range of indices of all frame objects created during call to
+    // LowerCall except for the frame object for restoring $gp.
+    std::pair<int, int> InArgFIRange, OutArgFIRange;
+
+    int GPFI; // Index of the frame object for restoring $gp
+
+    mutable int DynAllocFI; // Frame index of dynamically allocated stack area.
+
     int VarArgsFrameIndex;
     unsigned MaxCallFrameSize;
 
@@ -94,8 +104,6 @@ namespace llvm {
     /// use as the global base register. This is used for PIC in some PIC
     /// relocation models.
     unsigned GlobalBaseReg;
-    int GPFI; // Index of the frame object for restoring $gp
-
     /// SRetReturnReg - Some subtargets require that sret lowering includes
     /// returning the value of the returned struct in a register. This field
     /// holds the virtual register into which the sret argument is passed.
@@ -119,12 +127,6 @@ namespace llvm {
 
     // Range of frame object indices.
     // InArgFIRange: Range of indices of all frame objects created during call to
-
-    // LowerFormalArguments.
-    // OutArgFIRange: Range of indices of all frame objects created during call to
-    // LowerCall except for the frame object for restoring $gp.
-    std::pair<int, int> InArgFIRange, OutArgFIRange;
-    mutable int DynAllocFI; // Frame index of dynamically allocated stack area.
 
   };
   //@1 }

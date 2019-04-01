@@ -72,6 +72,7 @@ MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
   setOperationAction(ISD::ROTL, MVT::i32, Expand);
   setOperationAction(ISD::ROTR, MVT::i32, Expand);
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
+  setOperationAction(ISD::BlockAddress,  MVT::i32, Custom);
 
   // MYRISCVX does not have i1 type, so use i32 for
   // setcc operations results (slt, sgt, ...).
@@ -456,6 +457,7 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   switch (Op.getOpcode())
   {
     case ISD::GlobalAddress: return lowerGlobalAddress(Op, DAG);
+    case ISD::BlockAddress:  return lowerBlockAddress(Op, DAG);
     case ISD::SELECT:        return lowerSELECT(Op, DAG);
   }
   return SDValue();
@@ -504,6 +506,18 @@ SDValue MYRISCVXTargetLowering::lowerGlobalAddress(SDValue Op,
   return getAddrGlobal(
       N, Ty, DAG, MYRISCVXII::MO_GOT, DAG.getEntryNode(),
       MachinePointerInfo::getGOT(DAG.getMachineFunction()));
+}
+
+
+SDValue MYRISCVXTargetLowering::lowerBlockAddress(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  BlockAddressSDNode *N = cast<BlockAddressSDNode>(Op);
+  EVT Ty = Op.getValueType();
+
+  if (!isPositionIndependent())
+    return getAddrNonPIC(N, Ty, DAG);
+
+  return getAddrLocal(N, Ty, DAG);
 }
 
 
@@ -576,6 +590,19 @@ SDValue MYRISCVXTargetLowering::getTargetNode(GlobalAddressSDNode *N, EVT Ty,
                                               SelectionDAG &DAG,
                                               unsigned Flag) const {
   return DAG.getTargetGlobalAddress(N->getGlobal(), SDLoc(N), Ty, 0, Flag);
+}
+
+
+SDValue MYRISCVXTargetLowering::getTargetNode(BlockAddressSDNode *N, EVT Ty,
+                                              SelectionDAG &DAG,
+                                              unsigned Flag) const {
+  return DAG.getTargetBlockAddress(N->getBlockAddress(), Ty, 0, Flag);
+}
+
+SDValue MYRISCVXTargetLowering::getTargetNode(JumpTableSDNode *N, EVT Ty,
+                                              SelectionDAG &DAG,
+                                              unsigned Flag) const {
+  return DAG.getTargetJumpTable(N->getIndex(), Ty, Flag);
 }
 
 
@@ -838,7 +865,7 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   MYRISCVXFunctionInfo *FuncInfo = MF.getInfo<MYRISCVXFunctionInfo>();
   bool IsPIC = isPositionIndependent();
 
-  MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
+  // MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -947,7 +974,7 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool IsPICCall = IsPIC; // true if calls are translated to
   // jalr $t9
   bool GlobalOrExternal = false, InternalLinkage = false;
-  SDValue CalleeLo;
+  // SDValue CalleeLo;
   EVT Ty = Callee.getValueType();
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
     if (IsPICCall) {

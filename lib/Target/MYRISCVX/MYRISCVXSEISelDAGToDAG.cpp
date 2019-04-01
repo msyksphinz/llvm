@@ -93,7 +93,7 @@ bool MYRISCVXSEDAGToDAGISel::trySelect(SDNode *Node) {
   // Instruction Selection not handled by the auto-generated
   // tablegen selection should be handled here.
 
-  EVT NodeTy = Node->getValueType(0);
+  // EVT NodeTy = Node->getValueType(0);
   switch(Opcode) {
     default: break;
 
