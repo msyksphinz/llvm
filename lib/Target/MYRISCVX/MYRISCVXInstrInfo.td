@@ -37,8 +37,8 @@ def SelectCC : SDNode<"MYRISCVXISD::SELECT_CC", SDT_MYRISCVXSelectCC,
 // Hi and Lo nodes are used to handle global addresses. Used on
 // MYRISCVXISelLowering to lower stuff like GlobalAddress, ExternalSymbol
 // static model. (nothing to do with MYRISCVX Registers Hi and Lo)
-def MYRISCVXHi : SDNode<"MYRISCVXISD::Hi", SDTIntUnaryOp>;
-def MYRISCVXLo : SDNode<"MYRISCVXISD::Lo", SDTIntUnaryOp>;
+// def MYRISCVXHi : SDNode<"MYRISCVXISD::Hi", SDTIntUnaryOp>;
+// def MYRISCVXLo : SDNode<"MYRISCVXISD::Lo", SDTIntUnaryOp>;
 def MYRISCVXGPRel : SDNode<"MYRISCVXISD::GPRel", SDTIntUnaryOp>;
 
 def MYRISCVXWrapper : SDNode<"MYRISCVXISD::Wrapper", SDTIntBinOp>;
@@ -573,10 +573,10 @@ def : Pat<(i32 imm:$imm),
 
 
 // hi/lo relocs
-def : Pat<(MYRISCVXHi tglobaladdr:$in), (LUI tglobaladdr:$in)>;
-def : Pat<(MYRISCVXLo tglobaladdr:$in), (ORI ZERO, tglobaladdr:$in)>;
-def : Pat<(add GPR:$hi, (MYRISCVXLo tglobaladdr:$lo)),
-          (ORI GPR:$hi, tglobaladdr:$lo)>;
+// def : Pat<(MYRISCVXHi tglobaladdr:$in), (LUI tglobaladdr:$in)>;
+// def : Pat<(MYRISCVXLo tglobaladdr:$in), (ORI ZERO, tglobaladdr:$in)>;
+// def : Pat<(add GPR:$hi, (MYRISCVXLo tglobaladdr:$lo)),
+//           (ORI GPR:$hi, tglobaladdr:$lo)>;
 
 // gp_rel relocs
 def : Pat<(add GPR:$gp, (MYRISCVXGPRel tglobaladdr:$in)),
