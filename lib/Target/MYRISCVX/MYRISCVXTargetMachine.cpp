@@ -128,6 +128,10 @@ class MYRISCVXPassConfig : public TargetPassConfig {
   }
 
   void addPreEmitPass() override;
+
+#ifdef ENABLE_GPRESTORE
+  void addPreRegAlloc() override;
+#endif
 };
 
 } // namespace
@@ -154,3 +158,14 @@ void MYRISCVXPassConfig::addPreEmitPass() {
   addPass(createMYRISCVXDelJmpPass(TM));
   return;
 }
+
+
+#ifdef ENABLE_GPRESTORE
+void MYRISCVXPassConfig::addPreRegAlloc() {
+  if (!MYRISCVXReserveGP) {
+    // $gp is a caller-saved register.
+    addPass(createMYRISCVXEmitGPRestorePass(getMYRISCVXTargetMachine()));
+  }
+  return;
+}
+#endif

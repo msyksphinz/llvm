@@ -865,7 +865,7 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   MYRISCVXFunctionInfo *FuncInfo = MF.getInfo<MYRISCVXFunctionInfo>();
   bool IsPIC = isPositionIndependent();
 
-  // MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
+  MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -880,6 +880,19 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                      Callee.getNode(), CLI.getArgs());
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NextStackOffset = CCInfo.getNextStackOffset();
+
+
+#ifdef ENABLE_GPRESTORE
+  if (!MYRISCVXReserveGP) {
+    // If this is the first call, create a stack frame object that points to
+    // a location to which .cprestore saves $gp.
+    if (IsPIC && MYRISCVXFI->globalBaseRegFixed() && !MYRISCVXFI->getGPFI())
+      MYRISCVXFI->setGPFI(MFI.CreateFixedObject(4, 0, true));
+    if (MYRISCVXFI->needGPSaveRestore())
+      MFI.setObjectOffset(MYRISCVXFI->getGPFI(), NextStackOffset);
+  }
+#endif
+
   //@TailCall 1 {
   // Check if it's really possible to do a tail call.
   if (IsTailCall)

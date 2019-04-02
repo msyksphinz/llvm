@@ -66,5 +66,9 @@ namespace llvm {
 
   // Wrapper needed for tblgenned pseudo lowering.
     bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const;
+
+    void emitPseudoCPRestore(MCStreamer &OutStreamer,
+                             const MachineInstr *MI);
+
   };
 }

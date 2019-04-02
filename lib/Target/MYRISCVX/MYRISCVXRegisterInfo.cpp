@@ -83,7 +83,7 @@ eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  // MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
+  MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
 
   unsigned i = 0;
   while (!MI.getOperand(i).isFI()) {
@@ -125,7 +125,15 @@ eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
 
   // incoming argument, callee-saved register location or local variable.
   int64_t Offset;
-  Offset = spOffset + (int64_t)stackSize;
+
+#ifdef ENABLE_GPRESTORE //2
+  if (MYRISCVXFI->isOutArgFI(FrameIndex) || MYRISCVXFI->isGPFI(FrameIndex) ||
+      MYRISCVXFI->isDynAllocFI(FrameIndex))
+    Offset = spOffset;
+  else
+#endif
+    Offset = spOffset + (int64_t)stackSize;
+
   Offset += MI.getOperand(i+1).getImm();
   dbgs() << "Offset : " << Offset << "\n" << "<--------->\n";
   // If MI is not a debug value, make sure Offset fits in the 16-bit immediate

@@ -38,6 +38,7 @@ add_llvm_target(MYRISCVXCodeGen
   MYRISCVXAnalyzeImmediate.cpp
   MYRISCVXLongBranch.cpp
   MYRISCVXDelUselessJMP.cpp
+  MYRISCVXEmitGPRestore.cpp
 )
 
 # Should match with "subdirectories = MCTargetDesc TargetInfo" in LLVMBuild.txt

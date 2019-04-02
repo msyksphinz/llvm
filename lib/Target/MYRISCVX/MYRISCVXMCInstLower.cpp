@@ -11,6 +11,7 @@
 // MCInst records.
 //
 //===----------------------------------------------------------------------===//
+
 #include "MYRISCVXMCInstLower.h"
 #include "MYRISCVXAsmPrinter.h"
 #include "MYRISCVXInstrInfo.h"
@@ -148,6 +149,37 @@ void MYRISCVXMCInstLower::LowerCPLOAD(SmallVector<MCInst, 4>& MCInsts) {
   CreateMCInst(MCInsts[1], MYRISCVX::ORI, GPReg, GPReg, SymLo);
   CreateMCInst(MCInsts[2], MYRISCVX::ADD, GPReg, GPReg, TPReg);
 }
+
+
+#ifdef ENABLE_GPRESTORE
+// Lower ".cprestore offset" to "st $gp, offset($sp)".
+void MYRISCVXMCInstLower::LowerCPRESTORE(int64_t Offset,
+                                         SmallVector<MCInst, 4>& MCInsts) {
+  assert(isInt<32>(Offset) && (Offset >= 0) &&
+         "Imm operand of .cprestore must be a non-negative 32-bit value.");
+
+  MCOperand SPReg = MCOperand::createReg(MYRISCVX::SP), BaseReg = SPReg;
+  MCOperand GPReg = MCOperand::createReg(MYRISCVX::GP);
+  MCOperand ZEROReg = MCOperand::createReg(MYRISCVX::ZERO);
+
+  if (!isInt<16>(Offset)) {
+    unsigned Hi = ((Offset + 0x8000) >> 16) & 0xffff;
+    Offset &= 0xffff;
+    MCOperand ATReg = MCOperand::createReg(MYRISCVX::TP);
+    BaseReg = ATReg;
+
+    // lui   at,hi
+    // add   at,at,sp
+    MCInsts.resize(2);
+    CreateMCInst(MCInsts[0], MYRISCVX::LUI, ATReg, ZEROReg, MCOperand::createImm(Hi));
+    CreateMCInst(MCInsts[1], MYRISCVX::ADD, ATReg, ATReg, SPReg);
+  }
+
+  MCInst St;
+  CreateMCInst(St, MYRISCVX::SW, GPReg, BaseReg, MCOperand::createImm(Offset));
+  MCInsts.push_back(St);
+}
+#endif
 
 
 //@LowerOperand {

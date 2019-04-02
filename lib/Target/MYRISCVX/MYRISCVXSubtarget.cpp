@@ -63,7 +63,7 @@ MYRISCVXSubtarget::MYRISCVXSubtarget(const Triple &TT, const std::string &CPU,
   MYRISCVXNoCpload = NoCploadOpt;
 
 #ifdef ENABLE_GPRESTORE
-  if (!TM.isPositionIndependent() && !UseSmallSection && !Cpu0ReserveGP)
+  if (!TM.isPositionIndependent() && !UseSmallSection && !MYRISCVXReserveGP)
     FixGlobalBaseReg = false;
   else
 #endif

@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include "MYRISCVX.h"
+
 #include "MCTargetDesc/MYRISCVXMCExpr.h"
 
 #include "llvm/ADT/SmallVector.h"
@@ -47,6 +49,10 @@ namespace llvm {
                              int Opcode,
                              MYRISCVXMCExpr::MYRISCVXExprKind Kind) const;
     bool lowerLongBranch(const MachineInstr *MI, MCInst &OutMI) const;
+
+#ifdef ENABLE_GPRESTORE
+    void LowerCPRESTORE(int64_t Offset, SmallVector<MCInst, 4>& MCInsts);
+#endif
 
   };
 

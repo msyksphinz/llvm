@@ -38,7 +38,7 @@ void MYRISCVXSEFrameLowering::emitPrologue(MachineFunction &MF,
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  // MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
+  MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
   const MYRISCVXSEInstrInfo &TII =
       *static_cast<const MYRISCVXSEInstrInfo*>(STI.getInstrInfo());
   // const MYRISCVXRegisterInfo &RegInfo =
@@ -89,6 +89,18 @@ void MYRISCVXSEFrameLowering::emitPrologue(MachineFunction &MF,
       }
     }
   }
+
+  //@ENABLE_GPRESTORE {
+#ifdef ENABLE_GPRESTORE
+  // Restore GP from the saved stack location
+  if (MYRISCVXFI->needGPSaveRestore()) {
+    unsigned Offset = MFI.getObjectOffset(MYRISCVXFI->getGPFI());
+    BuildMI(MBB, MBBI, dl, TII.get(MYRISCVX::CPRESTORE)).addImm(Offset)
+      .addReg(MYRISCVX::GP);
+  }
+#endif
+//@ENABLE_GPRESTORE }
+
 }
 
 //}

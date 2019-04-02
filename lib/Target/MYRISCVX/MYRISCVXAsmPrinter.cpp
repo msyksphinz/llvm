@@ -78,6 +78,22 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
 //@adjustFixupValue }
 
 
+#ifdef ENABLE_GPRESTORE
+void MYRISCVXAsmPrinter::EmitInstrWithMacroNoAT(const MachineInstr *MI) {
+  MCInst TmpInst;
+
+  MCInstLowering.Lower(MI, TmpInst);
+  OutStreamer->EmitRawText(StringRef("\t.set\tmacro"));
+  // if (MYRISCVXFI->getEmitNOAT())
+  //   OutStreamer->EmitRawText(StringRef("\t.set\tat"));
+  // OutStreamer->EmitInstruction(TmpInst, getSubtargetInfo());
+  // if (MYRISCVXFI->getEmitNOAT())
+  //   OutStreamer->EmitRawText(StringRef("\t.set\tnoat"));
+  OutStreamer->EmitRawText(StringRef("\t.set\tnomacro"));
+}
+#endif
+
+
 bool MYRISCVXAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
   AsmPrinter::runOnMachineFunction(MF);
@@ -92,6 +108,41 @@ bool MYRISCVXAsmPrinter::lowerOperand(const MachineOperand &MO, MCOperand &MCOp)
 
 
 #include "MYRISCVXGenMCPseudoLowering.inc"
+
+
+#ifdef ENABLE_GPRESTORE
+void MYRISCVXAsmPrinter::emitPseudoCPRestore(MCStreamer &OutStreamer,
+                                              const MachineInstr *MI) {
+  unsigned Opc = MI->getOpcode();
+  SmallVector<MCInst, 4> MCInsts;
+  const MachineOperand &MO = MI->getOperand(0);
+  assert(MO.isImm() && "CPRESTORE's operand must be an immediate.");
+  int64_t Offset = MO.getImm();
+
+  if (OutStreamer.hasRawTextSupport()) {
+    // output assembly
+    if (!isInt<16>(Offset)) {
+      EmitInstrWithMacroNoAT(MI);
+      return;
+    }
+    MCInst TmpInst0;
+    MCInstLowering.Lower(MI, TmpInst0);
+    OutStreamer.EmitInstruction(TmpInst0, getSubtargetInfo());
+  } else {
+    // output elf
+    MCInstLowering.LowerCPRESTORE(Offset, MCInsts);
+
+    for (SmallVector<MCInst, 4>::iterator I = MCInsts.begin();
+         I != MCInsts.end(); ++I)
+      OutStreamer.EmitInstruction(*I, getSubtargetInfo());
+
+    return;
+  }
+}
+#endif
+
+
+
 //@EmitInstruction {
 //- EmitInstruction() must exists or will have run time error.
 void MYRISCVXAsmPrinter::EmitInstruction(const MachineInstr *MI) {
@@ -114,6 +165,13 @@ void MYRISCVXAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     // Do any auto-generated pseudo lowerings.
     if (emitPseudoExpansionLowering(*OutStreamer, &*I))
       continue;
+
+#ifdef ENABLE_GPRESTORE
+    if (I->getOpcode() == MYRISCVX::CPRESTORE) {
+      emitPseudoCPRestore(*OutStreamer, &*I);
+      continue;
+    }
+#endif
 
     if (I->isPseudo() && !isLongBranchPseudo(I->getOpcode())) {
       dbgs() << "opcode = " << I->getOpcode() << '\n';

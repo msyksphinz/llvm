@@ -18,6 +18,8 @@
 #include "MCTargetDesc/MYRISCVXMCTargetDesc.h"
 #include "llvm/Target/TargetMachine.h"
 
+#define ENABLE_GPRESTORE
+
 namespace llvm {
   class MYRISCVXTargetMachine;
   class AsmPrinter;
@@ -33,6 +35,10 @@ namespace llvm {
 
   FunctionPass *createMYRISCVXLongBranchPass(MYRISCVXTargetMachine &TM);
   FunctionPass *createMYRISCVXDelJmpPass(MYRISCVXTargetMachine &TM);
+
+#ifdef ENABLE_GPRESTORE
+  FunctionPass *createMYRISCVXEmitGPRestorePass(MYRISCVXTargetMachine &TM);
+#endif
 
 } // end namespace llvm;
 

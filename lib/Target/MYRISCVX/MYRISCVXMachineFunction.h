@@ -83,6 +83,16 @@ namespace llvm {
     /// representing a GOT entry for a global function.
     MachinePointerInfo callPtrInfo(const GlobalValue *GV);
 
+    int getGPFI() const { return GPFI; }
+    bool isGPFI(int FI) const { return GPFI && GPFI == FI; }
+    void setGPFI(int FI) { GPFI = FI; }
+    bool isDynAllocFI(int FI) const { return DynAllocFI && DynAllocFI == FI; }
+
+
+#ifdef ENABLE_GPRESTORE
+    bool needGPSaveRestore() const { return getGPFI(); }
+#endif
+
    private:
     virtual void anchor();
     MachineFunction& MF;
@@ -119,11 +129,6 @@ namespace llvm {
     bool CallsEhDwarf;
     /// Frame objects for spilling eh data registers.
     int EhDataRegFI[2];
-
-    int getGPFI() const { return GPFI; }
-    void setGPFI(int FI) { GPFI = FI; }
-    bool isGPFI(int FI) const { return GPFI && GPFI == FI; }
-    bool isDynAllocFI(int FI) const { return DynAllocFI && DynAllocFI == FI; }
 
     // Range of frame object indices.
     // InArgFIRange: Range of indices of all frame objects created during call to
