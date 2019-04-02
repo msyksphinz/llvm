@@ -292,10 +292,11 @@ let isBranch=1, isTerminator=1, isBarrier=1, imm12=0, hasDelaySlot = 0,
 isIndirectBranch = 1 in
 class JumpFR<bits<7> opcode, bits<3> funct3, string instr_asm, RegisterClass RC>:
   FI<opcode, funct3, (outs), (ins RC:$ra),
-     !strconcat(instr_asm, "\t$ra"), [(brind RC:$ra)], IIBranch> {
+    !strconcat(instr_asm, "\t$ra"), [], IIBranch> {
   let rd    = 0;  // Zero
   let rs1   = 1;  // RA
   let imm12 = 0;
+/*     !strconcat(instr_asm, "\t$ra"), [(brind RC:$ra)], IIBranch> { */
 }
 //@JumpFR }
 
@@ -416,8 +417,9 @@ def ADDI : ArithLogicI<0b0010011, 0b000, "addi", add, simm12, immSExt12, GPR>;
 
 /// Arithmetic Instructions (3-Operand, R-Type)
 def JALR : JumpFR<0b1100111, 0b000, "jalr", GPR>;
+def : Pat<(brind GPR:$rs1), (JALR GPR:$rs1)>;
 
-let isCall = 1 in
+// let isCall = 1 in
 // def JAL : UncondBranch<0b1101111, "jal">;
 
 def XORI : ArithLogicI<0b0010011, 0b110, "xori", xor, uimm12, immZExt12, GPR>;
@@ -507,12 +509,13 @@ let isCall=1, hasDelaySlot=0 in {
        !strconcat(instr_asm, "\t$target"), [(MYRISCVXJmpLink tglobaladdr:$target)],
        IIBranch> {
     }
+
   //@JumpLink }
-  // class JumpLinkReg<bits<7> opcode, bits<3> funct3, string instr_asm,
-  //                   RegisterClass RC>:
-  //   FI<opcode, funct3, (outs RC:$rd), (ins RC:$rb, variable_ops),
-  //      !strconcat(instr_asm, "\t$rb"), [(MYRISCVXJmpLink RC:$rd, RC:$rb)], IIBranch> {
-  // }
+  class JumpLinkReg<bits<7> opcode, bits<3> funct3, string instr_asm,
+                    RegisterClass RC>:
+    FI<opcode, funct3, (outs RC:$rd), (ins RC:$rb, variable_ops),
+       !strconcat(instr_asm, "\t$rb"), [(MYRISCVXJmpLink RC:$rd, RC:$rb)], IIBranch> {
+  }
 }
 
 def JAL : JumpLink<0b1101111, "jal", calltarget>;
@@ -521,6 +524,8 @@ def : Pat<(MYRISCVXJmpLink (i32 tglobaladdr:$dst)),
           (JAL tglobaladdr:$dst)>;
 def : Pat<(MYRISCVXJmpLink (i32 texternalsym:$dst)),
           (JAL texternalsym:$dst)>;
+def : Pat<(brind GPR:$rs1), (JALR GPR:$rs1)>;
+def : Pat<(MYRISCVXJmpLink GPR:$rs1), (JALR GPR:$rs1)>;
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1,
     hasExtraSrcRegAllocReq = 1 in {
