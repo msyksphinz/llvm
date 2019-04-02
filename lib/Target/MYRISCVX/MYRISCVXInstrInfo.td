@@ -292,7 +292,7 @@ let isBranch=1, isTerminator=1, isBarrier=1, imm12=0, hasDelaySlot = 0,
 isIndirectBranch = 1 in
 class JumpFR<bits<7> opcode, bits<3> funct3, string instr_asm, RegisterClass RC>:
   FI<opcode, funct3, (outs), (ins RC:$ra),
-     !strconcat(instr_asm, "\t$ra"), [(MYRISCVXJmpLink RC:$ra)], IIBranch> {
+     !strconcat(instr_asm, "\t$ra"), [(brind RC:$ra)], IIBranch> {
   let rd    = 0;  // Zero
   let rs1   = 1;  // RA
   let imm12 = 0;
@@ -574,9 +574,22 @@ def : Pat<(i32 imm:$imm),
 
 // hi/lo relocs
 def : Pat<(MYRISCVXHi tglobaladdr:$in), (LUI tglobaladdr:$in)>;
+def : Pat<(MYRISCVXHi tblockaddress:$in), (LUI tblockaddress:$in)>;
+def : Pat<(MYRISCVXHi tjumptable:$in), (LUI tjumptable:$in)>;
+
 def : Pat<(MYRISCVXLo tglobaladdr:$in), (ORI ZERO, tglobaladdr:$in)>;
 def : Pat<(add GPR:$hi, (MYRISCVXLo tglobaladdr:$lo)),
           (ORI GPR:$hi, tglobaladdr:$lo)>;
+def : Pat<(MYRISCVXLo tblockaddress:$in), (ORI ZERO, tblockaddress:$in)>;
+def : Pat<(MYRISCVXLo tjumptable:$in), (ORI ZERO, tjumptable:$in)>;
+
+
+def : Pat<(add GPR:$hi, (MYRISCVXLo tglobaladdr:$lo)),
+          (ORI GPR:$hi, tglobaladdr:$lo)>;
+def : Pat<(add GPR:$hi, (MYRISCVXLo tblockaddress:$lo)),
+          (ORI GPR:$hi, tblockaddress:$lo)>;
+def : Pat<(add GPR:$hi, (MYRISCVXLo tjumptable:$lo)),
+          (ORI GPR:$hi, tjumptable:$lo)>;
 
 // gp_rel relocs
 def : Pat<(add GPR:$gp, (MYRISCVXGPRel tglobaladdr:$in)),
