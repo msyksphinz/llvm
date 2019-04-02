@@ -233,6 +233,9 @@ CallLoweringInfo &CLI, SDValue Callee, SDValue Chain) const;
     /// Return the function that analyzes fixed argument list functions.
     llvm::CCAssignFn *fixedArgFn() const;
 
+    /// Return the function that analyzes variable argument list functions.
+    llvm::CCAssignFn *varArgFn() const;
+
     void allocateRegs(ByValArgInfo &ByVal, unsigned ByValSize,
                       unsigned Align);
 
@@ -294,6 +297,11 @@ CallLoweringInfo &CLI, SDValue Callee, SDValue Chain) const;
 
   SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerADD(SDValue Op, SelectionDAG &DAG) const;
 
   /// isEligibleForTailCallOptimization - Check whether the call is eligible
   /// for tail call optimization.
@@ -311,6 +319,13 @@ CallLoweringInfo &CLI, SDValue Callee, SDValue Chain) const;
                      SmallVectorImpl<SDValue> &InVals,
                      const Argument *FuncArg,
                      const MYRISCVXCC &CC, const ByValArgInfo &ByVal) const;
+
+  /// writeVarArgRegs - Write variable function arguments passed in registers
+  /// to the stack. Also create a stack frame object for the first variable
+  /// argument.
+  void writeVarArgRegs(std::vector<SDValue> &OutChains, const MYRISCVXCC &CC,
+                       SDValue Chain, const SDLoc &DL, SelectionDAG &DAG) const;
+
 
   SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;

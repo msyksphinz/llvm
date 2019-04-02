@@ -108,6 +108,19 @@ MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
   setOperationAction(ISD::SELECT,    MVT::i32, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::i32, Expand);
 
+  setOperationAction(ISD::VASTART, MVT::Other, Custom);
+
+  // Support va_arg(): variable numbers (not fixed numbers) of arguments
+  // (parameters) for function all
+  setOperationAction(ISD::VAARG, MVT::Other, Expand);
+  setOperationAction(ISD::VACOPY, MVT::Other, Expand);
+  setOperationAction(ISD::VAEND, MVT::Other, Expand);
+
+  //@llvm.stacksave
+  // Use the default for now
+  setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
+  setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
+
   //- Set .align 2
   // It will emit .align 2 later
   setMinFunctionAlignment(2);
@@ -276,6 +289,9 @@ MYRISCVXTargetLowering::LowerFormalArguments(SDValue Chain,
     }
   }
   //@Ordinary struct type: 1 }
+
+  if (IsVarArg)
+    writeVarArgRegs(OutChains, MYRISCVXCCInfo, Chain, DL, DAG);
 
   // All stores are grouped in one node to allow the matching between
   // the size of Ins and InVals. This only happens when on varg functions
@@ -459,6 +475,7 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
     case ISD::GlobalAddress: return lowerGlobalAddress(Op, DAG);
     case ISD::BlockAddress:  return lowerBlockAddress(Op, DAG);
     case ISD::SELECT:        return lowerSELECT(Op, DAG);
+    case ISD::VASTART:       return lowerVASTART(Op, DAG);
   }
   return SDValue();
 }
@@ -518,6 +535,20 @@ SDValue MYRISCVXTargetLowering::lowerBlockAddress(SDValue Op,
     return getAddrNonPIC(N, Ty, DAG);
 
   return getAddrLocal(N, Ty, DAG);
+}
+
+
+SDValue MYRISCVXTargetLowering::lowerVASTART(SDValue Op, SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  MYRISCVXFunctionInfo *FuncInfo = MF.getInfo<MYRISCVXFunctionInfo>();
+  SDLoc DL = SDLoc(Op);
+  SDValue FI = DAG.getFrameIndex(FuncInfo->getVarArgsFrameIndex(),
+                                 getPointerTy(MF.getDataLayout()));
+  // vastart just stores the address of the VarArgsFrameIndex slot into the
+  // memory location argument.
+  const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
+  return DAG.getStore(Op.getOperand(0), DL, FI, Op.getOperand(1),
+                      MachinePointerInfo(SV));
 }
 
 
@@ -1100,6 +1131,8 @@ analyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Args,
          "CallingConv::Fast shouldn't be used for vararg functions.");
   unsigned NumOpnds = Args.size();
   llvm::CCAssignFn *FixedFn = fixedArgFn();
+  llvm::CCAssignFn *VarFn = varArgFn();
+
   //@3 {
   for (unsigned I = 0; I != NumOpnds; ++I) {
     //@3 }
@@ -1109,7 +1142,12 @@ analyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Args,
     if (ArgFlags.isByVal()) {
       handleByValArg(I, ArgVT, ArgVT, CCValAssign::Full, ArgFlags);
       continue;
-    } {
+    }
+
+    if (IsVarArg && !Args[I].IsFixed)
+      R = VarFn(I, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo);
+    else
+    {
       MVT RegVT = getRegVT(ArgVT, FuncArgs[Args[I].OrigArgIndex].Ty, CallNode,
                            IsSoftFloat);
       R = FixedFn(I, ArgVT, RegVT, CCValAssign::Full, ArgFlags, CCInfo);
@@ -1312,4 +1350,58 @@ llvm::CCAssignFn *MYRISCVXTargetLowering::MYRISCVXCC::fixedArgFn() const {
 
   else // IsS32
     return CC_MYRISCVXS32;
+}
+
+
+
+llvm::CCAssignFn *MYRISCVXTargetLowering::MYRISCVXCC::varArgFn() const {
+  if (IsO32)
+    return CC_MYRISCVXO32;
+  else // IsS32
+    return CC_MYRISCVXS32;
+}
+
+
+void MYRISCVXTargetLowering::writeVarArgRegs(std::vector<SDValue> &OutChains,
+                                         const MYRISCVXCC &CC, SDValue Chain,
+                                         const SDLoc &DL, SelectionDAG &DAG) const {
+  unsigned NumRegs = CC.numIntArgRegs();
+  const ArrayRef<MCPhysReg> ArgRegs = CC.intArgRegs();
+  const CCState &CCInfo = CC.getCCInfo();
+  unsigned Idx = CCInfo.getFirstUnallocated(ArgRegs);
+  unsigned RegSize = CC.regSize();
+  MVT RegTy = MVT::getIntegerVT(RegSize * 8);
+  const TargetRegisterClass *RC = getRegClassFor(RegTy);
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
+
+  // Offset of the first variable argument from stack pointer.
+  int VaArgOffset;
+  if (NumRegs == Idx)
+    VaArgOffset = alignTo(CCInfo.getNextStackOffset(), RegSize);
+  else
+    VaArgOffset = (int)CC.reservedArgArea() - (int)(RegSize * (NumRegs - Idx));
+
+  // Record the frame index of the first variable argument
+  // which is a value necessary to VASTART.
+
+  int FI = MFI.CreateFixedObject(RegSize, VaArgOffset, true);
+  MYRISCVXFI->setVarArgsFrameIndex(FI);
+
+  // Copy the integer registers that have not been used for argument passing
+  // to the argument register save area. For O32, the save area is allocated
+  // in the caller's stack frame, while for N32/64, it is allocated in the
+  // callee's stack frame.
+  for (unsigned I = Idx; I < NumRegs; ++I, VaArgOffset += RegSize) {
+    unsigned Reg = addLiveIn(MF, ArgRegs[I], RC);
+    SDValue ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegTy);
+    FI = MFI.CreateFixedObject(RegSize, VaArgOffset, true);
+    SDValue PtrOff = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
+    SDValue Store = DAG.getStore(Chain, DL, ArgValue, PtrOff,
+                                 MachinePointerInfo());
+    cast<StoreSDNode>(Store.getNode())->getMemOperand()->setValue(
+        (Value *)nullptr);
+    OutChains.push_back(Store);
+  }
 }
