@@ -74,6 +74,9 @@ MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
   setOperationAction(ISD::BlockAddress,  MVT::i32, Custom);
 
+  setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32, Expand);
+
+
   // MYRISCVX does not have i1 type, so use i32 for
   // setcc operations results (slt, sgt, ...).
   setBooleanContents(ZeroOrOneBooleanContent);
@@ -128,6 +131,11 @@ MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
   // added, this allows us to compute derived properties we expose.
   computeRegisterProperties(STI.getRegisterInfo());
 
+  //- Set .align 2
+  // It will emit .align 2 later
+  setMinFunctionAlignment(2);
+
+  setStackPointerRegisterToSaveRestore(MYRISCVX::SP);
 }
 
 const MYRISCVXTargetLowering *MYRISCVXTargetLowering::create(const MYRISCVXTargetMachine &TM,

@@ -72,6 +72,10 @@ namespace llvm {
                                   const TargetRegisterInfo *TRI,
                                   int64_t Offset) const = 0;
 
+    virtual void adjustStackPtr(unsigned SP, int64_t Amount,
+                                MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator I) const = 0;
+
     MachineMemOperand *GetMemOperand(MachineBasicBlock &MBB, int FI,
                                      MachineMemOperand::Flags Flags) const;
 

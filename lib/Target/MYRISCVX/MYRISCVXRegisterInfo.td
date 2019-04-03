@@ -16,7 +16,7 @@ def TP   : MYRISCVXGPRReg<4,  "x4">,    DwarfRegNum<[4]>;
 def T0   : MYRISCVXGPRReg<5,  "x5">,    DwarfRegNum<[5]>;
 def T1   : MYRISCVXGPRReg<6,  "x6">,    DwarfRegNum<[6]>;
 def T2   : MYRISCVXGPRReg<7,  "x7">,    DwarfRegNum<[7]>;
-def S0   : MYRISCVXGPRReg<8,  "x8">,    DwarfRegNum<[8]>;
+def S0   : MYRISCVXGPRReg<8,  "x8">,    DwarfRegNum<[8]>;  // used as FP
 def S1   : MYRISCVXGPRReg<9,  "x9">,    DwarfRegNum<[9]>;
 
 def A0   : MYRISCVXGPRReg<10, "x10">,   DwarfRegNum<[10]>;

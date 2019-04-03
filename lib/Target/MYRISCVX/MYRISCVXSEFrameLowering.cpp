@@ -48,6 +48,9 @@ void MYRISCVXSEFrameLowering::emitPrologue(MachineFunction &MF,
   DebugLoc dl = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
   // MYRISCVXABIInfo ABI = STI.getABI();
   unsigned SP = MYRISCVX::SP;
+  unsigned FP = MYRISCVX::S0;
+  unsigned ZERO = MYRISCVX::ZERO;
+  unsigned ADD  = MYRISCVX::ADD;
 
   // const TargetRegisterClass *RC = &MYRISCVX::GPRRegClass;
 
@@ -90,6 +93,23 @@ void MYRISCVXSEFrameLowering::emitPrologue(MachineFunction &MF,
     }
   }
 
+  // if framepointer enabled, set it to point to the stack pointer.
+  if (hasFP(MF)) {
+    if (MYRISCVXFI->callsEhDwarf()) {
+      BuildMI(MBB, MBBI, dl, TII.get(ADD), MYRISCVX::A0).addReg(FP).addReg(ZERO)
+        .setMIFlag(MachineInstr::FrameSetup);
+    }
+    //@ Insert instruction "move $fp, $sp" at this location.
+    BuildMI(MBB, MBBI, dl, TII.get(ADD), FP).addReg(SP).addReg(ZERO)
+      .setMIFlag(MachineInstr::FrameSetup);
+
+    // emit ".cfi_def_cfa_register $fp"
+    unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createDefCfaRegister(
+        nullptr, MRI->getDwarfRegNum(FP, true)));
+    BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex);
+  }
+
   //@ENABLE_GPRESTORE {
 #ifdef ENABLE_GPRESTORE
   // Restore GP from the saved stack location
@@ -119,6 +139,20 @@ void MYRISCVXSEFrameLowering::emitEpilogue(MachineFunction &MF,
   // MYRISCVXABIInfo ABI = STI.getABI();
 
   unsigned SP = MYRISCVX::SP;
+  unsigned FP = MYRISCVX::S0;
+  unsigned ZERO = MYRISCVX::ZERO;
+  unsigned ADD = MYRISCVX::ADD;
+
+  // if framepointer enabled, restore the stack pointer.
+  if (hasFP(MF)) {
+    // Find the first instruction that restores a callee-saved register.
+    MachineBasicBlock::iterator I = MBBI;
+    for (unsigned i = 0; i < MFI.getCalleeSavedInfo().size(); ++i)
+      --I;
+    // Insert instruction "move $sp, $fp" at this location.
+    BuildMI(MBB, I, dl, TII.get(ADD), SP).addReg(FP).addReg(ZERO);
+  }
+
   // Get the number of bytes from FrameInfo
   uint64_t StackSize = MFI.getStackSize();
 
@@ -164,8 +198,18 @@ void MYRISCVXSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   //@determineCalleeSaves-body
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
-  // MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
+  MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
   // MachineRegisterInfo& MRI = MF.getRegInfo();
+  unsigned FP = MYRISCVX::S0;
+
+  // Mark $fp as used if function has dedicated frame pointer.
+  if (hasFP(MF))
+    setAliasRegs(MF, SavedRegs, FP);
+
+  //@callsEhReturn
+  // Create spill slots for eh data registers if function calls eh_return.
+  if (MYRISCVXFI->callsEhReturn())
+    MYRISCVXFI->createEhDataRegsFI();
 
   if (MF.getFrameInfo().hasCalls())
     setAliasRegs(MF, SavedRegs, MYRISCVX::RA);

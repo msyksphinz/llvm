@@ -68,6 +68,11 @@ getReservedRegs(const MachineFunction &MF) const {
 #endif
   Reserved.set(MYRISCVX::GP);
 
+  // Reserve FP if this function should have a dedicated frame pointer register.
+  if (MF.getSubtarget().getFrameLowering()->hasFP(MF)) {
+    Reserved.set(MYRISCVX::S0);
+  }
+
   return Reserved;
 }
 

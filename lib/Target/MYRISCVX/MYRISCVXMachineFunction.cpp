@@ -36,6 +36,16 @@ unsigned MYRISCVXFunctionInfo::getGlobalBaseReg() {
   return GlobalBaseReg = MYRISCVX::GP;
 }
 
+void MYRISCVXFunctionInfo::createEhDataRegsFI() {
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  for (int I = 0; I < 2; ++I) {
+    const TargetRegisterClass &RC = MYRISCVX::GPRRegClass;
+
+    EhDataRegFI[I] = MF.getFrameInfo().CreateStackObject(TRI.getSpillSize(RC),
+                                                         TRI.getSpillAlignment(RC), false);
+  }
+}
+
 MachinePointerInfo MYRISCVXFunctionInfo::callPtrInfo(const char *ES) {
   return MachinePointerInfo(MF.getPSVManager().getExternalSymbolCallEntry(ES));
 }
