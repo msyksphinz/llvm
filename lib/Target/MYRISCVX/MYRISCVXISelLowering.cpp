@@ -76,7 +76,6 @@ MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
 
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32, Expand);
 
-
   // MYRISCVX does not have i1 type, so use i32 for
   // setcc operations results (slt, sgt, ...).
   setBooleanContents(ZeroOrOneBooleanContent);
@@ -123,6 +122,13 @@ MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
   // Use the default for now
   setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
   setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
+
+  setOperationAction(ISD::EH_RETURN,     MVT::Other, Custom);
+
+  setOperationAction(ISD::ADD,           MVT::i32, Custom);
+
+  setOperationAction(ISD::BSWAP, MVT::i32, Expand);
+  setOperationAction(ISD::BSWAP, MVT::i64, Expand);
 
   //- Set .align 2
   // It will emit .align 2 later
@@ -480,10 +486,14 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
 {
   switch (Op.getOpcode())
   {
-    case ISD::GlobalAddress: return lowerGlobalAddress(Op, DAG);
-    case ISD::BlockAddress:  return lowerBlockAddress(Op, DAG);
-    case ISD::SELECT:        return lowerSELECT(Op, DAG);
-    case ISD::VASTART:       return lowerVASTART(Op, DAG);
+    case ISD::GlobalAddress : return lowerGlobalAddress(Op, DAG);
+    case ISD::BlockAddress  : return lowerBlockAddress(Op, DAG);
+    case ISD::SELECT        : return lowerSELECT(Op, DAG);
+    case ISD::VASTART       : return lowerVASTART(Op, DAG);
+    case ISD::FRAMEADDR     : return lowerFRAMEADDR(Op, DAG);
+    case ISD::RETURNADDR    : return lowerRETURNADDR(Op, DAG);
+    case ISD::EH_RETURN     : return lowerEH_RETURN(Op, DAG);
+    case ISD::ADD           : return lowerADD(Op, DAG);
   }
   return SDValue();
 }
@@ -1412,4 +1422,84 @@ void MYRISCVXTargetLowering::writeVarArgRegs(std::vector<SDValue> &OutChains,
         (Value *)nullptr);
     OutChains.push_back(Store);
   }
+}
+
+
+SDValue MYRISCVXTargetLowering::
+lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
+  // check the depth
+  assert((cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() == 0) &&
+         "Frame address can only be determined for current frame.");
+
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+  MFI.setFrameAddressIsTaken(true);
+  EVT VT = Op.getValueType();
+  SDLoc DL(Op);
+  SDValue FrameAddr = DAG.getCopyFromReg(
+      DAG.getEntryNode(), DL, MYRISCVX::S0, VT);
+  return FrameAddr;
+}
+
+
+SDValue MYRISCVXTargetLowering::lowerRETURNADDR(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
+    return SDValue();
+
+  // check the depth
+  assert((cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() == 0) &&
+         "Return address can be determined only for current frame.");
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  MVT VT = Op.getSimpleValueType();
+  unsigned RA = MYRISCVX::RA;
+  MFI.setReturnAddressIsTaken(true);
+
+  // Return RA, which contains the return address. Mark it an implicit live-in.
+  unsigned Reg = MF.addLiveIn(RA, getRegClassFor(VT));
+  return DAG.getCopyFromReg(DAG.getEntryNode(), SDLoc(Op), Reg, VT);
+}
+
+
+// An EH_RETURN is the result of lowering llvm.eh.return which in turn is
+// generated from __builtin_eh_return (offset, handler)
+// The effect of this is to adjust the stack pointer by "offset"
+// and then branch to "handler".
+SDValue MYRISCVXTargetLowering::lowerEH_RETURN(SDValue Op, SelectionDAG &DAG)
+    const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
+
+  MYRISCVXFI->setCallsEhReturn();
+  SDValue Chain     = Op.getOperand(0);
+  SDValue Offset    = Op.getOperand(1);
+  SDValue Handler   = Op.getOperand(2);
+  SDLoc DL(Op);
+  EVT Ty = MVT::i32;
+
+  // Store stack offset in A1, store jump target in V0. Glue CopyToReg and
+  // EH_RETURN nodes, so that instructions are emitted back-to-back.
+  unsigned OffsetReg = MYRISCVX::A1;
+  unsigned AddrReg = MYRISCVX::A0;
+  Chain = DAG.getCopyToReg(Chain, DL, OffsetReg, Offset, SDValue());
+  Chain = DAG.getCopyToReg(Chain, DL, AddrReg, Handler, Chain.getValue(1));
+  return DAG.getNode(MYRISCVXISD::EH_RETURN, DL, MVT::Other, Chain,
+                     DAG.getRegister(OffsetReg, Ty),
+                     DAG.getRegister(AddrReg, getPointerTy(MF.getDataLayout())),
+                     Chain.getValue(1));
+}
+
+
+SDValue MYRISCVXTargetLowering::lowerADD(SDValue Op, SelectionDAG &DAG) const {
+  if ((Op->getOperand(0).getOpcode() != ISD::FRAMEADDR) ||
+      (cast<ConstantSDNode>(Op->getOperand(0).getOperand(0))->getZExtValue() != 0) ||
+      Op->getOperand(1).getOpcode() != ISD::FRAME_TO_ARGS_OFFSET)
+    return SDValue();
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
+
+  MYRISCVXFI->setCallsEhDwarf();
+  return Op;
 }

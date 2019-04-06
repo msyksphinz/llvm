@@ -35,6 +35,9 @@ namespace llvm {
     void adjustStackPtr(unsigned SP, int64_t Amount, MachineBasicBlock &MBB,
                         MachineBasicBlock::iterator I) const override;
 
+    void expandEhReturn(MachineBasicBlock &MBB,
+                        MachineBasicBlock::iterator I) const;
+
     /// Emit a series of instructions to load an immediate. If NewImm is a
     /// non-NULL parameter, the last instruction is not emitted, but instead
     /// its immediate operand is returned in NewImm.

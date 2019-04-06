@@ -23,6 +23,19 @@ def SDT_MYRISCVXJmpLink : SDTypeProfile<0, 1, [SDTCisVT<0, iPTR>]>;
 def SDT_MYRISCVXCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>]>;
 def SDT_MYRISCVXCallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
 
+// Exception handling related node and instructions.
+// The conversion sequence is:
+// ISD::EH_RETURN -> MYRISCVXISD::EH_RETURN ->
+// MYRISCVXeh_return -> (stack change + indirect branch)
+//
+// MYRISCVXeh_return takes the place of regular return instruction
+// but takes two arguments (V1, V0) which are used for storing
+// the offset and return address respectively.
+def SDT_MYRISCVXEHRET : SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisPtrTy<1>]>;
+
+def MYRISCVXehret : SDNode<"MYRISCVXISD::EH_RETURN", SDT_MYRISCVXEHRET,
+                           [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
 // Tail call
 def MYRISCVXTailCall : SDNode<"MYRISCVXISD::TailCall", SDT_MYRISCVXJmpLink,
                    [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
@@ -359,6 +372,7 @@ let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
   def RetRA : MYRISCVXPseudo<(outs), (ins), "", [(MYRISCVXRet)]>;
 
 
+
 class IsTailCall {
   bit isCall = 1;
   bit isTerminator = 1;
@@ -390,6 +404,10 @@ let hasSideEffects = 0 in
 def CPRESTORE : MYRISCVXPseudo<(outs), (ins simm12:$loc, GPR:$gp),
                             ".cprestore\t$loc", []>;
 
+let Uses = [A0, A1], isTerminator = 1, isReturn = 1, isBarrier = 1 in {
+  def MYRISCVXeh_return32 : MYRISCVXPseudo<(outs), (ins GPR:$spoff, GPR:$dst), "",
+                                [(MYRISCVXehret GPR:$spoff, GPR:$dst)]>;
+}
 
 //===----------------------------------------------------------------------===//
 // Instruction definition

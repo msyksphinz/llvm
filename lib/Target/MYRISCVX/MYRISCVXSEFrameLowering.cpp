@@ -41,18 +41,18 @@ void MYRISCVXSEFrameLowering::emitPrologue(MachineFunction &MF,
   MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
   const MYRISCVXSEInstrInfo &TII =
       *static_cast<const MYRISCVXSEInstrInfo*>(STI.getInstrInfo());
-  // const MYRISCVXRegisterInfo &RegInfo =
-  //     *static_cast<const MYRISCVXRegisterInfo *>(STI.getRegisterInfo());
+  const MYRISCVXRegisterInfo &RegInfo =
+      *static_cast<const MYRISCVXRegisterInfo *>(STI.getRegisterInfo());
   MachineBasicBlock::iterator MBBI = MBB.begin();
 
   DebugLoc dl = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
-  // MYRISCVXABIInfo ABI = STI.getABI();
+  MYRISCVXABIInfo ABI = STI.getABI();
   unsigned SP = MYRISCVX::SP;
   unsigned FP = MYRISCVX::S0;
   unsigned ZERO = MYRISCVX::ZERO;
   unsigned ADD  = MYRISCVX::ADD;
 
-  // const TargetRegisterClass *RC = &MYRISCVX::GPRRegClass;
+  const TargetRegisterClass *RC = &MYRISCVX::GPRRegClass;
 
   // First, compute final stack size.
   uint64_t StackSize = MFI.getStackSize();
@@ -93,6 +93,26 @@ void MYRISCVXSEFrameLowering::emitPrologue(MachineFunction &MF,
     }
   }
 
+  if (MYRISCVXFI->callsEhReturn()) {
+    // Insert instructions that spill eh data registers.
+    for (int I = 0; I < ABI.EhDataRegSize(); ++I) {
+      if (!MBB.isLiveIn(ABI.GetEhDataReg(I)))
+        MBB.addLiveIn(ABI.GetEhDataReg(I));
+      TII.storeRegToStackSlot(MBB, MBBI, ABI.GetEhDataReg(I), false,
+                              MYRISCVXFI->getEhDataRegFI(I), RC, &RegInfo);
+    }
+
+    // Emit .cfi_offset directives for eh data registers.
+    for (int I = 0; I < ABI.EhDataRegSize(); ++I) {
+      int64_t Offset = MFI.getObjectOffset(MYRISCVXFI->getEhDataRegFI(I));
+      unsigned Reg = MRI->getDwarfRegNum(ABI.GetEhDataReg(I), true);
+      unsigned CFIIndex = MF.addFrameInst(
+          MCCFIInstruction::createOffset(nullptr, Reg, Offset));
+      BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex);
+    }
+  }
+
   // if framepointer enabled, set it to point to the stack pointer.
   if (hasFP(MF)) {
     if (MYRISCVXFI->callsEhDwarf()) {
@@ -130,13 +150,13 @@ void MYRISCVXSEFrameLowering::emitEpilogue(MachineFunction &MF,
                                            MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  // MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
+  MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
   const MYRISCVXSEInstrInfo &TII =
       *static_cast<const MYRISCVXSEInstrInfo *>(STI.getInstrInfo());
-  // const MYRISCVXRegisterInfo &RegInfo =
-  //     *static_cast<const MYRISCVXRegisterInfo *>(STI.getRegisterInfo());
+  const MYRISCVXRegisterInfo &RegInfo =
+      *static_cast<const MYRISCVXRegisterInfo *>(STI.getRegisterInfo());
   DebugLoc dl = MBBI->getDebugLoc();
-  // MYRISCVXABIInfo ABI = STI.getABI();
+  MYRISCVXABIInfo ABI = STI.getABI();
 
   unsigned SP = MYRISCVX::SP;
   unsigned FP = MYRISCVX::S0;
@@ -151,6 +171,21 @@ void MYRISCVXSEFrameLowering::emitEpilogue(MachineFunction &MF,
       --I;
     // Insert instruction "move $sp, $fp" at this location.
     BuildMI(MBB, I, dl, TII.get(ADD), SP).addReg(FP).addReg(ZERO);
+  }
+
+  if (MYRISCVXFI->callsEhReturn()) {
+    const TargetRegisterClass *RC = &MYRISCVX::GPRRegClass;
+
+    // Find first instruction that restores a callee-saved register.
+    MachineBasicBlock::iterator I = MBBI;
+    for (unsigned i = 0; i < MFI.getCalleeSavedInfo().size(); ++i)
+      --I;
+
+    // Insert instructions that restore eh data registers.
+    for (int J = 0; J < ABI.EhDataRegSize(); ++J) {
+      TII.loadRegFromStackSlot(MBB, I, ABI.GetEhDataReg(J),
+                               MYRISCVXFI->getEhDataRegFI(J), RC, &RegInfo);
+    }
   }
 
   // Get the number of bytes from FrameInfo

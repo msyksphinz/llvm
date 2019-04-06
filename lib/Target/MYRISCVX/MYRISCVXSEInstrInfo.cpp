@@ -48,6 +48,9 @@ bool MYRISCVXSEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     case MYRISCVX::RetRA:
       expandRetLR(MBB, MI);
       break;
+    case MYRISCVX::MYRISCVXeh_return32:
+      expandEhReturn(MBB, MI);
+      break;
   }
   MBB.erase(MI);
   return true;
@@ -57,6 +60,35 @@ bool MYRISCVXSEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 void MYRISCVXSEInstrInfo::expandRetLR(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator I) const {
   BuildMI(MBB, I, I->getDebugLoc(), get(MYRISCVX::JALR)).addReg(MYRISCVX::RA);
+}
+
+
+void MYRISCVXSEInstrInfo::expandEhReturn(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::iterator I) const {
+  // This pseudo instruction is generated as part of the lowering of
+  // ISD::EH_RETURN. We convert it to a stack increment by OffsetReg, and
+  // indirect jump to TargetReg
+  unsigned ADDU = MYRISCVX::ADD;
+  unsigned SP = MYRISCVX::SP;
+  unsigned LR = MYRISCVX::RA;
+  unsigned T9 = MYRISCVX::T1;
+  unsigned ZERO = MYRISCVX::ZERO;
+  unsigned OffsetReg = I->getOperand(0).getReg();
+  unsigned TargetReg = I->getOperand(1).getReg();
+
+  // addu $lr, $v0, $zero
+  // addu $sp, $sp, $v1
+  // jr   $lr (via RetLR)
+  const TargetMachine &TM = MBB.getParent()->getTarget();
+  if (TM.isPositionIndependent())
+    BuildMI(MBB, I, I->getDebugLoc(), get(ADDU), T9)
+        .addReg(TargetReg)
+        .addReg(ZERO);
+  BuildMI(MBB, I, I->getDebugLoc(), get(ADDU), LR)
+      .addReg(TargetReg)
+      .addReg(ZERO);
+  BuildMI(MBB, I, I->getDebugLoc(), get(ADDU), SP).addReg(SP).addReg(OffsetReg);
+  expandRetLR(MBB, I);
 }
 
 
