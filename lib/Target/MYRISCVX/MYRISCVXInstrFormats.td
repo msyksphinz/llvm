@@ -76,7 +76,7 @@ class MYRISCVXInst<dag outs, dag ins, string asmstr, list<dag> pattern,
 // R-Type instruction class in MYRISCVX : <|opcode|ra|rb|rc|cx|>
 //===----------------------------------------------------------------------===//
 
-class FR<bits<7> opcode, bits<7> funct7, bits<3> funct3,
+class FR<bits<7> opcode, bits<3> funct3, bits<7> funct7,
          dag outs, dag ins, string asmstr,
          list<dag> pattern, InstrItinClass itin>:
       MYRISCVXInst<outs, ins, asmstr, pattern, itin, FrmR>
@@ -98,7 +98,6 @@ class FR<bits<7> opcode, bits<7> funct7, bits<3> funct3,
 //===----------------------------------------------------------------------===//
 // I-Type instruction class in MYRISCVX : <|opcode|ra|rb|cx|>
 //===----------------------------------------------------------------------===//
-
 class FI<bits<7> opcode, bits<3> funct3,
          dag outs, dag ins, string asmstr, list<dag> pattern,
          InstrItinClass itin>: MYRISCVXInst<outs, ins, asmstr, pattern, itin, FrmI>
@@ -115,6 +114,31 @@ class FI<bits<7> opcode, bits<3> funct3,
   let Inst{11-7}  = rd;
 }
 //@class FI }
+
+
+//@class FIShift {
+//===----------------------------------------------------------------------===//
+// I-Type instruction class in MYRISCVX : <|opcode|ra|rb|cx|>
+//===----------------------------------------------------------------------===//
+class FIShift<bits<7> opcode, bits<3> funct3, bit arithshift,
+         dag outs, dag ins, string asmstr, list<dag> pattern,
+         InstrItinClass itin>: MYRISCVXInst<outs, ins, asmstr, pattern, itin, FrmI>
+{
+  bits<5> rs1;
+  bits<5> rd;
+  bits<6> shamt;
+
+  let Opcode = opcode;
+
+  let Inst{31} = 0;
+  let Inst{30} = arithshift;
+  let Inst{29-26} = 0;
+  let Inst{25-20} = shamt;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = funct3;
+  let Inst{11-7}  = rd;
+}
+//@class FIShift }
 
 
 //@class FS {
@@ -178,6 +202,7 @@ class FB<bits<7> opcode, bits<3> funct3,
 
   let Inst{31}    = imm12{11};
   let Inst{30-25} = imm12{9-4};
+  let Inst{14-12} = funct3;
   let Inst{11-8}  = imm12{3-0};
   let Inst{7}     = imm12{10};
 }

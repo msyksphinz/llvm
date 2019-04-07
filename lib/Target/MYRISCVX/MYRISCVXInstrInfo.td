@@ -217,10 +217,10 @@ class EffectiveAddress<string instr_asm, RegisterClass RC, Operand Mem> :
 
 
 // Arithmetic and logical instructions with 2 register operands.
-class ArithLogicR<bits<7> opcode, bits<3> funct3,
+class ArithLogicR<bits<7> opcode, bits<3> funct3, bits<7>funct7,
                   string instr_asm, SDNode OpNode,
                   RegisterClass RC> :
-  FI<opcode, funct3, (outs GPR:$ra), (ins RC:$rb, RC:$rc),
+  FR<opcode, funct3, funct7, (outs GPR:$ra), (ins RC:$rb, RC:$rc),
   !strconcat(instr_asm, "\t$ra, $rb, $rc"),
   [(set GPR:$ra, (OpNode RC:$rb, RC:$rc))], IIAlu> {
     let isReMaterializable = 1;
@@ -309,7 +309,7 @@ class JumpFR<bits<7> opcode, bits<3> funct3, string instr_asm, RegisterClass RC>
   let rd    = 0;  // Zero
   let rs1   = 1;  // RA
   let imm12 = 0;
-/*     !strconcat(instr_asm, "\t$ra"), [(brind RC:$ra)], IIBranch> { */
+  let DecoderMethod = "DecodeJumpFR";
 }
 //@JumpFR }
 
@@ -324,24 +324,24 @@ class RetBase<RegisterClass RC>: JumpFR<0b1100111, 0b000, "ret", RC> {
 
 
 // Shifts
-class shift_rotate_imm<bits<7> opcode, bits<3> funct3, bits<4> isRotate, string instr_asm,
+class shift_rotate_imm<bits<7> opcode, bits<3> funct3, bit arithshift, string instr_asm,
                        SDNode OpNode, PatFrag PF, Operand ImmOpnd,
                        RegisterClass RC>:
-  FI<opcode, funct3, (outs GPR:$ra), (ins RC:$rb, ImmOpnd:$shamt),
+  FIShift<opcode, funct3, arithshift, (outs GPR:$ra), (ins RC:$rb, ImmOpnd:$shamt),
     !strconcat(instr_asm, "\t$ra, $rb, $shamt"),
     [(set GPR:$ra, (OpNode RC:$rb, PF:$shamt))], IIAlu> {
 }
 
 // 32-bit shift instructions.
-class shift_rotate_imm32<bits<7> opcode, bits<3> funct3, bits<4> isRotate, string instr_asm,
+class shift_rotate_imm32<bits<7> opcode, bits<3> funct3, bit arithshift, string instr_asm,
                          SDNode OpNode>:
-  shift_rotate_imm<opcode, funct3, isRotate, instr_asm, OpNode, immZExt5, shamt, GPR>;
+  shift_rotate_imm<opcode, funct3, arithshift, instr_asm, OpNode, immZExt5, shamt, GPR>;
 
 
 class shift_rotate_reg<bits<7> opcode, bits<7> funct7, bits<3> funct3,
                        bits<4> isRotate, string instr_asm,
                        SDNode OpNode, RegisterClass RC>:
-  FR<opcode, funct7, funct3, (outs GPR:$ra), (ins RC:$rb, RC:$rc),
+  FR<opcode, funct3, funct7, (outs GPR:$ra), (ins RC:$rb, RC:$rc),
      !strconcat(instr_asm, "\t$ra, $rb, $rc"),
      [(set GPR:$ra, (OpNode RC:$rb, RC:$rc))], IIAlu> {
 }
@@ -440,24 +440,24 @@ def : Pat<(brind GPR:$rs1), (JALR GPR:$rs1)>;
 // let isCall = 1 in
 // def JAL : UncondBranch<0b1101111, "jal">;
 
-def XORI : ArithLogicI<0b0010011, 0b110, "xori", xor, uimm12, immZExt12, GPR>;
+def XORI : ArithLogicI<0b0010011, 0b100, "xori", xor, uimm12, immZExt12, GPR>;
 def ORI  : ArithLogicI<0b0010011, 0b110, "ori",  or,  uimm12, immZExt12, GPR>;
 def ANDI : ArithLogicI<0b0010011, 0b111, "andi", and, uimm12, immZExt12, GPR>;
 
 def LUI  : ArithLogicU<0b0110111, "lui", simm20, immSExt12>;
-def ADD  : ArithLogicR<0b0110011, 0b000, "add", add, GPR>;
-def SUB  : ArithLogicR<0b0110011, 0b000, "sub", sub, GPR>;
+def ADD  : ArithLogicR<0b0110011, 0b000, 0b0000000, "add", add, GPR>;
+def SUB  : ArithLogicR<0b0110011, 0b000, 0b0100000, "sub", sub, GPR>;
 
 def SLL  : shift_rotate_reg<0b0110011, 0b0000000, 0b001, 0x0, "sll", shl, GPR>;
-def AND  : ArithLogicR<0b0110011, 0b111, "and", and, GPR>;
+def AND  : ArithLogicR<0b0110011, 0b111, 0b0000000, "and", and, GPR>;
 def SRL  : shift_rotate_reg<0b0110011, 0b0000000, 0b101, 0x0, "srl", srl, GPR>;
 def SRA  : shift_rotate_reg<0b0110011, 0b0100000, 0b101, 0x0, "sra", sra, GPR>;
-def OR   : ArithLogicR<0b0110011, 0b110, "or",  or,  GPR>;
-def XOR  : ArithLogicR<0b0110011, 0b100, "xor", xor, GPR>;
+def OR   : ArithLogicR<0b0110011, 0b110, 0b0000000, "or",  or,  GPR>;
+def XOR  : ArithLogicR<0b0110011, 0b100, 0b0000000, "xor", xor, GPR>;
 
-def SRLI : shift_rotate_imm32<0b0010011, 0b101, 0x00, "shli", srl>;
-def SLLI : shift_rotate_imm32<0b0010011, 0b001, 0x00, "slli", shl>;
-def SRAI : shift_rotate_imm32<0b0010011, 0b101, 0x00, "srai", sra>;
+def SRLI : shift_rotate_imm32<0b0010011, 0b101, 0, "shli", srl>;
+def SLLI : shift_rotate_imm32<0b0010011, 0b001, 0, "slli", shl>;
+def SRAI : shift_rotate_imm32<0b0010011, 0b101, 1, "srai", sra>;
 
 def SLTI  : SetCC_I<0b0010011, 0b010, "slti",  setlt,  simm12, immSExt12, GPR>;
 def SLTIU : SetCC_I<0b0010011, 0b011, "sltiu", setult, simm12, immSExt12, GPR>;
@@ -502,14 +502,14 @@ def SDT_MYRISCVXDivRem : SDTypeProfile<0, 2,
                                   [SDTCisInt<0>,
                                   SDTCisSameAs<0, 1>]>;
 
-def MUL   : ArithLogicR<0b0110011, 0b000, "mul",    mul,   GPR>;
-def MULH  : ArithLogicR<0b0110011, 0b001, "mulh",   mulhs, GPR>;
-def MULHSU: ArithLogicR<0b0110011, 0b010, "mulhsu", mulhs, GPR>;
-def MULHU : ArithLogicR<0b0110011, 0b011, "mulhu",  mulhu, GPR>;
-def DIV   : ArithLogicR<0b0110011, 0b100, "div",    sdiv,  GPR>;
-def DIVU  : ArithLogicR<0b0110011, 0b101, "divu",   udiv,  GPR>;
-def REM   : ArithLogicR<0b0110011, 0b110, "rem",    srem,  GPR>;
-def REMU  : ArithLogicR<0b0110011, 0b111, "remu",   urem,  GPR>;
+def MUL   : ArithLogicR<0b0110011, 0b000, 0b0000001, "mul",    mul,   GPR>;
+def MULH  : ArithLogicR<0b0110011, 0b001, 0b0000001, "mulh",   mulhs, GPR>;
+def MULHSU: ArithLogicR<0b0110011, 0b010, 0b0000001, "mulhsu", mulhs, GPR>;
+def MULHU : ArithLogicR<0b0110011, 0b011, 0b0000001, "mulhu",  mulhu, GPR>;
+def DIV   : ArithLogicR<0b0110011, 0b100, 0b0000001, "div",    sdiv,  GPR>;
+def DIVU  : ArithLogicR<0b0110011, 0b101, 0b0000001, "divu",   udiv,  GPR>;
+def REM   : ArithLogicR<0b0110011, 0b110, 0b0000001, "rem",    srem,  GPR>;
+def REMU  : ArithLogicR<0b0110011, 0b111, 0b0000001, "remu",   urem,  GPR>;
 
 // FrameIndexes are legalized when they are operands from load/store
 // instructions. The same not happens for stack address copies, so an
@@ -526,7 +526,8 @@ let isCall=1, hasDelaySlot=0 in {
     FJ<opcode, (outs), (ins opnd:$target),
        !strconcat(instr_asm, "\t$target"), [(MYRISCVXJmpLink tglobaladdr:$target)],
        IIBranch> {
-    }
+       let DecoderMethod = "DecodeJumpTarget";
+  }
 
   //@JumpLink }
   class JumpLinkReg<bits<7> opcode, bits<3> funct3, string instr_asm,
