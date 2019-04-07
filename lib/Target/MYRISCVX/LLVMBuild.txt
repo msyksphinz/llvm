@@ -20,7 +20,7 @@ subdirectories =
   InstPrinter
   MCTargetDesc
   TargetInfo
-
+  Disassembler
 
 [component_0]
 # TargetGroup components are an extension of LibraryGroups, specifically for
@@ -31,10 +31,11 @@ type = TargetGroup
 name = MYRISCVX
 # MYRISCVX component is located in directory Target/
 parent = Target
-# Please enable asmprinter
-has_asmprinter = 1
 # Whether this target defines an assembly parser, assembly printer, disassembler
 # , and supports JIT compilation. They are optional.
+# Please enable asmprinter
+has_asmprinter = 1
+has_disassembler = 1
 
 [component_1]
 # component_1 is a Library type and name is MYRISCVXCodeGen. After build it will
