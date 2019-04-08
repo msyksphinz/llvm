@@ -81,9 +81,9 @@ class FR<bits<7> opcode, bits<3> funct3, bits<7> funct7,
          list<dag> pattern, InstrItinClass itin>:
       MYRISCVXInst<outs, ins, asmstr, pattern, itin, FrmR>
 {
-  bits<5>  rs2;
-  bits<5>  rs1;
   bits<5>  rd;
+  bits<5>  rs1;
+  bits<5>  rs2;
 
   let Opcode = opcode;
 
@@ -102,8 +102,8 @@ class FI<bits<7> opcode, bits<3> funct3,
          dag outs, dag ins, string asmstr, list<dag> pattern,
          InstrItinClass itin>: MYRISCVXInst<outs, ins, asmstr, pattern, itin, FrmI>
 {
-  bits<5>  rs1;
   bits<5>  rd;
+  bits<5>  rs1;
   bits<12> imm12;
 
   let Opcode = opcode;
@@ -150,17 +150,19 @@ class FS<bits<7> opcode, bits<3> funct3,
          dag outs, dag ins, string asmstr, list<dag> pattern,
          InstrItinClass itin>: MYRISCVXInst<outs, ins, asmstr, pattern, itin, FrmS>
 {
-  bits<5>  rs1;
   bits<5>  rs2;
-  bits<12> imm12;
+  bits<5>  rs1;
+  bits<12> simm12;
 
   let Opcode = opcode;
 
-  let Inst{31-25} = imm12{11-5};
+  let Inst{31-25} = simm12{11-5};
   let Inst{19-15} = rs1;
   let Inst{24-20} = rs2;
   let Inst{14-12} = funct3;
-  let Inst{11-7}  = imm12{4-0};
+  let Inst{11-7}  = simm12{4-0};
+
+  let DecoderMethod = "DecodeStore";
 }
 //@class FS }
 
@@ -195,8 +197,8 @@ class FB<bits<7> opcode, bits<3> funct3,
          InstrItinClass itin>: MYRISCVXInst<outs, ins, asmstr, pattern, itin, FrmI>
 {
   bits<12> imm12;
-  bits<5> rs2;
-  bits<5> rs1;
+  bits<5>  rs2;
+  bits<5>  rs1;
 
   let Opcode = opcode;
 

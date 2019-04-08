@@ -220,9 +220,9 @@ class EffectiveAddress<string instr_asm, RegisterClass RC, Operand Mem> :
 class ArithLogicR<bits<7> opcode, bits<3> funct3, bits<7>funct7,
                   string instr_asm, SDNode OpNode,
                   RegisterClass RC> :
-  FR<opcode, funct3, funct7, (outs GPR:$ra), (ins RC:$rb, RC:$rc),
-  !strconcat(instr_asm, "\t$ra, $rb, $rc"),
-  [(set GPR:$ra, (OpNode RC:$rb, RC:$rc))], IIAlu> {
+  FR<opcode, funct3, funct7, (outs RC:$rd), (ins RC:$rs1, RC:$rs2),
+  !strconcat(instr_asm, "\t$rd, $rs1, $rs2"),
+  [(set RC:$rd, (OpNode RC:$rs1, RC:$rs2))], IIAlu> {
     let isReMaterializable = 1;
 }
 
@@ -231,9 +231,9 @@ class ArithLogicR<bits<7> opcode, bits<3> funct3, bits<7>funct7,
 class ArithLogicI<bits<7> opcode, bits<3> funct3,
                   string instr_asm, SDNode OpNode,
                   Operand Od, PatLeaf imm_type, RegisterClass RC> :
-  FI<opcode, funct3, (outs GPR:$ra), (ins RC:$rb, Od:$imm12),
-  !strconcat(instr_asm, "\t$ra, $rb, $imm12"),
-  [(set GPR:$ra, (OpNode RC:$rb, imm_type:$imm12))], IIAlu> {
+  FI<opcode, funct3, (outs RC:$rd), (ins RC:$rs1, Od:$imm12),
+  !strconcat(instr_asm, "\t$rd, $rs1, $imm12"),
+  [(set RC:$rd, (OpNode RC:$rs1, imm_type:$imm12))], IIAlu> {
     let isReMaterializable = 1;
 }
 
@@ -242,8 +242,8 @@ class ArithLogicI<bits<7> opcode, bits<3> funct3,
 class CBranch12<bits<7> opcode, bits<3> funct3,
                 string instr_asm,
                 PatFrag cond_op, RegisterClass RC> :
-  FB<opcode, funct3, (outs), (ins RC:$ra, RC:$rb, brtarget12:$imm12),
-  !strconcat(instr_asm, "\t$ra, $rb, $imm12"),
+  FB<opcode, funct3, (outs), (ins RC:$rs1, RC:$rs2, brtarget12:$imm12),
+  !strconcat(instr_asm, "\t$rs1, $rs2, $imm12"),
   [], IIAlu> {
     let isBranch = 1;
     let isTerminator = 1;
@@ -259,11 +259,11 @@ class UncondBranch<bits<7> opcode, string instr_asm>:
 }
 
 
-// Arithmetic and logical instructions with 3 register operands.
+// Arithmetic and logical instructions with 2 register and one immediate.
 class ArithLogicU<bits<7> opcode,
-                  string instr_asm, Operand Od, PatLeaf imm_type> :
-  FU<opcode, (outs GPR:$ra), (ins Od:$imm20),
-    !strconcat(instr_asm, "\t$ra, $imm20"), [], IIAlu> {
+                  string instr_asm, RegisterClass RC, Operand Od, PatLeaf imm_type> :
+  FU<opcode, (outs RC:$rd), (ins Od:$imm20),
+    !strconcat(instr_asm, "\t$rd, $imm20"), [], IIAlu> {
       let isReMaterializable = 1;
 }
 
@@ -275,14 +275,15 @@ class LoadM<bits<7> opcode, bits<3> funct3, string instr_asm, PatFrag OpNode, Re
      !strconcat(instr_asm, "\t$ra, $addr"),
      [(set RC:$ra, (OpNode addr:$addr))], IILoad> {
   let isPseudo = Pseudo;
+  let DecoderMethod = "DecodeLoad";
 }
 
 
 class StoreM<bits<7> opcode, bits<3> funct3, string instr_asm, PatFrag OpNode, RegisterClass RC,
              Operand MemOpnd, bit Pseudo>:
-  FI<opcode, funct3, (outs), (ins RC:$ra, MemOpnd:$addr),
-     !strconcat(instr_asm, "\t$ra, $addr"),
-     [(OpNode RC:$ra, addr:$addr)], IIStore> {
+  FS<opcode, funct3, (outs), (ins RC:$rs1, MemOpnd:$addr),
+     !strconcat(instr_asm, "\t$rs1, $addr"),
+     [(OpNode RC:$rs1, addr:$addr)], IIStore> {
   let isPseudo = Pseudo;
 }
 
@@ -327,10 +328,11 @@ class RetBase<RegisterClass RC>: JumpFR<0b1100111, 0b000, "ret", RC> {
 class shift_rotate_imm<bits<7> opcode, bits<3> funct3, bit arithshift, string instr_asm,
                        SDNode OpNode, PatFrag PF, Operand ImmOpnd,
                        RegisterClass RC>:
-  FIShift<opcode, funct3, arithshift, (outs GPR:$ra), (ins RC:$rb, ImmOpnd:$shamt),
-    !strconcat(instr_asm, "\t$ra, $rb, $shamt"),
-    [(set GPR:$ra, (OpNode RC:$rb, PF:$shamt))], IIAlu> {
+  FIShift<opcode, funct3, arithshift, (outs RC:$rd), (ins RC:$rs1, ImmOpnd:$shamt),
+    !strconcat(instr_asm, "\t$rd, $rs1, $shamt"),
+    [(set GPR:$rd, (OpNode RC:$rs1, PF:$shamt))], IIAlu> {
 }
+
 
 // 32-bit shift instructions.
 class shift_rotate_imm32<bits<7> opcode, bits<3> funct3, bit arithshift, string instr_asm,
@@ -341,7 +343,7 @@ class shift_rotate_imm32<bits<7> opcode, bits<3> funct3, bit arithshift, string 
 class shift_rotate_reg<bits<7> opcode, bits<7> funct7, bits<3> funct3,
                        bits<4> isRotate, string instr_asm,
                        SDNode OpNode, RegisterClass RC>:
-  FR<opcode, funct3, funct7, (outs GPR:$ra), (ins RC:$rb, RC:$rc),
+  FR<opcode, funct3, funct7, (outs RC:$ra), (ins RC:$rb, RC:$rc),
      !strconcat(instr_asm, "\t$ra, $rb, $rc"),
      [(set GPR:$ra, (OpNode RC:$rb, RC:$rc))], IIAlu> {
 }
@@ -351,7 +353,7 @@ class shift_rotate_reg<bits<7> opcode, bits<7> funct7, bits<3> funct3,
 class SetCC_R<bits<7> opcode, bits<3> funct3,
               string instr_asm, PatFrag cond_op,
               RegisterClass RC> :
-  FI<opcode, funct3, (outs GPR:$ra), (ins RC:$rb, RC:$rc),
+  FI<opcode, funct3, (outs RC:$ra), (ins RC:$rb, RC:$rc),
   !strconcat(instr_asm, "\t$ra, $rb, $rc"),
   [(set GPR:$ra, (cond_op RC:$rb, RC:$rc))], IIAlu> {
     let isReMaterializable = 1;
@@ -361,7 +363,7 @@ class SetCC_R<bits<7> opcode, bits<3> funct3,
 class SetCC_I<bits<7> opcode, bits<3> funct3,
               string instr_asm, PatFrag cond_op,
               Operand imm, PatLeaf imm_type, RegisterClass RC> :
-  FI<opcode, funct3, (outs GPR:$ra), (ins RC:$rb, imm:$imm12),
+  FI<opcode, funct3, (outs RC:$ra), (ins RC:$rb, imm:$imm12),
   !strconcat(instr_asm, "\t$ra, $rb, $imm12"),
   [(set GPR:$ra, (cond_op RC:$rb, imm_type:$imm12))], IIAlu> {
     let isReMaterializable = 1;
@@ -444,7 +446,7 @@ def XORI : ArithLogicI<0b0010011, 0b100, "xori", xor, uimm12, immZExt12, GPR>;
 def ORI  : ArithLogicI<0b0010011, 0b110, "ori",  or,  uimm12, immZExt12, GPR>;
 def ANDI : ArithLogicI<0b0010011, 0b111, "andi", and, uimm12, immZExt12, GPR>;
 
-def LUI  : ArithLogicU<0b0110111, "lui", simm20, immSExt12>;
+def LUI  : ArithLogicU<0b0110111, "lui", GPR, simm20, immSExt12>;
 def ADD  : ArithLogicR<0b0110011, 0b000, 0b0000000, "add", add, GPR>;
 def SUB  : ArithLogicR<0b0110011, 0b000, 0b0100000, "sub", sub, GPR>;
 

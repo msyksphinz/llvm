@@ -85,10 +85,10 @@ static DecodeStatus DecodeCPURegsRegisterClass(MCInst &Inst,
                                                unsigned RegNo,
                                                uint64_t Address,
                                                const void *Decoder);
-static DecodeStatus DecodeGPROutRegisterClass(MCInst &Inst,
-                                               unsigned RegNo,
-                                               uint64_t Address,
-                                               const void *Decoder);
+static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst,
+                                           unsigned RegNo,
+                                           uint64_t Address,
+                                           const void *Decoder);
 // static DecodeStatus DecodeSRRegisterClass(MCInst &Inst,
 //                                                unsigned RegNo,
 //                                                uint64_t Address,
@@ -114,10 +114,15 @@ static DecodeStatus DecodeJumpFR(MCInst &Inst,
                                  uint64_t Address,
                                  const void *Decoder);
 
-static DecodeStatus DecodeMem(MCInst &Inst,
-                              unsigned Insn,
-                              uint64_t Address,
-                              const void *Decoder);
+static DecodeStatus DecodeStore(MCInst &Inst,
+                                unsigned Insn,
+                                uint64_t Address,
+                                const void *Decoder);
+static DecodeStatus DecodeLoad (MCInst &Inst,
+                                unsigned Insn,
+                                uint64_t Address,
+                                const void *Decoder);
+
 static DecodeStatus DecodeSimm12(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeSimm20 (MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
 
@@ -213,10 +218,10 @@ static DecodeStatus DecodeCPURegsRegisterClass(MCInst &Inst,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeGPROutRegisterClass(MCInst &Inst,
-                                               unsigned RegNo,
-                                               uint64_t Address,
-                                               const void *Decoder) {
+static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst,
+                                           unsigned RegNo,
+                                           uint64_t Address,
+                                           const void *Decoder) {
   return DecodeCPURegsRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
@@ -238,22 +243,42 @@ static DecodeStatus DecodeGPROutRegisterClass(MCInst &Inst,
 //   return MCDisassembler::Success;
 // }
 
-//@DecodeMem {
-static DecodeStatus DecodeMem(MCInst &Inst,
-                              unsigned Insn,
-                              uint64_t Address,
-                              const void *Decoder) {
-//@DecodeMem body {
-  int Offset = SignExtend32<16>(Insn & 0xffff);
-  int Reg = (int)fieldFromInstruction(Insn, 20, 4);
-  int Base = (int)fieldFromInstruction(Insn, 16, 4);
+// @DecodeStore {
+static DecodeStatus DecodeStore(MCInst &Inst,
+                                unsigned Insn,
+                                uint64_t Address,
+                                const void *Decoder) {
+  // @DecodeStore body {
+  int Offset = SignExtend32<12>((fieldFromInstruction(Insn,  25, 7) << 5) |
+                                (fieldFromInstruction(Insn,   7, 5)));
+  int Reg  = (int)fieldFromInstruction(Insn, 20, 5);
+  int Base = (int)fieldFromInstruction(Insn, 15, 5);
 
+  Inst.addOperand(MCOperand::createReg(CPURegsTable[Base]));
   Inst.addOperand(MCOperand::createReg(CPURegsTable[Reg]));
+  Inst.addOperand(MCOperand::createImm(Offset));
+
+  return MCDisassembler::Success;
+}
+
+
+// @DecodeLoad {
+static DecodeStatus DecodeLoad (MCInst &Inst,
+                                unsigned Insn,
+                                uint64_t Address,
+                                const void *Decoder) {
+  // @DecodeLoad body {
+  int Offset = SignExtend32<12>((Insn >> 20) & 0x0fff);
+  int Dest = (int)fieldFromInstruction(Insn,  7, 5);
+  int Base = (int)fieldFromInstruction(Insn, 15, 5);
+
+  Inst.addOperand(MCOperand::createReg(CPURegsTable[Dest]));
   Inst.addOperand(MCOperand::createReg(CPURegsTable[Base]));
   Inst.addOperand(MCOperand::createImm(Offset));
 
   return MCDisassembler::Success;
 }
+
 
 static DecodeStatus DecodeBranch12Target(MCInst &Inst,
                                        unsigned Insn,
