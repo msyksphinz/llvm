@@ -463,7 +463,7 @@ def SRA  : shift_rotate_reg<0b0110011, 0b0100000, 0b101, 0x0, "sra", sra, GPR>;
 def OR   : ArithLogicR<0b0110011, 0b110, 0b0000000, "or",  or,  GPR>;
 def XOR  : ArithLogicR<0b0110011, 0b100, 0b0000000, "xor", xor, GPR>;
 
-def SRLI : shift_rotate_imm32<0b0010011, 0b101, 0, "shli", srl>;
+def SRLI : shift_rotate_imm32<0b0010011, 0b101, 0, "srli", srl>;
 def SLLI : shift_rotate_imm32<0b0010011, 0b001, 0, "slli", shl>;
 def SRAI : shift_rotate_imm32<0b0010011, 0b101, 1, "srai", sra>;
 
