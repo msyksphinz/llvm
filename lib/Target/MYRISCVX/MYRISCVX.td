@@ -17,6 +17,17 @@ include "MYRISCVXInstrInfo.td"
 
 def MYRISCVXInstrInfo : InstrInfo;
 
+def MYRISCVXAsmParser : AsmParser {
+  let ShouldEmitMatchRegisterName = 0;
+}
+
+def MYRISCVXAsmParserVariant : AsmParserVariant {
+  int Variant = 0;
+
+  // Recognize hard coded registers.
+  string RegisterPrefix = "$";
+}
+
 // Will generate MYRISCVXGenAsmWrite.inc included by MYRISCVXInstPrinter.cpp, contents
 //  as follows,
 // void MYRISCVXInstPrinter::printInstruction(const MCInst *MI, raw_ostream &O) {...}
@@ -24,4 +35,7 @@ def MYRISCVXInstrInfo : InstrInfo;
 def MYRISCVX : Target {
 // def MYRISCVXInstrInfo : InstrInfo as before.
   let InstructionSet = MYRISCVXInstrInfo;
+
+  let AssemblyParsers = [MYRISCVXAsmParser];
+  let AssemblyParserVariants = [MYRISCVXAsmParserVariant];
 }

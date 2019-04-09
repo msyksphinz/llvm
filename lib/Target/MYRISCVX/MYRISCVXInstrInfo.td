@@ -110,11 +110,17 @@ def uimm12 : Operand<i32> {
 }
 
 
+def MYRISCVXMemAsmOperand : AsmOperandClass {
+  let Name = "Mem";
+  let ParserMethod = "parseMemOperand";
+}
+
 // Address operand
 def mem : Operand<iPTR> {
   let PrintMethod   = "printMemOperand";
   let MIOperandInfo = (ops GPR, simm12);
   let EncoderMethod = "getMemEncoding";
+  let ParserMatchClass = MYRISCVXMemAsmOperand;
 }
 
 def mem_ea : Operand<iPTR> {
@@ -682,3 +688,23 @@ defm : BrcondPatsSlt<GPR, BEQ, BNE, SLT, SLTU, SLTI, SLTIU, ZERO>;
 let isBarrier = 1, isBranch = 1, isTerminator = 1 in
 def PseudoBR : MYRISCVXPseudo<(outs), (ins calltarget:$simm20), "", [(br bb:$simm20)]>,
                PseudoInstExpansion<(JAL calltarget:$simm20)>;
+
+
+//===----------------------------------------------------------------------===//
+// Pseudo Instruction definition
+//===----------------------------------------------------------------------===//
+
+class LoadImm32< string instr_asm, Operand Od, RegisterClass RC> :
+  MYRISCVXAsmPseudoInst<(outs RC:$ra), (ins Od:$imm32),
+                     !strconcat(instr_asm, "\t$ra, $imm32")> ;
+def LoadImm32Reg : LoadImm32<"li", shamt, GPR>;
+
+class LoadAddress<string instr_asm, Operand MemOpnd, RegisterClass RC> :
+  MYRISCVXAsmPseudoInst<(outs RC:$ra), (ins MemOpnd:$addr),
+                     !strconcat(instr_asm, "\t$ra, $addr")> ;
+def LoadAddr32Reg : LoadAddress<"la", mem, GPR>;
+
+class LoadAddressImm<string instr_asm, Operand Od, RegisterClass RC> :
+  MYRISCVXAsmPseudoInst<(outs RC:$ra), (ins Od:$imm32),
+                     !strconcat(instr_asm, "\t$ra, $imm32")> ;
+def LoadAddr32Imm : LoadAddressImm<"la", shamt, GPR>;
