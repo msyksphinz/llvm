@@ -108,13 +108,20 @@ getFixupKindInfo(MCFixupKind Kind) const {
     // MYRISCVXFixupKinds.h.
     //
     // name offset bits flags
-    { "fixup_MYRISCVX_32", 0, 32, 0 },
-    { "fixup_MYRISCVX_HI16", 0, 16, 0 },
-    { "fixup_MYRISCVX_LO16", 0, 16, 0 },
-    { "fixup_MYRISCVX_GPREL16", 0, 16, 0 },
-    { "fixup_MYRISCVX_GOT", 0, 16, 0 },
-    { "fixup_MYRISCVX_GOT_HI16", 0, 16, 0 },
-    { "fixup_MYRISCVX_GOT_LO16", 0, 16, 0 }
+    { "fixup_MYRISCVX_32"       , 0, 32, 0 },
+    { "fixup_MYRISCVX_HI16"     , 0, 16, 0 },
+    { "fixup_MYRISCVX_LO16"     , 0, 16, 0 },
+    { "fixup_MYRISCVX_GPREL16"  , 0, 16, 0 },
+    { "fixup_MYRISCVX_GOT"      , 0, 16, 0 },
+    { "fixup_MYRISCVX_GOT_HI16" , 0, 16, 0 },
+    { "fixup_MYRISCVX_GOT_LO16" , 0, 16, 0 },
+    { "fixup_MYRISCVX_TLSGD"    , 0, 16, 0 },
+    { "fixup_MYRISCVX_GOTTP"    , 0, 16, 0 },
+    { "fixup_MYRISCVX_TP_HI"    , 0, 16, 0 },
+    { "fixup_MYRISCVX_TP_LO"    , 0, 16, 0 },
+    { "fixup_MYRISCVX_TLSLDM"   , 0, 16, 0 },
+    { "fixup_MYRISCVX_DTP_HI"   , 0, 16, 0 },
+    { "fixup_MYRISCVX_DTP_LO"   , 0, 16, 0 }
   };
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);

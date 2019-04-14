@@ -48,6 +48,26 @@ namespace llvm {
       /// MO_GOT_HI16/LO16 - Relocations used for large GOTs.
       MO_GOT_HI16,
       MO_GOT_LO16,
+      /// MO_TLSGD - Represents the offset into the global offset table at which
+      // the module ID and TSL block offset reside during execution (General
+      // Dynamic TLS).
+      MO_TLSGD,
+
+      /// MO_TLSLDM - Represents the offset into the global offset table at which
+      // the module ID and TSL block offset reside during execution (Local
+      // Dynamic TLS).
+      MO_TLSLDM,
+      MO_DTP_HI,
+      MO_DTP_LO,
+
+      /// MO_GOTTPREL - Represents the offset from the thread pointer (Initial
+      // Exec TLS).
+      MO_GOTTPREL,
+
+      /// MO_TPREL_HI/LO - Represents the hi and low part of the offset from
+      // the thread pointer (Local Exec TLS).
+      MO_TP_HI,
+      MO_TP_LO,
     }; // enum TOF {
 
     enum {

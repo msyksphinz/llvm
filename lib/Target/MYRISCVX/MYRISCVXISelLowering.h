@@ -394,6 +394,7 @@ class MYRISCVXTargetLowering : public TargetLowering {
                               MachineBasicBlock *BB) const override;
 
   MYRISCVXCC::SpecialCallingConvType getSpecialCallingConv(SDValue Callee) const;
+
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   unsigned
@@ -407,6 +408,7 @@ class MYRISCVXTargetLowering : public TargetLowering {
   getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
     return MYRISCVX::A1;
   }
+  SDValue lowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
 };
 
 

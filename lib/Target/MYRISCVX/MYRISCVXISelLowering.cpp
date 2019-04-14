@@ -130,6 +130,8 @@ MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
   setOperationAction(ISD::BSWAP, MVT::i32, Expand);
   setOperationAction(ISD::BSWAP, MVT::i64, Expand);
 
+  setOperationAction(ISD::GlobalTLSAddress,   MVT::i32,   Custom);
+
   //- Set .align 2
   // It will emit .align 2 later
   setMinFunctionAlignment(2);
@@ -486,14 +488,15 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
 {
   switch (Op.getOpcode())
   {
-    case ISD::GlobalAddress : return lowerGlobalAddress(Op, DAG);
-    case ISD::BlockAddress  : return lowerBlockAddress(Op, DAG);
-    case ISD::SELECT        : return lowerSELECT(Op, DAG);
-    case ISD::VASTART       : return lowerVASTART(Op, DAG);
-    case ISD::FRAMEADDR     : return lowerFRAMEADDR(Op, DAG);
-    case ISD::RETURNADDR    : return lowerRETURNADDR(Op, DAG);
-    case ISD::EH_RETURN     : return lowerEH_RETURN(Op, DAG);
-    case ISD::ADD           : return lowerADD(Op, DAG);
+    case ISD::GlobalAddress    : return lowerGlobalAddress(Op, DAG);
+    case ISD::BlockAddress     : return lowerBlockAddress(Op, DAG);
+    case ISD::SELECT           : return lowerSELECT(Op, DAG);
+    case ISD::VASTART          : return lowerVASTART(Op, DAG);
+    case ISD::FRAMEADDR        : return lowerFRAMEADDR(Op, DAG);
+    case ISD::RETURNADDR       : return lowerRETURNADDR(Op, DAG);
+    case ISD::EH_RETURN        : return lowerEH_RETURN(Op, DAG);
+    case ISD::ADD              : return lowerADD(Op, DAG);
+    case ISD::GlobalTLSAddress : return lowerGlobalTLSAddress(Op, DAG);
   }
   return SDValue();
 }
@@ -1765,4 +1768,84 @@ bool MYRISCVXTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   }
 
   return true;
+}
+
+
+SDValue MYRISCVXTargetLowering::
+lowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const
+{
+  // If the relocation model is PIC, use the General Dynamic TLS Model or
+  // Local Dynamic TLS model, otherwise use the Initial Exec or
+  // Local Exec TLS Model.
+
+  GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
+  if (DAG.getTarget().Options.EmulatedTLS)
+    return LowerToTLSEmulatedModel(GA, DAG);
+
+  SDLoc DL(GA);
+  const GlobalValue *GV = GA->getGlobal();
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+
+  TLSModel::Model model = getTargetMachine().getTLSModel(GV);
+
+  if (model == TLSModel::GeneralDynamic || model == TLSModel::LocalDynamic) {
+    // General Dynamic and Local Dynamic TLS Model.
+    unsigned Flag = (model == TLSModel::LocalDynamic) ? MYRISCVXII::MO_TLSLDM
+                                                      : MYRISCVXII::MO_TLSGD;
+
+    SDValue TGA = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, Flag);
+    SDValue Argument = DAG.getNode(MYRISCVXISD::Wrapper, DL, PtrVT,
+                                   getGlobalReg(DAG, PtrVT), TGA);
+    unsigned PtrSize = PtrVT.getSizeInBits();
+    IntegerType *PtrTy = Type::getIntNTy(*DAG.getContext(), PtrSize);
+
+    SDValue TlsGetAddr = DAG.getExternalSymbol("__tls_get_addr", PtrVT);
+
+    ArgListTy Args;
+    ArgListEntry Entry;
+    Entry.Node = Argument;
+    Entry.Ty = PtrTy;
+    Args.push_back(Entry);
+
+    TargetLowering::CallLoweringInfo CLI(DAG);
+    CLI.setDebugLoc(DL).setChain(DAG.getEntryNode())
+      .setCallee(CallingConv::C, PtrTy, TlsGetAddr, std::move(Args));
+    std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
+
+    SDValue Ret = CallResult.first;
+
+    if (model != TLSModel::LocalDynamic)
+      return Ret;
+
+    SDValue TGAHi = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0,
+                                               MYRISCVXII::MO_DTP_HI);
+    SDValue Hi = DAG.getNode(MYRISCVXISD::Hi, DL, PtrVT, TGAHi);
+    SDValue TGALo = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0,
+                                               MYRISCVXII::MO_DTP_LO);
+    SDValue Lo = DAG.getNode(MYRISCVXISD::Lo, DL, PtrVT, TGALo);
+    SDValue Add = DAG.getNode(ISD::ADD, DL, PtrVT, Hi, Ret);
+    return DAG.getNode(ISD::ADD, DL, PtrVT, Add, Lo);
+  }
+
+  SDValue Offset;
+  if (model == TLSModel::InitialExec) {
+    // Initial Exec TLS Model
+    SDValue TGA = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0,
+                                             MYRISCVXII::MO_GOTTPREL);
+    TGA = DAG.getNode(MYRISCVXISD::Wrapper, DL, PtrVT, getGlobalReg(DAG, PtrVT),
+                      TGA);
+    Offset =
+        DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), TGA, MachinePointerInfo());
+  } else {
+    // Local Exec TLS Model
+    assert(model == TLSModel::LocalExec);
+    SDValue TGAHi = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0,
+                                               MYRISCVXII::MO_TP_HI);
+    SDValue TGALo = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0,
+                                               MYRISCVXII::MO_TP_LO);
+    SDValue Hi = DAG.getNode(MYRISCVXISD::Hi, DL, PtrVT, TGAHi);
+    SDValue Lo = DAG.getNode(MYRISCVXISD::Lo, DL, PtrVT, TGALo);
+    Offset = DAG.getNode(ISD::ADD, DL, PtrVT, Hi, Lo);
+  }
+  return Offset;
 }

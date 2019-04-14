@@ -71,6 +71,27 @@ MCOperand MYRISCVXMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
     case MYRISCVXII::MO_GOT_LO16:
       TargetKind = MYRISCVXMCExpr::CEK_GOT_LO16;
       break;
+    case MYRISCVXII::MO_TLSGD:
+      TargetKind = MYRISCVXMCExpr::CEK_TLSGD;
+      break;
+    case MYRISCVXII::MO_TLSLDM:
+      TargetKind = MYRISCVXMCExpr::CEK_TLSLDM;
+      break;
+    case MYRISCVXII::MO_DTP_HI:
+      TargetKind = MYRISCVXMCExpr::CEK_DTP_HI;
+      break;
+    case MYRISCVXII::MO_DTP_LO:
+      TargetKind = MYRISCVXMCExpr::CEK_DTP_LO;
+      break;
+    case MYRISCVXII::MO_GOTTPREL:
+      TargetKind = MYRISCVXMCExpr::CEK_GOTTPREL;
+      break;
+    case MYRISCVXII::MO_TP_HI:
+      TargetKind = MYRISCVXMCExpr::CEK_TP_HI;
+      break;
+    case MYRISCVXII::MO_TP_LO:
+      TargetKind = MYRISCVXMCExpr::CEK_TP_LO;
+      break;
   }
 
   switch (MOTy) {

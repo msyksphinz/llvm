@@ -44,6 +44,28 @@ namespace llvm {
       fixup_MYRISCVX_PCREL_LO12_S,
       // resulting in - R_MYRISCVX_CALL16.
       fixup_MYRISCVX_CALL16,
+
+      // resulting in - R_MYRISCVX_TLS_GD.
+      fixup_MYRISCVX_TLSGD,
+
+      // resulting in - R_MYRISCVX_TLS_GOTTPREL.
+      fixup_MYRISCVX_GOTTPREL,
+
+      // resulting in - R_MYRISCVX_TLS_TPREL_HI16.
+      fixup_MYRISCVX_TP_HI,
+
+      // resulting in - R_MYRISCVX_TLS_TPREL_LO16.
+      fixup_MYRISCVX_TP_LO,
+
+      // resulting in - R_MYRISCVX_TLS_LDM.
+      fixup_MYRISCVX_TLSLDM,
+
+      // resulting in - R_MYRISCVX_TLS_DTP_HI16.
+      fixup_MYRISCVX_DTP_HI,
+
+      // resulting in - R_MYRISCVX_TLS_DTP_LO16.
+      fixup_MYRISCVX_DTP_LO,
+
       // Marker
       LastTargetFixupKind,
       NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind

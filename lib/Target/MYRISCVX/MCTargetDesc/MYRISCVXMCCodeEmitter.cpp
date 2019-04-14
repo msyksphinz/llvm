@@ -172,6 +172,29 @@ getExprOpValue(const MCExpr *Expr,SmallVectorImpl<MCFixup> &Fixups,
       case MYRISCVXMCExpr::CEK_GOT_LO16:
         FixupKind = MYRISCVX::fixup_MYRISCVX_GOT_LO16;
         break;
+
+      case MYRISCVXMCExpr::CEK_TLSGD:
+        FixupKind = MYRISCVX::fixup_MYRISCVX_TLSGD;
+        break;
+      case MYRISCVXMCExpr::CEK_TLSLDM:
+        FixupKind = MYRISCVX::fixup_MYRISCVX_TLSLDM;
+        break;
+      case MYRISCVXMCExpr::CEK_DTP_HI:
+        FixupKind = MYRISCVX::fixup_MYRISCVX_DTP_HI;
+        break;
+      case MYRISCVXMCExpr::CEK_DTP_LO:
+        FixupKind = MYRISCVX::fixup_MYRISCVX_DTP_LO;
+        break;
+      case MYRISCVXMCExpr::CEK_GOTTPREL:
+        FixupKind = MYRISCVX::fixup_MYRISCVX_GOTTPREL;
+        break;
+      case MYRISCVXMCExpr::CEK_TP_HI:
+        FixupKind = MYRISCVX::fixup_MYRISCVX_TP_HI;
+        break;
+      case MYRISCVXMCExpr::CEK_TP_LO:
+        FixupKind = MYRISCVX::fixup_MYRISCVX_TP_LO;
+        break;
+
     } // switch
     Fixups.push_back(MCFixup::create(0, Expr, MCFixupKind(FixupKind)));
     return 0;

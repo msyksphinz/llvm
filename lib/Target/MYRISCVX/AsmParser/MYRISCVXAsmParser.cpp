@@ -902,7 +902,9 @@ ParseInstruction(ParseInstructionInfo &Info, StringRef Name, SMLoc NameLoc,
 
   // Create the leading tokens for the mnemonic, split by '.' characters.
   size_t Start = 0, Next = Name.find('.');
+  LLVM_DEBUG(dbgs() << "Name = " << Name << '\n');
   StringRef Mnemonic = Name.slice(Start, Next);
+  LLVM_DEBUG(dbgs() << "Mnemonic = " << Mnemonic << '\n');
 
   // Refer to the explanation in source code of function DecodeJumpFR(...) in
   // MYRISCVXDisassembler.cpp

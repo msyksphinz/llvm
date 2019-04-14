@@ -79,6 +79,12 @@ unsigned MYRISCVXELFObjectWriter::getRelocType(MCContext &Ctx,
     case MYRISCVX::fixup_MYRISCVX_CALL16:
       Type = ELF::R_MYRISCVX_CALL16;
       break;
+    case MYRISCVX::fixup_MYRISCVX_TLSGD:
+      Type = ELF::R_MYRISCVX_TLS_GD;
+      break;
+    case MYRISCVX::fixup_MYRISCVX_GOTTPREL:
+      Type = ELF::R_MYRISCVX_TLS_GOTTPREL;
+      break;
   }
   return Type;
 }

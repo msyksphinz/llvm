@@ -62,6 +62,14 @@ def MYRISCVXJmpLink : SDNode<"MYRISCVXISD::JmpLink",SDT_MYRISCVXJmpLink,
                          [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                          SDNPVariadic]>;
 
+// TlsGd node is used to handle General Dynamic TLS
+def MYRISCVXTlsGd : SDNode<"MYRISCVXISD::TlsGd", SDTIntUnaryOp>;
+
+// TpHi and TpLo nodes are used to handle Local Exec TLS
+def MYRISCVXTpHi  : SDNode<"MYRISCVXISD::TpHi", SDTIntUnaryOp>;
+def MYRISCVXTpLo  : SDNode<"MYRISCVXISD::TpLo", SDTIntUnaryOp>;
+
+
 //===----------------------------------------------------------------------===//
 // Instruction format superclass
 //===----------------------------------------------------------------------===//
@@ -614,7 +622,7 @@ def : Pat<(add GPR:$hi, (MYRISCVXLo tglobaladdr:$lo)),
           (ORI GPR:$hi, tglobaladdr:$lo)>;
 def : Pat<(MYRISCVXLo tblockaddress:$in), (ORI ZERO, tblockaddress:$in)>;
 def : Pat<(MYRISCVXLo tjumptable:$in), (ORI ZERO, tjumptable:$in)>;
-
+def : Pat<(MYRISCVXHi tglobaltlsaddr:$in), (LUI tglobaltlsaddr:$in)>;
 
 def : Pat<(add GPR:$hi, (MYRISCVXLo tglobaladdr:$lo)),
           (ORI GPR:$hi, tglobaladdr:$lo)>;
