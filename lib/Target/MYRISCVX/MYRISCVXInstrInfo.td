@@ -623,6 +623,10 @@ def : Pat<(add GPR:$hi, (MYRISCVXLo tglobaladdr:$lo)),
 def : Pat<(MYRISCVXLo tblockaddress:$in), (ORI ZERO, tblockaddress:$in)>;
 def : Pat<(MYRISCVXLo tjumptable:$in), (ORI ZERO, tjumptable:$in)>;
 def : Pat<(MYRISCVXHi tglobaltlsaddr:$in), (LUI tglobaltlsaddr:$in)>;
+def : Pat<(MYRISCVXLo tglobaltlsaddr:$in), (ORI ZERO, tglobaltlsaddr:$in)>;
+def : Pat<(add GPR:$hi, (MYRISCVXLo tglobaltlsaddr:$lo)),
+           (ORI GPR:$hi, tglobaltlsaddr:$lo)>;
+
 
 def : Pat<(add GPR:$hi, (MYRISCVXLo tglobaladdr:$lo)),
           (ORI GPR:$hi, tglobaladdr:$lo)>;
