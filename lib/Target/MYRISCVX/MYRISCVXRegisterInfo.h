@@ -43,5 +43,10 @@ namespace llvm {
     unsigned getFrameRegister(const MachineFunction &MF) const override;
     /// \brief Return GPR register class.
     virtual const TargetRegisterClass *intRegClass(unsigned Size) const = 0;
+
+    /// Code Generation virtual methods...
+    const TargetRegisterClass *getPointerRegClass(const MachineFunction &MF,
+                                                  unsigned Kind) const override;
+
   };
 } // end namespace llvm

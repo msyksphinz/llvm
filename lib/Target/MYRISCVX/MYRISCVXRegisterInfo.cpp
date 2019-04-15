@@ -167,3 +167,10 @@ getFrameRegister(const MachineFunction &MF) const {
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   return TFI->hasFP(MF) ? (MYRISCVX::S0) : (MYRISCVX::SP);
 }
+
+
+const TargetRegisterClass *
+MYRISCVXRegisterInfo::getPointerRegClass(const MachineFunction &MF,
+                                     unsigned Kind) const {
+  return &MYRISCVX::GPRRegClass;
+}

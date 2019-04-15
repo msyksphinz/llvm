@@ -38,6 +38,9 @@ MYRISCVXSETargetLowering::MYRISCVXSETargetLowering(const MYRISCVXTargetMachine &
   //@MYRISCVXSETargetLowering body {
   // Set up the register classes
   addRegisterClass(MVT::i32, &MYRISCVX::GPRRegClass);
+
+  setOperationAction(ISD::ATOMIC_FENCE,       MVT::Other, Custom);
+
   // must, computeRegisterProperties - Once all of the register classes are
   // added, this allows us to compute derived properties we expose.
   computeRegisterProperties(Subtarget.getRegisterInfo());

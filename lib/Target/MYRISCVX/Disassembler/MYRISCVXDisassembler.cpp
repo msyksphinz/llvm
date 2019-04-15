@@ -254,6 +254,10 @@ static DecodeStatus DecodeStore(MCInst &Inst,
   int Reg  = (int)fieldFromInstruction(Insn, 20, 5);
   int Base = (int)fieldFromInstruction(Insn, 15, 5);
 
+  if(Inst.getOpcode() == MYRISCVX::SC){
+    Inst.addOperand(MCOperand::createReg(Reg));
+  }
+
   Inst.addOperand(MCOperand::createReg(CPURegsTable[Base]));
   Inst.addOperand(MCOperand::createReg(CPURegsTable[Reg]));
   Inst.addOperand(MCOperand::createImm(Offset));

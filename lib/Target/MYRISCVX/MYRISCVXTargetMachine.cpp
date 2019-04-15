@@ -128,6 +128,7 @@ class MYRISCVXPassConfig : public TargetPassConfig {
   }
 
   void addPreEmitPass() override;
+  void addIRPasses() override;
 
 #ifdef ENABLE_GPRESTORE
   void addPreRegAlloc() override;
@@ -157,6 +158,12 @@ void MYRISCVXPassConfig::addPreEmitPass() {
   addPass(createMYRISCVXLongBranchPass(TM));
   addPass(createMYRISCVXDelJmpPass(TM));
   return;
+}
+
+
+void MYRISCVXPassConfig::addIRPasses() {
+  addPass(createAtomicExpandPass());
+  TargetPassConfig::addIRPasses();
 }
 
 

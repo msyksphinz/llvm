@@ -53,6 +53,7 @@ const char *MYRISCVXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     case MYRISCVXISD::DivRemU:    return "MYRISCVXISD::DivRemU";
     case MYRISCVXISD::Wrapper:    return "MYRISCVXISD::Wrapper";
     case MYRISCVXISD::SELECT_CC:  return "MYRISCVXISD::SELECT_CC";
+    case MYRISCVXISD::Sync:       return "MYRISCVXISD::Sync";
     default:                      return NULL;
   }
 }
@@ -131,6 +132,11 @@ MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
   setOperationAction(ISD::BSWAP, MVT::i64, Expand);
 
   setOperationAction(ISD::GlobalTLSAddress,   MVT::i32,   Custom);
+
+  setOperationAction(ISD::ATOMIC_LOAD,       MVT::i32,    Expand);
+  setOperationAction(ISD::ATOMIC_LOAD,       MVT::i64,    Expand);
+  setOperationAction(ISD::ATOMIC_STORE,      MVT::i32,    Expand);
+  setOperationAction(ISD::ATOMIC_STORE,      MVT::i64,    Expand);
 
   //- Set .align 2
   // It will emit .align 2 later
@@ -497,6 +503,7 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
     case ISD::EH_RETURN        : return lowerEH_RETURN(Op, DAG);
     case ISD::ADD              : return lowerADD(Op, DAG);
     case ISD::GlobalTLSAddress : return lowerGlobalTLSAddress(Op, DAG);
+    case ISD::ATOMIC_FENCE     : return lowerATOMIC_FENCE(Op, DAG);
   }
   return SDValue();
 }
@@ -712,6 +719,61 @@ MYRISCVXTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       llvm_unreachable("Unexpected instr type to insert");
     case MYRISCVX::Select_GPR_Using_CC_GPR:
       break;
+    case MYRISCVX::ATOMIC_LOAD_ADD_I8:
+      return emitAtomicBinaryPartword(MI, BB, 1, MYRISCVX::ADD);
+    case MYRISCVX::ATOMIC_LOAD_ADD_I16:
+      return emitAtomicBinaryPartword(MI, BB, 2, MYRISCVX::ADD);
+    case MYRISCVX::ATOMIC_LOAD_ADD_I32:
+      return emitAtomicBinary(MI, BB, 4, MYRISCVX::ADD);
+
+    case MYRISCVX::ATOMIC_LOAD_AND_I8:
+      return emitAtomicBinaryPartword(MI, BB, 1, MYRISCVX::AND);
+    case MYRISCVX::ATOMIC_LOAD_AND_I16:
+      return emitAtomicBinaryPartword(MI, BB, 2, MYRISCVX::AND);
+    case MYRISCVX::ATOMIC_LOAD_AND_I32:
+      return emitAtomicBinary(MI, BB, 4, MYRISCVX::AND);
+
+    case MYRISCVX::ATOMIC_LOAD_OR_I8:
+      return emitAtomicBinaryPartword(MI, BB, 1, MYRISCVX::OR);
+    case MYRISCVX::ATOMIC_LOAD_OR_I16:
+      return emitAtomicBinaryPartword(MI, BB, 2, MYRISCVX::OR);
+    case MYRISCVX::ATOMIC_LOAD_OR_I32:
+      return emitAtomicBinary(MI, BB, 4, MYRISCVX::OR);
+
+    case MYRISCVX::ATOMIC_LOAD_XOR_I8:
+      return emitAtomicBinaryPartword(MI, BB, 1, MYRISCVX::XOR);
+    case MYRISCVX::ATOMIC_LOAD_XOR_I16:
+      return emitAtomicBinaryPartword(MI, BB, 2, MYRISCVX::XOR);
+    case MYRISCVX::ATOMIC_LOAD_XOR_I32:
+      return emitAtomicBinary(MI, BB, 4, MYRISCVX::XOR);
+
+    case MYRISCVX::ATOMIC_LOAD_NAND_I8:
+      return emitAtomicBinaryPartword(MI, BB, 1, 0, true);
+    case MYRISCVX::ATOMIC_LOAD_NAND_I16:
+      return emitAtomicBinaryPartword(MI, BB, 2, 0, true);
+    case MYRISCVX::ATOMIC_LOAD_NAND_I32:
+      return emitAtomicBinary(MI, BB, 4, 0, true);
+
+    case MYRISCVX::ATOMIC_LOAD_SUB_I8:
+      return emitAtomicBinaryPartword(MI, BB, 1, MYRISCVX::SUB);
+    case MYRISCVX::ATOMIC_LOAD_SUB_I16:
+      return emitAtomicBinaryPartword(MI, BB, 2, MYRISCVX::SUB);
+    case MYRISCVX::ATOMIC_LOAD_SUB_I32:
+      return emitAtomicBinary(MI, BB, 4, MYRISCVX::SUB);
+
+    case MYRISCVX::ATOMIC_SWAP_I8:
+      return emitAtomicBinaryPartword(MI, BB, 1, 0);
+    case MYRISCVX::ATOMIC_SWAP_I16:
+      return emitAtomicBinaryPartword(MI, BB, 2, 0);
+    case MYRISCVX::ATOMIC_SWAP_I32:
+      return emitAtomicBinary(MI, BB, 4, 0);
+
+    case MYRISCVX::ATOMIC_CMP_SWAP_I8:
+      return emitAtomicCmpSwapPartword(MI, BB, 1);
+    case MYRISCVX::ATOMIC_CMP_SWAP_I16:
+      return emitAtomicCmpSwapPartword(MI, BB, 2);
+    case MYRISCVX::ATOMIC_CMP_SWAP_I32:
+      return emitAtomicCmpSwap(MI, BB, 4);
   }
 
   // To "insert" a SELECT instruction, we actually have to insert the triangle
@@ -772,6 +834,496 @@ MYRISCVXTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return TailMBB;
 }
+
+
+// This function also handles MYRISCVX::ATOMIC_SWAP_I32 (when BinOpcode == 0), and
+// MYRISCVX::ATOMIC_LOAD_NAND_I32 (when Nand == true)
+MachineBasicBlock *MYRISCVXTargetLowering::emitAtomicBinary(
+    MachineInstr &MI, MachineBasicBlock *BB, unsigned Size, unsigned BinOpcode,
+    bool Nand) const {
+  assert((Size == 4) && "Unsupported size for EmitAtomicBinary.");
+
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &RegInfo = MF->getRegInfo();
+  const TargetRegisterClass *RC = getRegClassFor(MVT::getIntegerVT(Size * 8));
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+  unsigned LL, SC, AND, XOR, ZERO, BEQ;
+
+  LL = MYRISCVX::LL;
+  SC = MYRISCVX::SC;
+  AND = MYRISCVX::AND;
+  XOR = MYRISCVX::XOR;
+  ZERO = MYRISCVX::ZERO;
+  BEQ = MYRISCVX::BEQ;
+
+  unsigned OldVal = MI.getOperand(0).getReg();
+  unsigned Ptr = MI.getOperand(1).getReg();
+  unsigned Incr = MI.getOperand(2).getReg();
+
+  unsigned StoreVal = RegInfo.createVirtualRegister(RC);
+  unsigned AndRes = RegInfo.createVirtualRegister(RC);
+  unsigned AndRes2 = RegInfo.createVirtualRegister(RC);
+  unsigned Success = RegInfo.createVirtualRegister(RC);
+
+  // insert new blocks after the current block
+  const BasicBlock *LLVM_BB = BB->getBasicBlock();
+  MachineBasicBlock *loopMBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *exitMBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineFunction::iterator It = ++BB->getIterator();
+  MF->insert(It, loopMBB);
+  MF->insert(It, exitMBB);
+
+  // Transfer the remainder of BB and its successor edges to exitMBB.
+  exitMBB->splice(exitMBB->begin(), BB,
+                  std::next(MachineBasicBlock::iterator(MI)), BB->end());
+  exitMBB->transferSuccessorsAndUpdatePHIs(BB);
+
+  //  thisMBB:
+  //    ...
+  //    fallthrough --> loopMBB
+  BB->addSuccessor(loopMBB);
+  loopMBB->addSuccessor(loopMBB);
+  loopMBB->addSuccessor(exitMBB);
+
+  //  loopMBB:
+  //    ll oldval, 0(ptr)
+  //    <binop> storeval, oldval, incr
+  //    sc success, storeval, 0(ptr)
+  //    beq success, $0, loopMBB
+  BB = loopMBB;
+  BuildMI(BB, DL, TII->get(LL), OldVal).addReg(Ptr).addImm(0);
+  if (Nand) {
+    //  and andres, oldval, incr
+    //  xor storeval, $0, andres
+    //  xor storeval2, $0, storeval
+    BuildMI(BB, DL, TII->get(AND), AndRes).addReg(OldVal).addReg(Incr);
+    BuildMI(BB, DL, TII->get(XOR), StoreVal).addReg(ZERO).addReg(AndRes);
+    BuildMI(BB, DL, TII->get(XOR), AndRes2).addReg(ZERO).addReg(AndRes);
+  } else if (BinOpcode) {
+    //  <binop> storeval, oldval, incr
+    BuildMI(BB, DL, TII->get(BinOpcode), StoreVal).addReg(OldVal).addReg(Incr);
+  } else {
+    StoreVal = Incr;
+  }
+  BuildMI(BB, DL, TII->get(SC), Success).addReg(StoreVal).addReg(Ptr).addImm(0);
+  BuildMI(BB, DL, TII->get(BEQ)).addReg(Success).addReg(ZERO).addMBB(loopMBB);
+
+  MI.eraseFromParent(); // The instruction is gone now.
+
+  return exitMBB;
+}
+
+MachineBasicBlock *MYRISCVXTargetLowering::emitSignExtendToI32InReg(
+    MachineInstr &MI, MachineBasicBlock *BB, unsigned Size, unsigned DstReg,
+    unsigned SrcReg) const {
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &RegInfo = MF->getRegInfo();
+  const TargetRegisterClass *RC = getRegClassFor(MVT::i32);
+  unsigned ScrReg = RegInfo.createVirtualRegister(RC);
+
+  assert(Size < 32);
+  int64_t ShiftImm = 32 - (Size * 8);
+
+  BuildMI(BB, DL, TII->get(MYRISCVX::SLL), ScrReg).addReg(SrcReg).addImm(ShiftImm);
+  BuildMI(BB, DL, TII->get(MYRISCVX::SRA), DstReg).addReg(ScrReg).addImm(ShiftImm);
+
+  return BB;
+}
+
+MachineBasicBlock *MYRISCVXTargetLowering::emitAtomicBinaryPartword(
+    MachineInstr &MI, MachineBasicBlock *BB, unsigned Size, unsigned BinOpcode,
+    bool Nand) const {
+  assert((Size == 1 || Size == 2) &&
+         "Unsupported size for EmitAtomicBinaryPartial.");
+
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &RegInfo = MF->getRegInfo();
+  const TargetRegisterClass *RC = getRegClassFor(MVT::i32);
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+
+  unsigned Dest = MI.getOperand(0).getReg();
+  unsigned Ptr = MI.getOperand(1).getReg();
+  unsigned Incr = MI.getOperand(2).getReg();
+
+  unsigned AlignedAddr = RegInfo.createVirtualRegister(RC);
+  unsigned ShiftAmt = RegInfo.createVirtualRegister(RC);
+  unsigned Mask = RegInfo.createVirtualRegister(RC);
+  unsigned Mask2 = RegInfo.createVirtualRegister(RC);
+  unsigned Mask3 = RegInfo.createVirtualRegister(RC);
+  unsigned NewVal = RegInfo.createVirtualRegister(RC);
+  unsigned OldVal = RegInfo.createVirtualRegister(RC);
+  unsigned Incr2 = RegInfo.createVirtualRegister(RC);
+  unsigned MaskLSB2 = RegInfo.createVirtualRegister(RC);
+  unsigned PtrLSB2 = RegInfo.createVirtualRegister(RC);
+  unsigned MaskUpper = RegInfo.createVirtualRegister(RC);
+  unsigned AndRes = RegInfo.createVirtualRegister(RC);
+  unsigned BinOpRes = RegInfo.createVirtualRegister(RC);
+  unsigned BinOpRes2 = RegInfo.createVirtualRegister(RC);
+  unsigned MaskedOldVal0 = RegInfo.createVirtualRegister(RC);
+  unsigned StoreVal = RegInfo.createVirtualRegister(RC);
+  unsigned MaskedOldVal1 = RegInfo.createVirtualRegister(RC);
+  unsigned SrlRes = RegInfo.createVirtualRegister(RC);
+  unsigned Success = RegInfo.createVirtualRegister(RC);
+
+  // insert new blocks after the current block
+  const BasicBlock *LLVM_BB = BB->getBasicBlock();
+  MachineBasicBlock *loopMBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *sinkMBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *exitMBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineFunction::iterator It = ++BB->getIterator();
+
+  MF->insert(It, loopMBB);
+  MF->insert(It, sinkMBB);
+  MF->insert(It, exitMBB);
+
+  // Transfer the remainder of BB and its successor edges to exitMBB.
+  exitMBB->splice(exitMBB->begin(), BB,
+                  std::next(MachineBasicBlock::iterator(MI)), BB->end());
+  exitMBB->transferSuccessorsAndUpdatePHIs(BB);
+
+  BB->addSuccessor(loopMBB);
+  loopMBB->addSuccessor(loopMBB);
+  loopMBB->addSuccessor(sinkMBB);
+  sinkMBB->addSuccessor(exitMBB);
+
+  //  thisMBB:
+  //    addiu   masklsb2,$0,-4                # 0xfffffffc
+  //    and     alignedaddr,ptr,masklsb2
+  //    andi    ptrlsb2,ptr,3
+  //    sll     shiftamt,ptrlsb2,3
+  //    ori     maskupper,$0,255               # 0xff
+  //    sll     mask,maskupper,shiftamt
+  //    xor     mask2,$0,mask
+  //    xor     mask3,$0,mask2
+  //    sll     incr2,incr,shiftamt
+
+  int64_t MaskImm = (Size == 1) ? 255 : 65535;
+  BuildMI(BB, DL, TII->get(MYRISCVX::ADDI), MaskLSB2)
+    .addReg(MYRISCVX::ZERO).addImm(-4);
+  BuildMI(BB, DL, TII->get(MYRISCVX::AND), AlignedAddr)
+    .addReg(Ptr).addReg(MaskLSB2);
+  BuildMI(BB, DL, TII->get(MYRISCVX::ANDI), PtrLSB2).addReg(Ptr).addImm(3);
+  // if (Subtarget.isLittle()) {
+  BuildMI(BB, DL, TII->get(MYRISCVX::SLL), ShiftAmt).addReg(PtrLSB2).addImm(3);
+  // } else {
+  //   unsigned Off = RegInfo.createVirtualRegister(RC);
+  //   BuildMI(BB, DL, TII->get(MYRISCVX::XORI), Off)
+  //     .addReg(PtrLSB2).addImm((Size == 1) ? 3 : 2);
+  //   BuildMI(BB, DL, TII->get(MYRISCVX::SLL), ShiftAmt).addReg(Off).addImm(3);
+  // }
+  BuildMI(BB, DL, TII->get(MYRISCVX::ORI), MaskUpper)
+    .addReg(MYRISCVX::ZERO).addImm(MaskImm);
+  BuildMI(BB, DL, TII->get(MYRISCVX::SLL), Mask)
+    .addReg(MaskUpper).addReg(ShiftAmt);
+  BuildMI(BB, DL, TII->get(MYRISCVX::XOR), Mask2).addReg(MYRISCVX::ZERO).addReg(Mask);
+  BuildMI(BB, DL, TII->get(MYRISCVX::XOR), Mask3).addReg(MYRISCVX::ZERO).addReg(Mask2);
+  BuildMI(BB, DL, TII->get(MYRISCVX::SLL), Incr2).addReg(Incr).addReg(ShiftAmt);
+
+  // atomic.load.binop
+  // loopMBB:
+  //   ll      oldval,0(alignedaddr)
+  //   binop   binopres,oldval,incr2
+  //   and     newval,binopres,mask
+  //   and     maskedoldval0,oldval,mask3
+  //   or      storeval,maskedoldval0,newval
+  //   sc      success,storeval,0(alignedaddr)
+  //   beq     success,$0,loopMBB
+
+  // atomic.swap
+  // loopMBB:
+  //   ll      oldval,0(alignedaddr)
+  //   and     newval,incr2,mask
+  //   and     maskedoldval0,oldval,mask3
+  //   or      storeval,maskedoldval0,newval
+  //   sc      success,storeval,0(alignedaddr)
+  //   beq     success,$0,loopMBB
+
+  BB = loopMBB;
+  unsigned LL = MYRISCVX::LL;
+  BuildMI(BB, DL, TII->get(LL), OldVal).addReg(AlignedAddr).addImm(0);
+  if (Nand) {
+    //  and andres, oldval, incr2
+    //  xor binopres,  $0, andres
+    //  xor binopres2, $0, binopres
+    //  and newval, binopres, mask
+    BuildMI(BB, DL, TII->get(MYRISCVX::AND), AndRes).addReg(OldVal).addReg(Incr2);
+    BuildMI(BB, DL, TII->get(MYRISCVX::XOR), BinOpRes)
+      .addReg(MYRISCVX::ZERO).addReg(AndRes);
+    BuildMI(BB, DL, TII->get(MYRISCVX::XOR), BinOpRes2)
+      .addReg(MYRISCVX::ZERO).addReg(BinOpRes);
+    BuildMI(BB, DL, TII->get(MYRISCVX::AND), NewVal).addReg(BinOpRes).addReg(Mask);
+  } else if (BinOpcode) {
+    //  <binop> binopres, oldval, incr2
+    //  and newval, binopres, mask
+    BuildMI(BB, DL, TII->get(BinOpcode), BinOpRes).addReg(OldVal).addReg(Incr2);
+    BuildMI(BB, DL, TII->get(MYRISCVX::AND), NewVal).addReg(BinOpRes).addReg(Mask);
+  } else { // atomic.swap
+    //  and newval, incr2, mask
+    BuildMI(BB, DL, TII->get(MYRISCVX::AND), NewVal).addReg(Incr2).addReg(Mask);
+  }
+
+  BuildMI(BB, DL, TII->get(MYRISCVX::AND), MaskedOldVal0)
+    .addReg(OldVal).addReg(Mask2);
+  BuildMI(BB, DL, TII->get(MYRISCVX::OR), StoreVal)
+    .addReg(MaskedOldVal0).addReg(NewVal);
+  unsigned SC = MYRISCVX::SC;
+  BuildMI(BB, DL, TII->get(SC), Success)
+    .addReg(StoreVal).addReg(AlignedAddr).addImm(0);
+  BuildMI(BB, DL, TII->get(MYRISCVX::BEQ))
+    .addReg(Success).addReg(MYRISCVX::ZERO).addMBB(loopMBB);
+
+  //  sinkMBB:
+  //    and     maskedoldval1,oldval,mask
+  //    srl     srlres,maskedoldval1,shiftamt
+  //    sign_extend dest,srlres
+  BB = sinkMBB;
+
+  BuildMI(BB, DL, TII->get(MYRISCVX::AND), MaskedOldVal1)
+    .addReg(OldVal).addReg(Mask);
+  BuildMI(BB, DL, TII->get(MYRISCVX::SRL), SrlRes)
+      .addReg(MaskedOldVal1).addReg(ShiftAmt);
+  BB = emitSignExtendToI32InReg(MI, BB, Size, Dest, SrlRes);
+
+  MI.eraseFromParent(); // The instruction is gone now.
+
+  return exitMBB;
+}
+
+MachineBasicBlock * MYRISCVXTargetLowering::emitAtomicCmpSwap(MachineInstr &MI,
+                                                          MachineBasicBlock *BB,
+                                                          unsigned Size) const {
+  assert((Size == 4) && "Unsupported size for EmitAtomicCmpSwap.");
+
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &RegInfo = MF->getRegInfo();
+  const TargetRegisterClass *RC = getRegClassFor(MVT::getIntegerVT(Size * 8));
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+  unsigned LL, SC, ZERO, BNE, BEQ;
+
+  LL = MYRISCVX::LL;
+  SC = MYRISCVX::SC;
+  ZERO = MYRISCVX::ZERO;
+  BNE = MYRISCVX::BNE;
+  BEQ = MYRISCVX::BEQ;
+
+  unsigned Dest    = MI.getOperand(0).getReg();
+  unsigned Ptr     = MI.getOperand(1).getReg();
+  unsigned OldVal  = MI.getOperand(2).getReg();
+  unsigned NewVal  = MI.getOperand(3).getReg();
+
+  unsigned Success = RegInfo.createVirtualRegister(RC);
+
+  // insert new blocks after the current block
+  const BasicBlock *LLVM_BB = BB->getBasicBlock();
+  MachineBasicBlock *loop1MBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *loop2MBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *exitMBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineFunction::iterator It = ++BB->getIterator();
+
+  MF->insert(It, loop1MBB);
+  MF->insert(It, loop2MBB);
+  MF->insert(It, exitMBB);
+
+  // Transfer the remainder of BB and its successor edges to exitMBB.
+  exitMBB->splice(exitMBB->begin(), BB,
+                  std::next(MachineBasicBlock::iterator(MI)), BB->end());
+  exitMBB->transferSuccessorsAndUpdatePHIs(BB);
+
+  //  thisMBB:
+  //    ...
+  //    fallthrough --> loop1MBB
+  BB->addSuccessor(loop1MBB);
+  loop1MBB->addSuccessor(exitMBB);
+  loop1MBB->addSuccessor(loop2MBB);
+  loop2MBB->addSuccessor(loop1MBB);
+  loop2MBB->addSuccessor(exitMBB);
+
+  // loop1MBB:
+  //   ll dest, 0(ptr)
+  //   bne dest, oldval, exitMBB
+  BB = loop1MBB;
+  BuildMI(BB, DL, TII->get(LL), Dest).addReg(Ptr).addImm(0);
+  BuildMI(BB, DL, TII->get(BNE))
+    .addReg(Dest).addReg(OldVal).addMBB(exitMBB);
+
+  // loop2MBB:
+  //   sc success, newval, 0(ptr)
+  //   beq success, $0, loop1MBB
+  BB = loop2MBB;
+  BuildMI(BB, DL, TII->get(SC), Success)
+    .addReg(NewVal).addReg(Ptr).addImm(0);
+  BuildMI(BB, DL, TII->get(BEQ))
+    .addReg(Success).addReg(ZERO).addMBB(loop1MBB);
+
+  MI.eraseFromParent(); // The instruction is gone now.
+
+  return exitMBB;
+}
+
+MachineBasicBlock *
+MYRISCVXTargetLowering::emitAtomicCmpSwapPartword(MachineInstr &MI,
+                                                  MachineBasicBlock *BB,
+                                                  unsigned Size) const {
+  assert((Size == 1 || Size == 2) &&
+         "Unsupported size for EmitAtomicCmpSwapPartial.");
+
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &RegInfo = MF->getRegInfo();
+  const TargetRegisterClass *RC = getRegClassFor(MVT::i32);
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+
+  unsigned Dest    = MI.getOperand(0).getReg();
+  unsigned Ptr     = MI.getOperand(1).getReg();
+  unsigned CmpVal  = MI.getOperand(2).getReg();
+  unsigned NewVal  = MI.getOperand(3).getReg();
+
+  unsigned AlignedAddr = RegInfo.createVirtualRegister(RC);
+  unsigned ShiftAmt = RegInfo.createVirtualRegister(RC);
+  unsigned Mask = RegInfo.createVirtualRegister(RC);
+  unsigned Mask2 = RegInfo.createVirtualRegister(RC);
+  unsigned Mask3 = RegInfo.createVirtualRegister(RC);
+  unsigned ShiftedCmpVal = RegInfo.createVirtualRegister(RC);
+  unsigned OldVal = RegInfo.createVirtualRegister(RC);
+  unsigned MaskedOldVal0 = RegInfo.createVirtualRegister(RC);
+  unsigned ShiftedNewVal = RegInfo.createVirtualRegister(RC);
+  unsigned MaskLSB2 = RegInfo.createVirtualRegister(RC);
+  unsigned PtrLSB2 = RegInfo.createVirtualRegister(RC);
+  unsigned MaskUpper = RegInfo.createVirtualRegister(RC);
+  unsigned MaskedCmpVal = RegInfo.createVirtualRegister(RC);
+  unsigned MaskedNewVal = RegInfo.createVirtualRegister(RC);
+  unsigned MaskedOldVal1 = RegInfo.createVirtualRegister(RC);
+  unsigned StoreVal = RegInfo.createVirtualRegister(RC);
+  unsigned SrlRes = RegInfo.createVirtualRegister(RC);
+  unsigned Success = RegInfo.createVirtualRegister(RC);
+
+  // insert new blocks after the current block
+  const BasicBlock *LLVM_BB = BB->getBasicBlock();
+  MachineBasicBlock *loop1MBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *loop2MBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *sinkMBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *exitMBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineFunction::iterator It = ++BB->getIterator();
+
+  MF->insert(It, loop1MBB);
+  MF->insert(It, loop2MBB);
+  MF->insert(It, sinkMBB);
+  MF->insert(It, exitMBB);
+
+  // Transfer the remainder of BB and its successor edges to exitMBB.
+  exitMBB->splice(exitMBB->begin(), BB,
+                  std::next(MachineBasicBlock::iterator(MI)), BB->end());
+  exitMBB->transferSuccessorsAndUpdatePHIs(BB);
+
+  BB->addSuccessor(loop1MBB);
+  loop1MBB->addSuccessor(sinkMBB);
+  loop1MBB->addSuccessor(loop2MBB);
+  loop2MBB->addSuccessor(loop1MBB);
+  loop2MBB->addSuccessor(sinkMBB);
+  sinkMBB->addSuccessor(exitMBB);
+
+  // FIXME: computation of newval2 can be moved to loop2MBB.
+  //  thisMBB:
+  //    addiu   masklsb2,$0,-4                # 0xfffffffc
+  //    and     alignedaddr,ptr,masklsb2
+  //    andi    ptrlsb2,ptr,3
+  //    shl     shiftamt,ptrlsb2,3
+  //    ori     maskupper,$0,255               # 0xff
+  //    shl     mask,maskupper,shiftamt
+  //    xor     mask2,$0,mask
+  //    xor     mask3,$0,mask2
+  //    andi    maskedcmpval,cmpval,255
+  //    shl     shiftedcmpval,maskedcmpval,shiftamt
+  //    andi    maskednewval,newval,255
+  //    shl     shiftednewval,maskednewval,shiftamt
+  int64_t MaskImm = (Size == 1) ? 255 : 65535;
+  BuildMI(BB, DL, TII->get(MYRISCVX::ADDI), MaskLSB2)
+      .addReg(MYRISCVX::ZERO).addImm(-4);
+  BuildMI(BB, DL, TII->get(MYRISCVX::AND), AlignedAddr)
+      .addReg(Ptr).addReg(MaskLSB2);
+  BuildMI(BB, DL, TII->get(MYRISCVX::ANDI), PtrLSB2).addReg(Ptr).addImm(3);
+  // if (Subtarget.isLittle()) {
+  BuildMI(BB, DL, TII->get(MYRISCVX::SLL), ShiftAmt).addReg(PtrLSB2).addImm(3);
+  // } else {
+  //   unsigned Off = RegInfo.createVirtualRegister(RC);
+  //   BuildMI(BB, DL, TII->get(MYRISCVX::XORi), Off)
+  //       .addReg(PtrLSB2).addImm((Size == 1) ? 3 : 2);
+  //   BuildMI(BB, DL, TII->get(MYRISCVX::SLL), ShiftAmt).addReg(Off).addImm(3);
+  // }
+  BuildMI(BB, DL, TII->get(MYRISCVX::ORI), MaskUpper)
+      .addReg(MYRISCVX::ZERO).addImm(MaskImm);
+  BuildMI(BB, DL, TII->get(MYRISCVX::SLL), Mask)
+      .addReg(MaskUpper).addReg(ShiftAmt);
+  BuildMI(BB, DL, TII->get(MYRISCVX::XOR), Mask2).addReg(MYRISCVX::ZERO).addReg(Mask);
+  BuildMI(BB, DL, TII->get(MYRISCVX::XOR), Mask3).addReg(MYRISCVX::ZERO).addReg(Mask2);
+  BuildMI(BB, DL, TII->get(MYRISCVX::ANDI), MaskedCmpVal)
+      .addReg(CmpVal).addImm(MaskImm);
+  BuildMI(BB, DL, TII->get(MYRISCVX::SLL), ShiftedCmpVal)
+      .addReg(MaskedCmpVal).addReg(ShiftAmt);
+  BuildMI(BB, DL, TII->get(MYRISCVX::ANDI), MaskedNewVal)
+      .addReg(NewVal).addImm(MaskImm);
+  BuildMI(BB, DL, TII->get(MYRISCVX::SLL), ShiftedNewVal)
+      .addReg(MaskedNewVal).addReg(ShiftAmt);
+
+  //  loop1MBB:
+  //    ll      oldval,0(alginedaddr)
+  //    and     maskedoldval0,oldval,mask
+  //    bne     maskedoldval0,shiftedcmpval,sinkMBB
+  BB = loop1MBB;
+  unsigned LL = MYRISCVX::LL;
+  BuildMI(BB, DL, TII->get(LL), OldVal).addReg(AlignedAddr).addImm(0);
+  BuildMI(BB, DL, TII->get(MYRISCVX::AND), MaskedOldVal0)
+      .addReg(OldVal).addReg(Mask);
+  BuildMI(BB, DL, TII->get(MYRISCVX::BNE))
+      .addReg(MaskedOldVal0).addReg(ShiftedCmpVal).addMBB(sinkMBB);
+
+  //  loop2MBB:
+  //    and     maskedoldval1,oldval,mask3
+  //    or      storeval,maskedoldval1,shiftednewval
+  //    sc      success,storeval,0(alignedaddr)
+  //    beq     success,$0,loop1MBB
+  BB = loop2MBB;
+  BuildMI(BB, DL, TII->get(MYRISCVX::AND), MaskedOldVal1)
+      .addReg(OldVal).addReg(Mask3);
+  BuildMI(BB, DL, TII->get(MYRISCVX::OR), StoreVal)
+      .addReg(MaskedOldVal1).addReg(ShiftedNewVal);
+  unsigned SC = MYRISCVX::SC;
+  BuildMI(BB, DL, TII->get(SC), Success)
+      .addReg(StoreVal).addReg(AlignedAddr).addImm(0);
+  BuildMI(BB, DL, TII->get(MYRISCVX::BEQ))
+      .addReg(Success).addReg(MYRISCVX::ZERO).addMBB(loop1MBB);
+
+  //  sinkMBB:
+  //    srl     srlres,maskedoldval0,shiftamt
+  //    sign_extend dest,srlres
+  BB = sinkMBB;
+
+  BuildMI(BB, DL, TII->get(MYRISCVX::SRA), SrlRes)
+      .addReg(MaskedOldVal0).addReg(ShiftAmt);
+  BB = emitSignExtendToI32InReg(MI, BB, Size, Dest, SrlRes);
+
+  MI.eraseFromParent();   // The instruction is gone now.
+
+  return exitMBB;
+}
+
+
+SDValue MYRISCVXTargetLowering::lowerATOMIC_FENCE(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  // FIXME: Need pseudo-fence for 'singlethread' fences
+  // FIXME: Set SType for weaker fences where supported/appropriate.
+  unsigned SType = 0;
+  SDLoc DL(Op);
+  return DAG.getNode(MYRISCVXISD::Sync, DL, MVT::Other, Op.getOperand(0),
+                     DAG.getConstant(SType, DL, MVT::i32));
+}
+
 
 //===----------------------------------------------------------------------===//
 // TODO: Implement a generic logic using tblgen that can support this.

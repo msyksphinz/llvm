@@ -23,6 +23,8 @@ def SDT_MYRISCVXJmpLink : SDTypeProfile<0, 1, [SDTCisVT<0, iPTR>]>;
 def SDT_MYRISCVXCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>]>;
 def SDT_MYRISCVXCallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
 
+def SDT_Sync : SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>;
+
 // Exception handling related node and instructions.
 // The conversion sequence is:
 // ISD::EH_RETURN -> MYRISCVXISD::EH_RETURN ->
@@ -69,6 +71,7 @@ def MYRISCVXTlsGd : SDNode<"MYRISCVXISD::TlsGd", SDTIntUnaryOp>;
 def MYRISCVXTpHi  : SDNode<"MYRISCVXISD::TpHi", SDTIntUnaryOp>;
 def MYRISCVXTpLo  : SDNode<"MYRISCVXISD::TpLo", SDTIntUnaryOp>;
 
+def MYRISCVXSync : SDNode<"MYRISCVXISD::Sync", SDT_Sync, [SDNPHasChain]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction format superclass
@@ -136,6 +139,13 @@ def mem_ea : Operand<iPTR> {
   let MIOperandInfo = (ops GPR, simm12);
   let EncoderMethod = "getMemEncoding";
 }
+
+
+def PtrRC : Operand<iPTR> {
+  let MIOperandInfo = (ops ptr_rc);
+  let DecoderMethod = "DecodeCPURegsRegisterClass";
+}
+
 
 // Transformation Function - get the lower 12 bits.
 def LO12 : SDNodeXForm<imm, [{
@@ -220,6 +230,17 @@ def store_a         : AlignedStore<store>;
 def truncstorei8_a  : AlignedStore<truncstorei8>;
 def truncstorei16_a : AlignedStore<truncstorei16>;
 
+// Atomic instructions with 2 source operands (ATOMIC_SWAP & ATOMIC_LOAD_*).
+class Atomic2Ops<PatFrag Op, RegisterClass DRC> :
+  MYRISCVXPseudo<(outs DRC:$rd), (ins PtrRC:$ptr, DRC:$incr), "",
+                  [(set DRC:$rd, (Op iPTR:$ptr, DRC:$incr))]>;
+
+// Atomic Compare & Swap.
+class AtomicCmpSwap<PatFrag Op, RegisterClass DRC> :
+  MYRISCVXPseudo<(outs DRC:$rd), (ins PtrRC:$ptr, DRC:$cmp, DRC:$swap), "",
+                  [(set DRC:$rd, (Op iPTR:$ptr, DRC:$cmp, DRC:$swap))]>;
+
+
 //===----------------------------------------------------------------------===//
 // Instructions specific format
 //===----------------------------------------------------------------------===//
@@ -285,9 +306,9 @@ class ArithLogicU<bits<7> opcode,
 let canFoldAsLoad = 1 in
 class LoadM<bits<7> opcode, bits<3> funct3, string instr_asm, PatFrag OpNode, RegisterClass RC,
             Operand MemOpnd, bit Pseudo>:
-  FI<opcode, funct3, (outs RC:$ra), (ins MemOpnd:$addr),
-     !strconcat(instr_asm, "\t$ra, $addr"),
-     [(set RC:$ra, (OpNode addr:$addr))], IILoad> {
+  FI<opcode, funct3, (outs RC:$rd), (ins MemOpnd:$addr),
+     !strconcat(instr_asm, "\t$rd, $addr"),
+     [(set RC:$rd, (OpNode addr:$addr))], IILoad> {
   let isPseudo = Pseudo;
   let DecoderMethod = "DecodeLoad";
 }
@@ -312,6 +333,20 @@ multiclass LoadM32<bits<7> opcode, bits<3> funct3, string instr_asm, PatFrag OpN
 multiclass StoreM32<bits<7> opcode, bits<3> funct3, string instr_asm, PatFrag OpNode,
                     bit Pseudo = 0> {
   def #NAME# : StoreM<opcode, funct3, instr_asm, OpNode, GPR, mem, Pseudo>;
+}
+
+
+class LLBase<bits<7> opcode, bits<3> funct3, string opstring, RegisterClass RC, Operand Mem> :
+  FI<opcode, funct3, (outs RC:$rd), (ins Mem:$addr),
+     !strconcat(opstring, "\t$rd, $addr"), [], IILoad> {
+  let mayLoad = 1;
+}
+
+class SCBase<bits<7> opcode, bits<3> funct3, string opstring, RegisterOperand RO, Operand Mem> :
+  FS<opcode, funct3, (outs RO:$dst), (ins RO:$rs1, Mem:$addr),
+       !strconcat(opstring, "\t$rs1, $addr"), [], IIStore> {
+  let mayStore = 1;
+  let Constraints = "$rs1 = $dst";
 }
 
 
@@ -582,6 +617,51 @@ def : Pat<(MYRISCVXTailCall (iPTR tglobaladdr:$dst)),
 def : Pat<(MYRISCVXTailCall (iPTR texternalsym:$dst)),
           (TAILCALL texternalsym:$dst)>;
 
+let usesCustomInserter = 1 in {
+  def ATOMIC_LOAD_ADD_I8   : Atomic2Ops<atomic_load_add_8     , GPR>;
+  def ATOMIC_LOAD_ADD_I16  : Atomic2Ops<atomic_load_add_16    , GPR>;
+  def ATOMIC_LOAD_ADD_I32  : Atomic2Ops<atomic_load_add_32    , GPR>;
+  def ATOMIC_LOAD_SUB_I8   : Atomic2Ops<atomic_load_sub_8     , GPR>;
+  def ATOMIC_LOAD_SUB_I16  : Atomic2Ops<atomic_load_sub_16    , GPR>;
+  def ATOMIC_LOAD_SUB_I32  : Atomic2Ops<atomic_load_sub_32    , GPR>;
+  def ATOMIC_LOAD_AND_I8   : Atomic2Ops<atomic_load_and_8     , GPR>;
+  def ATOMIC_LOAD_AND_I16  : Atomic2Ops<atomic_load_and_16    , GPR>;
+  def ATOMIC_LOAD_AND_I32  : Atomic2Ops<atomic_load_and_32    , GPR>;
+  def ATOMIC_LOAD_OR_I8    : Atomic2Ops<atomic_load_or_8      , GPR>;
+  def ATOMIC_LOAD_OR_I16   : Atomic2Ops<atomic_load_or_16     , GPR>;
+  def ATOMIC_LOAD_OR_I32   : Atomic2Ops<atomic_load_or_32     , GPR>;
+  def ATOMIC_LOAD_XOR_I8   : Atomic2Ops<atomic_load_xor_8     , GPR>;
+  def ATOMIC_LOAD_XOR_I16  : Atomic2Ops<atomic_load_xor_16    , GPR>;
+  def ATOMIC_LOAD_XOR_I32  : Atomic2Ops<atomic_load_xor_32    , GPR>;
+  def ATOMIC_LOAD_NAND_I8  : Atomic2Ops<atomic_load_nand_8    , GPR>;
+  def ATOMIC_LOAD_NAND_I16 : Atomic2Ops<atomic_load_nand_16   , GPR>;
+  def ATOMIC_LOAD_NAND_I32 : Atomic2Ops<atomic_load_nand_32   , GPR>;
+
+  def ATOMIC_SWAP_I8       : Atomic2Ops<atomic_swap_8         , GPR>;
+  def ATOMIC_SWAP_I16      : Atomic2Ops<atomic_swap_16        , GPR>;
+  def ATOMIC_SWAP_I32      : Atomic2Ops<atomic_swap_32        , GPR>;
+
+  def ATOMIC_CMP_SWAP_I8   : AtomicCmpSwap<atomic_cmp_swap_8  , GPR>;
+  def ATOMIC_CMP_SWAP_I16  : AtomicCmpSwap<atomic_cmp_swap_16 , GPR>;
+  def ATOMIC_CMP_SWAP_I32  : AtomicCmpSwap<atomic_cmp_swap_32 , GPR>;
+}
+
+
+let hasSideEffects = 1 in
+def SYNC : MYRISCVXInst<(outs), (ins i32imm:$stype), "sync $stype",
+                        [(MYRISCVXSync imm:$stype)], NoItinerary, FrmS>
+{
+  bits<5> stype;
+  let Opcode = 0x60;
+  let Inst{25-11} = 0;
+  let Inst{10-6} = stype;
+  let Inst{5-0} = 0;
+}
+
+/// Load-linked, Store-conditional
+def LL      : LLBase<0x61, 0x01, "ll", GPR, mem>;
+def SC      : SCBase<0x62, 0x01, "sc", RegisterOperand<GPR>, mem>;
+
 //===----------------------------------------------------------------------===//
 // Instruction aliases
 //===----------------------------------------------------------------------===//
@@ -593,6 +673,9 @@ def : MYRISCVXInstAlias<"move $dst, $src",
 
 /// No operation
 def : InstAlias<"nop",  (ADDI ZERO, ZERO, 0)>;
+
+def : MYRISCVXInstAlias<"sync",
+                        (SYNC 0), 1>;
 
 //===----------------------------------------------------------------------===//
 // Arbitrary patterns that map to one or more instructions
