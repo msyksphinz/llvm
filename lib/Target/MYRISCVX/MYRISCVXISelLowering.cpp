@@ -352,10 +352,8 @@ analyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Args,
     MVT RegVT = getRegVT(ArgVT, FuncArg->getType(), nullptr, IsSoftFloat);
     if (!FixedFn(I, ArgVT, RegVT, CCValAssign::Full, ArgFlags, CCInfo))
       continue;
-#ifndef NDEBUG
-    dbgs() << "Formal Arg #" << I << " has unhandled type "
-           << EVT(ArgVT).getEVTString();
-#endif
+    LLVM_DEBUG(dbgs() << "Formal Arg #" << I << " has unhandled type "
+               << EVT(ArgVT).getEVTString());
     llvm_unreachable(nullptr);
   }
 }
@@ -600,10 +598,8 @@ analyzeReturn(const SmallVectorImpl<Ty> &RetVals, bool IsSoftFloat,
     ISD::ArgFlagsTy Flags = RetVals[I].Flags;
     MVT RegVT = this->getRegVT(VT, RetTy, CallNode, IsSoftFloat);
     if (Fn(I, VT, RegVT, CCValAssign::Full, Flags, this->CCInfo)) {
-#ifndef NDEBUG
-      dbgs() << "Call result #" << I << " has unhandled type "
-             << EVT(VT).getEVTString() << '\n';
-#endif
+      LLVM_DEBUG(dbgs() << "Call result #" << I << " has unhandled type "
+                 << EVT(VT).getEVTString() << '\n');
       llvm_unreachable(nullptr);
     }
   }
@@ -713,8 +709,6 @@ static unsigned getBranchOpcodeForIntCondCode(ISD::CondCode CC) {
 MachineBasicBlock *
 MYRISCVXTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                  MachineBasicBlock *BB) const {
-  dbgs() << "MYRISCVXTargetLowering::EmitInstrWithCustomInserter\n";
-
   switch (MI.getOpcode()) {
     default:
       llvm_unreachable("Unexpected instr type to insert");
@@ -1727,10 +1721,8 @@ analyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Args,
       R = FixedFn(I, ArgVT, RegVT, CCValAssign::Full, ArgFlags, CCInfo);
     }
     if (R) {
-#ifndef NDEBUG
-      dbgs() << "Call operand #" << I << " has unhandled type "
-             << EVT(ArgVT).getEVTString();
-#endif
+      LLVM_DEBUG(dbgs() << "Call operand #" << I << " has unhandled type "
+                 << EVT(ArgVT).getEVTString());
       llvm_unreachable(nullptr);
     }
   }

@@ -140,12 +140,12 @@ void MYRISCVXDAGToDAGISel::Select(SDNode *Node) {
   unsigned Opcode = Node->getOpcode();
   // Dump information about the Node being selected
 
-  dbgs() << "Selecting: ";
-  Node->dump(CurDAG);
+  LLVM_DEBUG(dbgs() << "Selecting: "; Node->dump(CurDAG));
+
 
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
-    dbgs() << "== "; Node->dump(CurDAG); dbgs() << "\n";
+    LLVM_DEBUG(dbgs() << "== "; Node->dump(CurDAG); dbgs() << "\n");
     Node->setNodeId(-1);
     return;
   }

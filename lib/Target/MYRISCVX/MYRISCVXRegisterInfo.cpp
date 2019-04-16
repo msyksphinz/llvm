@@ -96,14 +96,14 @@ eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
     assert(i < MI.getNumOperands() &&
            "Instr doesn't have FrameIndex operand!");
   }
-  dbgs() << "\nFunction : " << MF.getFunction().getName() << "\n";
-  dbgs() << "<--------->\n" << MI;
+  LLVM_DEBUG(dbgs() << "\nFunction : " << MF.getFunction().getName() << "\n");
+  LLVM_DEBUG(dbgs() << "<--------->\n" << MI);
   int FrameIndex = MI.getOperand(i).getIndex();
   uint64_t stackSize = MF.getFrameInfo().getStackSize();
   int64_t spOffset = MF.getFrameInfo().getObjectOffset(FrameIndex);
-  dbgs() << "FrameIndex : " << FrameIndex << "\n"
-         << "spOffset : " << spOffset << "\n"
-         << "stackSize : " << stackSize << "\n";
+  LLVM_DEBUG(dbgs() << "FrameIndex : " << FrameIndex << "\n"
+             << "spOffset : " << spOffset << "\n"
+             << "stackSize : " << stackSize << "\n");
 
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   int MinCSFI = 0;
@@ -140,7 +140,7 @@ eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
     Offset = spOffset + (int64_t)stackSize;
 
   Offset += MI.getOperand(i+1).getImm();
-  dbgs() << "Offset : " << Offset << "\n" << "<--------->\n";
+  LLVM_DEBUG(dbgs() << "Offset : " << Offset << "\n" << "<--------->\n");
   // If MI is not a debug value, make sure Offset fits in the 16-bit immediate
   // field.
   if (!MI.isDebugValue() && !isInt<16>(Offset)) {

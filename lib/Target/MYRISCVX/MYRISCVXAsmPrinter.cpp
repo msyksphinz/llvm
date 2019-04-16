@@ -174,7 +174,7 @@ void MYRISCVXAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 #endif
 
     if (I->isPseudo() && !isLongBranchPseudo(I->getOpcode())) {
-      dbgs() << "opcode = " << I->getOpcode() << '\n';
+      LLVM_DEBUG(dbgs() << "opcode = " << I->getOpcode() << '\n');
       llvm_unreachable("Pseudo opcode found in EmitInstruction()");
     }
     MCInst TmpInst0;
