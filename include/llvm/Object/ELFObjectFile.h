@@ -1044,6 +1044,8 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
       return "ELF32-ppc";
     case ELF::EM_RISCV:
       return "ELF32-riscv";
+    case ELF::EM_MYRISCVX:
+      return "ELF32-myriscvx";
     case ELF::EM_SPARC:
     case ELF::EM_SPARC32PLUS:
       return "ELF32-sparc";
@@ -1064,6 +1066,8 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
       return "ELF64-ppc64";
     case ELF::EM_RISCV:
       return "ELF64-riscv";
+    case ELF::EM_MYRISCVX:
+      return "ELF64-myriscvx";
     case ELF::EM_S390:
       return "ELF64-s390";
     case ELF::EM_SPARCV9:
