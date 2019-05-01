@@ -16,6 +16,7 @@ include "llvm/Target/Target.td"
 //===----------------------------------------------------------------------===//
 
 include "MYRISCVXRegisterInfo.td"
+include "MYRISCVXSchedule.td"
 include "MYRISCVXInstrInfo.td"
 
 def MYRISCVXInstrInfo : InstrInfo;
