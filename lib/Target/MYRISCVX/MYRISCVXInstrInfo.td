@@ -15,6 +15,12 @@
 // MYRISCVX profiles and nodes
 //===----------------------------------------------------------------------===//
 
+def SDT_MYRISCVXRet : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
+
+// Return
+def MYRISCVXRet : SDNode<"MYRISCVXISD::Ret", SDTNone,
+                         [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction format superclass
 //===----------------------------------------------------------------------===//
@@ -70,6 +76,15 @@ class ArithLogicU<bits<7> opcode,
 }
 
 
+// Return instruction
+class RetGPR<bits<7> opcode, bits<3> funct3, string instr_asm, RegisterClass RC>:
+  MYRISCVX_I<opcode, funct3, (outs), (ins RC:$rs1),
+     !strconcat(instr_asm, "\t$rs1"), [(brind RC:$rs1)], IIBranch> {
+  let rd = 0;
+  let isReturn = 1;
+}
+
+
 //===----------------------------------------------------------------------===//
 // Instruction definition
 //===----------------------------------------------------------------------===//
@@ -83,6 +98,9 @@ def ADDI : ArithLogicI<0b0010011, 0b000, "addi", add, simm12, immSExt12, GPR>;
 def LUI  : ArithLogicU<0b0110111, "lui", GPR, simm20, immSExt20>;
 def ADD  : ArithLogicR<0b0110011, 0b000, 0b0000000, "add", add, GPR>;
 def SUB  : ArithLogicR<0b0110011, 0b000, 0b0100000, "sub", sub, GPR>;
+
+def JR  : ArithLogicI<0b1100111, 0b000, "jr", add, simm12, immSExt12, GPR>;
+def RET : RetGPR<0b1100111, 0b000, "ret", GPR>;
 
 //===----------------------------------------------------------------------===//
 //  Arbitrary patterns that map to one or more instructions
