@@ -12,6 +12,8 @@
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
+Target llvm::TheMYRISCVX32Target, llvm::TheMYRISCVX64Target;
+
 namespace llvm {
 Target &getTheMYRISCVX32Target() {
   static Target TheMYRISCVX32Target;

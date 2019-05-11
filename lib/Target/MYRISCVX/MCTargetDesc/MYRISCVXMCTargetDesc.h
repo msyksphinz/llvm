@@ -20,21 +20,21 @@ namespace llvm {
 class Target;
 class Triple;
 
-extern Target TheMYRISCVXTarget;
-extern Target TheMYRISCVXelTarget;
+extern Target TheMYRISCVX32Target;
+extern Target TheMYRISCVX64Target;
 
 } // End llvm namespace
 
-// // Defines symbolic names for MYRISCVX registers.  This defines a mapping from
-// // register name to register number.
-// #define GET_REGINFO_ENUM
-// #include "MYRISCVXGenRegisterInfo.inc"
-//
-// // Defines symbolic names for the MYRISCVX instructions.
-// #define GET_INSTRINFO_ENUM
-// #include "MYRISCVXGenInstrInfo.inc"
-//
-// #define GET_SUBTARGETINFO_ENUM
-// #include "MYRISCVXGenSubtargetInfo.inc"
+// Defines symbolic names for MYRISCVX registers.  This defines a mapping from
+// register name to register number.
+#define GET_REGINFO_ENUM
+#include "MYRISCVXGenRegisterInfo.inc"
+
+// Defines symbolic names for the MYRISCVX instructions.
+#define GET_INSTRINFO_ENUM
+#include "MYRISCVXGenInstrInfo.inc"
+
+#define GET_SUBTARGETINFO_ENUM
+#include "MYRISCVXGenSubtargetInfo.inc"
 
 #endif
