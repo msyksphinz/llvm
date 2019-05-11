@@ -36,7 +36,7 @@ let Namespace = "MYRISCVX" in {
   def T0   : MYRISCVXGPRReg<5,  "x5", ["t0"]>,    DwarfRegNum<[5]>;
   def T1   : MYRISCVXGPRReg<6,  "x6", ["t1"]>,    DwarfRegNum<[6]>;
   def T2   : MYRISCVXGPRReg<7,  "x7", ["t2"]>,    DwarfRegNum<[7]>;
-  def S0   : MYRISCVXGPRReg<8,  "x8", ["s0", "fp"]>, DwarfRegNum<[8]>;  // used as FP
+  def FP   : MYRISCVXGPRReg<8,  "x8", ["s0", "fp"]>, DwarfRegNum<[8]>;  // used as FP
   def S1   : MYRISCVXGPRReg<9,  "x9", ["s1"]>,    DwarfRegNum<[9]>;
 
   def A0   : MYRISCVXGPRReg<10, "x10", ["a0"]>,   DwarfRegNum<[10]>;
@@ -77,7 +77,7 @@ def GPR : RegisterClass<"MYRISCVX", [i32], 32, (add
   // Not preserved across procedure calls
   T0, T1, T2, T3, T4, T5, T6,
   // Callee save
-  S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, S11,
+  FP, S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, S11,
   // Reserved
   RA, SP, GP, TP
   )>;

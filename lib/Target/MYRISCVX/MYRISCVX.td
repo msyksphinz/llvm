@@ -18,6 +18,7 @@ include "llvm/Target/Target.td"
 include "MYRISCVXRegisterInfo.td"
 include "MYRISCVXSchedule.td"
 include "MYRISCVXInstrInfo.td"
+include "MYRISCVXCallingConv.td"
 
 def MYRISCVXInstrInfo : InstrInfo;
 
