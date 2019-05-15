@@ -76,9 +76,9 @@ namespace llvm {
 
     bool abiUsesSoftFloat() const;
 
-    bool enableLongBranchPass() const {
-      return hasMYRISCVX32II();
-    }
+    // bool enableLongBranchPass() const {
+    //   return hasMYRISCVX32II();
+    // }
 
     unsigned stackAlignment() const { return 8; }
 
