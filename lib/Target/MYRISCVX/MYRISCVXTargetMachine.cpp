@@ -20,6 +20,8 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Support/TargetRegistry.h"
 
+#define DEBUG_TYPE "MYRISCVX-TargetMachine"
+
 using namespace llvm;
 
 extern "C" void LLVMInitializeMYRISCVXTarget() {
@@ -60,6 +62,7 @@ static Reloc::Model getEffectiveRelocModel(bool JIT,
                                            Optional<Reloc::Model> RM) {
   if (!RM.hasValue() || JIT)
     return Reloc::Static;
+  LLVM_DEBUG(dbgs() << "getEffectiveRelocModel : " << static_cast<int>(*RM) << '\n'; );
   return *RM;
 }
 
@@ -77,7 +80,6 @@ MYRISCVXTargetMachine::MYRISCVXTargetMachine(const Target &T, const Triple &TT,
                                              Optional<CodeModel::Model> CM,
                                              CodeGenOpt::Level OL, bool JIT,
                                              bool isLittle)
-    //- Default is big endian
     : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options, isLittle), TT,
                         CPU, FS, Options, getEffectiveRelocModel(JIT, RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),

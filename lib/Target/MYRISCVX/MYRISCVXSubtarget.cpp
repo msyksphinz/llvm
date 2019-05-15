@@ -60,37 +60,16 @@ MYRISCVXSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
                                                    const TargetMachine &TM) {
   if (TargetTriple.getArch() == Triple::myriscvx32) {
     if (CPU.empty() || CPU == "generic") {
-      CPU = "MYRISCVX32II";
+      CPU = "cpu-rv32";
     }
-    else if (CPU == "help") {
-      CPU = "";
-      return *this;
+  } else if (TargetTriple.getArch() == Triple::myriscvx64) {
+    if (CPU.empty() || CPU == "generic") {
+      CPU = "cpu-rv64";
     }
-    else if (CPU != "MYRISCVX32I" && CPU != "MYRISCVX32II") {
-      CPU = "MYRISCVX32II";
-    }
-  }
-  else {
+  } else {
     errs() << "!!!Error, TargetTriple.getArch() = " << TargetTriple.getArch()
            <<  "CPU = " << CPU << "\n";
     exit(0);
-  }
-
-  if (CPU == "MYRISCVX32I")
-    MYRISCVXArchVersion = MYRISCVX32I;
-  else if (CPU == "MYRISCVX32II")
-    MYRISCVXArchVersion = MYRISCVX32II;
-
-  if (isMYRISCVX32I()) {
-    HasCmp = true;
-    HasSlt = false;
-  }
-  else if (isMYRISCVX32II()) {
-    HasCmp = true;
-    HasSlt = true;
-  }
-  else {
-    errs() << "-mcpu must be empty(default:MYRISCVX32II), MYRISCVX32I or MYRISCVX32II" << "\n";
   }
 
   // Parse features string.
