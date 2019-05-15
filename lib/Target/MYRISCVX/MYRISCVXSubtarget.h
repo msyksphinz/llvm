@@ -34,185 +34,18 @@ namespace llvm {
   class MYRISCVXSubtarget : public MYRISCVXGenSubtargetInfo {
     virtual void anchor();
 
- public:
+   public:
 
-    bool HasChapterDummy;
-    bool HasChapterAll;
-
-    bool hasChapter3_1() const {
-#if CH >= CH3_1
-      return true;
-#else
-      return false;
-#endif
-    }
-
-    bool hasChapter3_2() const {
-#if CH >= CH3_2
-      return true;
-#else
-      return false;
-#endif
-    }
-
-    bool hasChapter3_3() const {
-#if CH >= CH3_3
-      return true;
-#else
-      return false;
-#endif
-    }
-
-    bool hasChapter3_4() const {
-#if CH >= CH3_4
-      return true;
-#else
-      return false;
-#endif
-    }
-
-    bool hasChapter3_5() const {
-#if CH >= CH3_5
-      return true;
-#else
-      return false;
-#endif
-    }
-
-    bool hasChapter4_1() const {
-#if CH >= CH4_1
-      return true;
-#else
-      return false;
-#endif
-    }
-
-    bool hasChapter4_2() const {
-#if CH >= CH4_2
-      return true;
-#else
-      return false;
-#endif
-    }
-
-    bool hasChapter5_1() const {
-#if CH >= CH5_1
-      return true;
-#else
-      return false;
-#endif
-    }
-
-    bool hasChapter6_1() const {
-#if CH >= CH6_1
-      return true;
-#else
-      return false;
-#endif
-    }
-
-    bool hasChapter7_1() const {
-#if CH >= CH7_1
-      return true;
-#else
-      return false;
-#endif
-    }
-
-    bool hasChapter8_1() const {
-#if CH >= CH8_1
-      return true;
-#else
-      return false;
-#endif
-    }
-
-    bool hasChapter8_2() const {
-#if CH >= CH8_2
-      return true;
-#else
-      return false;
-#endif
-    }
-
-    bool hasChapter9_1() const {
-#if CH >= CH9_1
-      return true;
-#else
-      return false;
-#endif
-    }
-
-    bool hasChapter9_2() const {
-#if CH >= CH9_2
-      return true;
-#else
-      return false;
-#endif
-    }
-
-    bool hasChapter9_3() const {
-#if CH >= CH9_3
-      return true;
-#else
-      return false;
-#endif
-    }
-
-    bool hasChapter10_1() const {
-#if CH >= CH10_1
-      return true;
-#else
-      return false;
-#endif
-    }
-
-    bool hasChapter11_1() const {
-#if CH >= CH11_1
-      return true;
-#else
-      return false;
-#endif
-    }
-
-    bool hasChapter11_2() const {
-#if CH >= CH11_2
-      return true;
-#else
-      return false;
-#endif
-    }
-
-    bool hasChapter12_1() const {
-#if CH >= CH12_1
-      return true;
-#else
-      return false;
-#endif
-    }
-
- protected:
-    enum MYRISCVXArchEnum {
-      MYRISCVX32I,
-      MYRISCVX32II
-    };
-
-    // MYRISCVX architecture version
-    MYRISCVXArchEnum MYRISCVXArchVersion;
+   protected:
+    bool is_enable_M = false;
+    bool is_enable_A = false;
+    bool is_enable_F = false;
+    bool is_enable_D = false;
+    bool is_enable_C = false;
 
     // IsLittle - The target is Little Endian
     bool IsLittle;
-
-    bool EnableOverflow;
-
-    // HasCmp - cmp instructions.
-    bool HasCmp;
-
-    // HasSlt - slt instructions.
-    bool HasSlt;
-
     InstrItineraryData InstrItins;
-
 
     const MYRISCVXTargetMachine &TM;
 
@@ -224,7 +57,7 @@ namespace llvm {
     std::unique_ptr<const MYRISCVXFrameLowering> FrameLowering;
     std::unique_ptr<const MYRISCVXTargetLowering> TLInfo;
 
- public:
+   public:
     bool isPositionIndependent() const;
     const MYRISCVXABIInfo &getABI() const;
 
@@ -239,16 +72,6 @@ namespace llvm {
     void ParseSubtargetFeatures(StringRef CPU, StringRef FS);
 
     bool isLittle() const { return IsLittle; }
-    bool hasMYRISCVX32I() const { return MYRISCVXArchVersion >= MYRISCVX32I; }
-    bool isMYRISCVX32I() const { return MYRISCVXArchVersion == MYRISCVX32I; }
-    bool hasMYRISCVX32II() const { return MYRISCVXArchVersion >= MYRISCVX32II; }
-    bool isMYRISCVX32II() const { return MYRISCVXArchVersion == MYRISCVX32II; }
-
-    /// Features related to the presence of specific instructions.
-    bool enableOverflow() const { return EnableOverflow; }
-    bool disableOverflow() const { return !EnableOverflow; }
-    bool hasCmp()   const { return HasCmp; }
-    bool hasSlt()   const { return HasSlt; }
 
 
     bool abiUsesSoftFloat() const;
