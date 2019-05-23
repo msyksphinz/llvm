@@ -45,6 +45,7 @@ namespace llvm {
 
     // IsLittle - The target is Little Endian
     bool IsLittle;
+    bool HasRV64 = false;
     InstrItineraryData InstrItins;
 
     const MYRISCVXTargetMachine &TM;
