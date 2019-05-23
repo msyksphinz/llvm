@@ -12,6 +12,15 @@
 include "llvm/Target/Target.td"
 
 //===----------------------------------------------------------------------===//
+// MYRISCVX subtarget features and instruction predicates.
+//===----------------------------------------------------------------------===//
+
+def FeatureRV64 : SubtargetFeature<"64bit", "HasRV64", "true", "RV64 support">;
+
+def : ProcessorModel<"cpu-rv32", NoSchedModel, []>;
+def : ProcessorModel<"cpu-rv64", NoSchedModel, [FeatureRV64]>;
+
+//===----------------------------------------------------------------------===//
 // Target-dependent interfaces
 //===----------------------------------------------------------------------===//
 
