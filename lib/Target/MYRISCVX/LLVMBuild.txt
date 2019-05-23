@@ -16,7 +16,10 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = MCTargetDesc TargetInfo
+subdirectories =
+  MCTargetDesc
+  TargetInfo
+  InstPrinter
 
 [component_0]
 # TargetGroup components are an extension of LibraryGroups, specifically for
@@ -29,6 +32,9 @@ name = MYRISCVX
 parent = Target
 # Whether this target defines an assembly parser, assembly printer, disassembler
 #  , and supports JIT compilation. They are optional.
+# Please enable asmprinter
+has_asmprinter = 1
+
 
 [component_1]
 # component_1 is a Library type and name is MYRISCVXCodeGen. After build it will
@@ -46,6 +52,8 @@ required_libraries =
   CodeGen Core MC
   MYRISCVXDesc
   MYRISCVXInfo
+  AsmPrinter
+  MYRISCVXAsmPrinter
   SelectionDAG
   Support
   Target
