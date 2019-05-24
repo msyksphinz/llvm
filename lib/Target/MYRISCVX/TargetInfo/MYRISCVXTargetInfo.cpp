@@ -12,8 +12,6 @@
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
-Target llvm::TheMYRISCVX32Target, llvm::TheMYRISCVX64Target;
-
 namespace llvm {
 Target &getTheMYRISCVX32Target() {
   static Target TheMYRISCVX32Target;
@@ -27,11 +25,8 @@ Target &getTheMYRISCVX64Target() {
 }
 
 extern "C" void LLVMInitializeMYRISCVXTargetInfo() {
-  RegisterTarget<Triple::myriscvx32,
-        /*HasJIT=*/true>
-      X(getTheMYRISCVX32Target(), "myriscvx32", "MYRISCVX (32-bit)", "MYRISCVX");
-
-  RegisterTarget<Triple::myriscvx64,
-        /*HasJIT=*/true>
-      Y(getTheMYRISCVX64Target(), "myriscvx64", "MYRISCVX (64-bit)", "MYRISCVX");
+  RegisterTarget<Triple::myriscvx32> X(getTheMYRISCVX32Target(), "myriscvx32",
+                                       "MYRISCVX (32-bit)", "MYRISCVX");
+  RegisterTarget<Triple::myriscvx64> Y(getTheMYRISCVX64Target(), "myriscvx64",
+                                       "MYRISCVX (64-bit)", "MYRISCVX");
 }
