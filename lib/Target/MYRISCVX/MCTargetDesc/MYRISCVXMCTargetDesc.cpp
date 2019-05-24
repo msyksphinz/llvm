@@ -26,8 +26,6 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/TargetRegistry.h"
 
-using namespace llvm;
-
 #define GET_INSTRINFO_MC_DESC
 #include "MYRISCVXGenInstrInfo.inc"
 
@@ -39,6 +37,8 @@ using namespace llvm;
 
 #include "InstPrinter/MYRISCVXInstPrinter.h"
 #include "MYRISCVXMCAsmInfo.h"
+
+using namespace llvm;
 
 /// Select the MYRISCVX Architecture Feature for the given triple and cpu name.
 /// The function will be called at command 'llvm-objdump -d' for MYRISCVX elf input.
@@ -107,7 +107,7 @@ static MCInstrAnalysis *createMYRISCVXMCInstrAnalysis(const MCInstrInfo *Info) {
 
 //@2 {
 extern "C" void LLVMInitializeMYRISCVXTargetMC() {
-  for (Target *T : {&TheMYRISCVX32Target, &TheMYRISCVX64Target}) {
+  for (Target *T : {&getTheMYRISCVX32Target(), &getTheMYRISCVX64Target()}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn X(*T, createMYRISCVXMCAsmInfo);
 

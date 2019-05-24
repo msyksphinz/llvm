@@ -255,6 +255,6 @@ void MYRISCVXAsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
 
 // Force static initialization.
 extern "C" void LLVMInitializeMYRISCVXAsmPrinter() {
-  RegisterAsmPrinter<MYRISCVXAsmPrinter> X(TheMYRISCVX32Target);
-  RegisterAsmPrinter<MYRISCVXAsmPrinter> Y(TheMYRISCVX64Target);
+  RegisterAsmPrinter<MYRISCVXAsmPrinter> X(getTheMYRISCVX32Target());
+  RegisterAsmPrinter<MYRISCVXAsmPrinter> Y(getTheMYRISCVX64Target());
 }

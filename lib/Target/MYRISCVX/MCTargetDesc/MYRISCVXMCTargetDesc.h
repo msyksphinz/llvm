@@ -31,8 +31,8 @@ class Triple;
 class raw_ostream;
 class raw_pwrite_stream;
 
-extern Target TheMYRISCVX32Target;
-extern Target TheMYRISCVX64Target;
+Target &getTheMYRISCVX32Target();
+Target &getTheMYRISCVX64Target();
 
 } // End llvm namespace
 

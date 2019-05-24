@@ -27,8 +27,9 @@ using namespace llvm;
 extern "C" void LLVMInitializeMYRISCVXTarget() {
   // Register the target.
   //- Little endian Target Machine
-  RegisterTargetMachine<MYRISCVX32TargetMachine> X(TheMYRISCVX32Target);
-  RegisterTargetMachine<MYRISCVX64TargetMachine> Y(TheMYRISCVX64Target);
+
+  RegisterTargetMachine<MYRISCVX32TargetMachine> X(getTheMYRISCVX32Target());
+  RegisterTargetMachine<MYRISCVX64TargetMachine> Y(getTheMYRISCVX64Target());
 }
 
 
