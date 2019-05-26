@@ -10,6 +10,7 @@
 // Subclass of MYRISCVXTargetLowering specialized for MYRISCVX32.
 //
 //===-----------------------------------------------------------------------------===//
+
 #include "MYRISCVXMachineFunction.h"
 #include "MYRISCVXSEISelLowering.h"
 

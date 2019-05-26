@@ -59,12 +59,18 @@ MYRISCVXSubtarget &
 MYRISCVXSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
                                                    const TargetMachine &TM) {
   if (TargetTriple.getArch() == Triple::myriscvx32) {
-    if (CPU.empty() || CPU == "generic") {
-      CPU = "cpu-rv32";
+    if (CPU.empty() || CPU == "simple32") {
+      CPU = "simple32";
+    } else {
+      errs() << "myriscvx32 only supports simple32 CPU target\n";
+      exit(0);
     }
   } else if (TargetTriple.getArch() == Triple::myriscvx64) {
-    if (CPU.empty() || CPU == "generic") {
-      CPU = "cpu-rv64";
+    if (CPU.empty() || CPU == "rocket64") {
+      CPU = "rocket64";
+    } else {
+      errs() << "myriscvx64 only supports rocket64 CPU target\n";
+      exit(0);
     }
   } else {
     errs() << "!!!Error, TargetTriple.getArch() = " << TargetTriple.getArch()
