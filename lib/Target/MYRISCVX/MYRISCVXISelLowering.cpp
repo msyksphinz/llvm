@@ -59,6 +59,7 @@ const char *MYRISCVXTargetLowering::getTargetNodeName(unsigned Opcode) const {
 MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
                                                const MYRISCVXSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI), ABI(TM.getABI()) {
+
 }
 
 const MYRISCVXTargetLowering *MYRISCVXTargetLowering::create(const MYRISCVXTargetMachine &TM,
