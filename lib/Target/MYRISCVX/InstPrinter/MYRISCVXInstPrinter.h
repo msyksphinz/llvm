@@ -45,9 +45,7 @@ namespace llvm {
     void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
     void printUnsignedImm(const MCInst *MI, int opNum, raw_ostream &O);
     void printMemOperand(const MCInst *MI, int opNum, raw_ostream &O);
-    //#if CH >= CH7_1
     void printMemOperandEA(const MCInst *MI, int opNum, raw_ostream &O);
-    //#endif
   };
 } // end namespace llvm
 

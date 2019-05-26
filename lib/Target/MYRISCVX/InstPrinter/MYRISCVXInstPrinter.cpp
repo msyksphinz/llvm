@@ -31,7 +31,7 @@ using namespace llvm;
 void MYRISCVXInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
   //- getRegisterName(RegNo) defined in MYRISCVXGenAsmWriter.inc which indicate in
   //   MYRISCVX.td.
-  OS << '$' << StringRef(getRegisterName(RegNo)).lower();
+  OS << StringRef(getRegisterName(RegNo)).lower();
 }
 
 //@1 {
@@ -83,7 +83,6 @@ printMemOperand(const MCInst *MI, int opNum, raw_ostream &O) {
   O << ")";
 }
 
-//#if CH >= CH7_1
 // The DAG data node, mem_ea of MYRISCVXInstrInfo.td, cannot be disabled by
 // ch7_1, only opcode node can be disabled.
 void MYRISCVXInstPrinter::
@@ -95,4 +94,3 @@ printMemOperandEA(const MCInst *MI, int opNum, raw_ostream &O) {
   printOperand(MI, opNum+1, O);
   return;
 }
-//#endif
