@@ -190,3 +190,12 @@ class MYRISCVX_J<bits<7> opcode,
   let Inst{19-12} = imm20{18-11};
   let Inst{6-0}   = opcode;
 }
+
+//===-------------------------------===//
+// MYRISCVX Pseudo Instructions Format
+//===-------------------------------===//
+class MYRISCVXPseudo<dag outs, dag ins, string asmstr, list<dag> pattern>:
+      MYRISCVXInst<outs, ins, asmstr, pattern, IIPseudo, Pseudo> {
+  let isCodeGenOnly = 1;
+  let isPseudo = 1;
+}

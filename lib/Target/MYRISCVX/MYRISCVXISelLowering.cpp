@@ -107,6 +107,123 @@ MYRISCVXTargetLowering::LowerReturn(SDValue Chain,
                                     const SmallVectorImpl<ISD::OutputArg> &Outs,
                                     const SmallVectorImpl<SDValue> &OutVals,
                                     const SDLoc &DL, SelectionDAG &DAG) const {
-  return DAG.getNode(MYRISCVXISD::Ret, DL, MVT::Other,
-                     Chain, DAG.getRegister(MYRISCVX::RA, MVT::i32));
+  // CCValAssign - represent the assignment of
+  // the return value to a location
+  SmallVector<CCValAssign, 16> RVLocs;
+  MachineFunction &MF = DAG.getMachineFunction();
+
+  // CCState - Info about the registers and stack slot.
+  CCState CCInfo(CallConv, IsVarArg, MF, RVLocs,
+                 *DAG.getContext());
+  MYRISCVXCC MYRISCVXCCInfo(CallConv, ABI.IsLP32(), CCInfo);
+
+  // Analyze return values.
+  MYRISCVXCCInfo.analyzeReturn(Outs, Subtarget.abiUsesSoftFloat(),
+                               MF.getFunction().getReturnType());
+
+  SDValue Flag;
+  SmallVector<SDValue, 4> RetOps(1, Chain);
+
+  // Copy the result values into the output registers.
+  for (unsigned i = 0; i != RVLocs.size(); ++i) {
+    SDValue Val = OutVals[i];
+    CCValAssign &VA = RVLocs[i];
+    assert(VA.isRegLoc() && "Can only return in registers!");
+
+    if (RVLocs[i].getValVT() != RVLocs[i].getLocVT())
+      Val = DAG.getNode(ISD::BITCAST, DL, RVLocs[i].getLocVT(), Val);
+
+    Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), Val, Flag);
+
+    // Guarantee that all emitted copies are stuck together with flags.
+    Flag = Chain.getValue(1);
+    RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
+  }
+
+//@Ordinary struct type: 2 {
+  // The MYRISCVX ABIs for returning structs by value requires that we copy
+  // the sret argument into $a0 for the return. We saved the argument into
+  // a virtual register in the entry block, so now we copy the value out
+  // and into $a0.
+  if (MF.getFunction().hasStructRetAttr()) {
+    MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
+    unsigned Reg = MYRISCVXFI->getSRetReturnReg();
+
+    if (!Reg)
+      llvm_unreachable("sret virtual register not created in the entry block");
+    SDValue Val =
+        DAG.getCopyFromReg(Chain, DL, Reg, getPointerTy(DAG.getDataLayout()));
+    unsigned A0 = MYRISCVX::A0;
+
+    Chain = DAG.getCopyToReg(Chain, DL, A0, Val, Flag);
+    Flag = Chain.getValue(1);
+    RetOps.push_back(DAG.getRegister(A0, getPointerTy(DAG.getDataLayout())));
+  }
+//@Ordinary struct type: 2 }
+
+  RetOps[0] = Chain;  // Update chain.
+
+  // Add the flag if we have it.
+  if (Flag.getNode())
+    RetOps.push_back(Flag);
+
+  // Return on MYRISCVX is always a "ret $lr"
+  return DAG.getNode(MYRISCVXISD::Ret, DL, MVT::Other, RetOps);
+}
+
+
+MYRISCVXTargetLowering::MYRISCVXCC::MYRISCVXCC(
+  CallingConv::ID CC, bool IsO32_, CCState &Info,
+  MYRISCVXCC::SpecialCallingConvType SpecialCallingConv_)
+  : CCInfo(Info), CallConv(CC), IsO32(IsO32_) {
+  // Pre-allocate reserved argument area.
+  CCInfo.AllocateStack(reservedArgArea(), 1);
+}
+
+template<typename Ty>
+void MYRISCVXTargetLowering::MYRISCVXCC::
+analyzeReturn(const SmallVectorImpl<Ty> &RetVals, bool IsSoftFloat,
+              const SDNode *CallNode, const Type *RetTy) const {
+  CCAssignFn *Fn;
+
+  Fn = RetCC_MYRISCVX;
+
+  for (unsigned I = 0, E = RetVals.size(); I < E; ++I) {
+    MVT VT = RetVals[I].VT;
+    ISD::ArgFlagsTy Flags = RetVals[I].Flags;
+    MVT RegVT = this->getRegVT(VT, RetTy, CallNode, IsSoftFloat);
+
+    if (Fn(I, VT, RegVT, CCValAssign::Full, Flags, this->CCInfo)) {
+#ifndef NDEBUG
+      dbgs() << "Call result #" << I << " has unhandled type "
+             << EVT(VT).getEVTString() << '\n';
+#endif
+      llvm_unreachable(nullptr);
+    }
+  }
+}
+
+void MYRISCVXTargetLowering::MYRISCVXCC::
+analyzeCallResult(const SmallVectorImpl<ISD::InputArg> &Ins, bool IsSoftFloat,
+                  const SDNode *CallNode, const Type *RetTy) const {
+  analyzeReturn(Ins, IsSoftFloat, CallNode, RetTy);
+}
+
+void MYRISCVXTargetLowering::MYRISCVXCC::
+analyzeReturn(const SmallVectorImpl<ISD::OutputArg> &Outs, bool IsSoftFloat,
+              const Type *RetTy) const {
+  analyzeReturn(Outs, IsSoftFloat, nullptr, RetTy);
+}
+
+unsigned MYRISCVXTargetLowering::MYRISCVXCC::reservedArgArea() const {
+  return (IsO32 && (CallConv != CallingConv::Fast)) ? 8 : 0;
+}
+
+MVT MYRISCVXTargetLowering::MYRISCVXCC::getRegVT(MVT VT, const Type *OrigTy,
+                                                 const SDNode *CallNode,
+                                                 bool IsSoftFloat) const {
+  if (IsSoftFloat || IsO32)
+    return VT;
+
+  return VT;
 }
