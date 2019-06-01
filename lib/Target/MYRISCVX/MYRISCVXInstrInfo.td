@@ -171,6 +171,10 @@ def SUB  : ArithLogicR<0b0110011, 0b000, 0b0100000, "sub", sub, GPR>;
 def JR  : ArithLogicI<0b1100111, 0b000, "jr", add, simm12, immSExt12, GPR>;
 def RET : RetGPR<0b1100111, 0b000, "ret", GPR>;
 
+let isReturn=1, isTerminator=1, hasDelaySlot=1, isBarrier=1, hasCtrlDep=1 in
+  def RetLR : MYRISCVXPseudo<(outs), (ins), "", [(MYRISCVXRet)]>;
+
+
 /// Load and Store Instructions
 ///  aligned
 defm LW     : LoadM32 <0b0000011, 0b010, "lw",  load_a>;
@@ -179,3 +183,7 @@ defm SW     : StoreM32<0b0100011, 0b010, "sw",  store_a>;
 //===----------------------------------------------------------------------===//
 //  Arbitrary patterns that map to one or more instructions
 //===----------------------------------------------------------------------===//
+
+// Small immediates
+def : Pat<(i32 immSExt12:$in),
+          (ADDI ZERO, imm:$in)>;

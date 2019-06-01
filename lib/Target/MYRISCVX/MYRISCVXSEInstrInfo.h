@@ -20,15 +20,19 @@
 
 namespace llvm {
 
-  class MYRISCVXSEInstrInfo : public MYRISCVXInstrInfo {
-    const MYRISCVXSERegisterInfo RI;
+class MYRISCVXSEInstrInfo : public MYRISCVXInstrInfo {
+  const MYRISCVXSERegisterInfo RI;
 
  public:
-    explicit MYRISCVXSEInstrInfo(const MYRISCVXSubtarget &STI);
+  explicit MYRISCVXSEInstrInfo(const MYRISCVXSubtarget &STI);
 
-    const MYRISCVXRegisterInfo &getRegisterInfo() const override;
+  const MYRISCVXRegisterInfo &getRegisterInfo() const override;
+  //@expandPostRAPseudo
+  bool expandPostRAPseudo(MachineInstr &MI) const override;
 
-  };
+ private:
+  void expandRetLR(MachineBasicBlock &MBB, MachineBasicBlock::iterator I) const;
+};
 
 }
 
