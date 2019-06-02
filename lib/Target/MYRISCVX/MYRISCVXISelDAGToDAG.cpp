@@ -57,24 +57,10 @@ bool MYRISCVXDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
 /// ComplexPattern used on MYRISCVXInstrInfo
 /// Used on MYRISCVX Load/Store instructions
 bool MYRISCVXDAGToDAGISel::
-SelectAddr(SDNode *Parent, SDValue Addr, SDValue &Base, SDValue &Offset) {
+SelectAddr(SDValue Addr, SDValue &Base, SDValue &Offset) {
   //@SelectAddr }
   EVT ValTy = Addr.getValueType();
   SDLoc DL(Addr);
-
-  // If Parent is an unaligned f32 load or store, select a (base + index)
-  // floating point load/store instruction (luxc1 or suxc1).
-  const LSBaseSDNode* LS = 0;
-
-  if (Parent && (LS = dyn_cast<LSBaseSDNode>(Parent))) {
-    EVT VT = LS->getMemoryVT();
-
-    if (VT.getSizeInBits() / 8 > LS->getAlignment()) {
-      assert("Unaligned loads/stores not supported for this type.");
-      if (VT == MVT::f32)
-        return false;
-    }
-  }
 
   // if Address is FI, get the TargetFrameIndex.
   if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {

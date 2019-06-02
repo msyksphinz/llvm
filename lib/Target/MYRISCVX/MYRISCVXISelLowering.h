@@ -100,7 +100,7 @@ namespace llvm {
         NoSpecialCallingConv
       };
 
-      MYRISCVXCC(CallingConv::ID CallConv, bool IsO32, CCState &Info,
+      MYRISCVXCC(CallingConv::ID CallConv, bool IsLP32, CCState &Info,
                  SpecialCallingConvType SpecialCallingConv = NoSpecialCallingConv);
 
       void analyzeCallResult(const SmallVectorImpl<ISD::InputArg> &Ins,
@@ -116,7 +116,7 @@ namespace llvm {
       bool hasByValArg() const { return !ByValArgs.empty(); }
 
       /// reservedArgArea - The size of the area the caller reserves for
-      /// register arguments. This is 16-byte if ABI is O32.
+      /// register arguments. This is 16-byte if ABI is LP32.
       unsigned reservedArgArea() const;
 
       typedef SmallVectorImpl<ByValArgInfo>::const_iterator byval_iterator;
@@ -138,10 +138,9 @@ namespace llvm {
 
       CCState &CCInfo;
       CallingConv::ID CallConv;
-      bool IsO32;
+      bool IsLP32;
       SmallVector<ByValArgInfo, 2> ByValArgs;
     };
-
 
    protected:
     // Subtarget Info
@@ -149,7 +148,7 @@ namespace llvm {
     // Cache the ABI from the TargetMachine, we use it everywhere.
     const MYRISCVXABIInfo &ABI;
 
- private:
+   private:
 
     // Lower Operand specifics
     SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;

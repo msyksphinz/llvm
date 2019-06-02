@@ -42,6 +42,9 @@ namespace llvm {
     /// Return the number of bytes of code the specified instruction may be.
     unsigned GetInstSizeInBytes(const MachineInstr &MI) const;
 
+    /// Adjust SP by Amount bytes.
+    virtual void adjustStackPtr(unsigned SP, int64_t Amount, MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator I) const = 0;
  protected:
   };
   const MYRISCVXInstrInfo *createMYRISCVXSEInstrInfo(const MYRISCVXSubtarget &STI);
