@@ -140,7 +140,7 @@ MYRISCVXTargetLowering::LowerReturn(SDValue Chain,
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }
 
-//@Ordinary struct type: 2 {
+  //@Ordinary struct type: 2 {
   // The MYRISCVX ABIs for returning structs by value requires that we copy
   // the sret argument into $a0 for the return. We saved the argument into
   // a virtual register in the entry block, so now we copy the value out
@@ -159,7 +159,7 @@ MYRISCVXTargetLowering::LowerReturn(SDValue Chain,
     Flag = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(A0, getPointerTy(DAG.getDataLayout())));
   }
-//@Ordinary struct type: 2 }
+  //@Ordinary struct type: 2 }
 
   RetOps[0] = Chain;  // Update chain.
 
@@ -167,15 +167,15 @@ MYRISCVXTargetLowering::LowerReturn(SDValue Chain,
   if (Flag.getNode())
     RetOps.push_back(Flag);
 
-  // Return on MYRISCVX is always a "ret $lr"
+  // Return on MYRISCVX is always a "ret $ra"
   return DAG.getNode(MYRISCVXISD::Ret, DL, MVT::Other, RetOps);
 }
 
 
 MYRISCVXTargetLowering::MYRISCVXCC::MYRISCVXCC(
-  CallingConv::ID CC, bool IsO32_, CCState &Info,
+  CallingConv::ID CC, bool IsLP32_, CCState &Info,
   MYRISCVXCC::SpecialCallingConvType SpecialCallingConv_)
-  : CCInfo(Info), CallConv(CC), IsO32(IsO32_) {
+  : CCInfo(Info), CallConv(CC), IsLP32(IsLP32_) {
   // Pre-allocate reserved argument area.
   CCInfo.AllocateStack(reservedArgArea(), 1);
 }
@@ -194,10 +194,8 @@ analyzeReturn(const SmallVectorImpl<Ty> &RetVals, bool IsSoftFloat,
     MVT RegVT = this->getRegVT(VT, RetTy, CallNode, IsSoftFloat);
 
     if (Fn(I, VT, RegVT, CCValAssign::Full, Flags, this->CCInfo)) {
-#ifndef NDEBUG
-      dbgs() << "Call result #" << I << " has unhandled type "
-             << EVT(VT).getEVTString() << '\n';
-#endif
+      LLVM_DEBUG(dbgs() << "Call result #" << I << " has unhandled type "
+                 << EVT(VT).getEVTString() << '\n');
       llvm_unreachable(nullptr);
     }
   }
@@ -216,13 +214,13 @@ analyzeReturn(const SmallVectorImpl<ISD::OutputArg> &Outs, bool IsSoftFloat,
 }
 
 unsigned MYRISCVXTargetLowering::MYRISCVXCC::reservedArgArea() const {
-  return (IsO32 && (CallConv != CallingConv::Fast)) ? 8 : 0;
+  return (IsLP32 && (CallConv != CallingConv::Fast)) ? 8 : 0;
 }
 
 MVT MYRISCVXTargetLowering::MYRISCVXCC::getRegVT(MVT VT, const Type *OrigTy,
                                                  const SDNode *CallNode,
                                                  bool IsSoftFloat) const {
-  if (IsSoftFloat || IsO32)
+  if (IsSoftFloat || IsLP32)
     return VT;
 
   return VT;
