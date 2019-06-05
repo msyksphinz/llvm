@@ -54,6 +54,20 @@ class MYRISCVXFunctionInfo : public MachineFunctionInfo {
     HasByvalArg = HasByval;
   }
 
+  unsigned getIncomingArgSize() const { return IncomingArgSize; }
+
+  bool callsEhReturn() const { return CallsEhReturn; }
+  void setCallsEhReturn() { CallsEhReturn = true; }
+
+  bool callsEhDwarf() const { return CallsEhDwarf; }
+  void setCallsEhDwarf() { CallsEhDwarf = true; }
+
+  void createEhDataRegsFI();
+  int getEhDataRegFI(unsigned Reg) const { return EhDataRegFI[Reg]; }
+
+  unsigned getMaxCallFrameSize() const { return MaxCallFrameSize; }
+  void setMaxCallFrameSize(unsigned S) { MaxCallFrameSize = S; }
+
  private:
   virtual void anchor();
 

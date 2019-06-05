@@ -155,7 +155,7 @@ void MYRISCVXAsmPrinter::printHex32(unsigned Value, raw_ostream &O) {
 //===----------------------------------------------------------------------===//
 // Frame and Set directives
 //===----------------------------------------------------------------------===//
-//->	.frame	$sp,8,$lr
+//->.frame	$sp,8,$lr
 //	.mask 	0x00000000,0
 //	.set	noreorder
 //	.set	nomacro
