@@ -31,6 +31,17 @@ include "MYRISCVXInstrFormats.td"
 // MYRISCVX Operand, Complex Patterns and Transformations Definitions.
 //===----------------------------------------------------------------------===//
 
+// Transformation Function - get the lower 12 bits.
+def LO12 : SDNodeXForm<imm, [{
+  return getImm(N, N->getZExtValue() & 0xfff);
+}]>;
+
+// Transformation Function - get the higher 20 bits.
+def HI20 : SDNodeXForm<imm, [{
+  return getImm(N, (N->getZExtValue() >> 12) & 0xfffff);
+}]>;
+
+
 // Signed Operand
 def simm12 : Operand<i32> {
   let DecoderMethod= "DecodeSimm12";
@@ -38,9 +49,24 @@ def simm12 : Operand<i32> {
 def simm20 : Operand<i32> {
   let DecoderMethod= "DecodeSimm20";
 }
+// Unsigned Operand
+def uimm12 : Operand<i32> {
+  let PrintMethod = "printUnsignedImm";
+}
 
 def immSExt12 : PatLeaf<(imm), [{ return isInt<12>(N->getSExtValue()); }]>;
 def immSExt20 : PatLeaf<(imm), [{ return isInt<20>(N->getSExtValue()); }]>;
+def immZExt12 : PatLeaf<(imm), [{
+  if (N->getValueType(0) == MVT::i32)
+    return (uint32_t)N->getZExtValue() == (unsigned short)N->getZExtValue();
+  else
+    return (uint64_t)N->getZExtValue() == (unsigned short)N->getZExtValue();
+}], LO12>;
+
+// shamt field must fit in 5 bits.
+def immZExt5 : ImmLeaf<i32, [{return Imm == (Imm & 0x1f);}]>;
+
+def shamt : Operand<i32>;
 
 def MYRISCVXMemAsmOperand : AsmOperandClass {
   let Name = "Mem";
@@ -148,9 +174,33 @@ class ArithLogicU<bits<7> opcode,
 // Return instruction
 class RetGPR<bits<7> opcode, bits<3> funct3, string instr_asm, RegisterClass RC>:
   MYRISCVX_I<opcode, funct3, (outs), (ins RC:$rs1),
-     !strconcat(instr_asm, "\t$rs1"), [(brind RC:$rs1)], IIBranch> {
+             !strconcat(instr_asm, "\t$rs1"), [(brind RC:$rs1)], IIBranch> {
   let rd = 0;
   let isReturn = 1;
+}
+
+// Shifts
+class shift_rotate_imm<bits<7> opcode, bits<3> funct3, bit arithshift, string instr_asm,
+                       SDNode OpNode, PatFrag PF, Operand ImmOpnd,
+                       RegisterClass RC>:
+  MYRISCVX_ISHIFT<opcode, funct3, arithshift, (outs RC:$rd), (ins RC:$rs1, ImmOpnd:$shamt),
+                  !strconcat(instr_asm, "\t$rd, $rs1, $shamt"),
+                  [(set GPR:$rd, (OpNode RC:$rs1, PF:$shamt))], IIAlu> {
+}
+
+
+// 32-bit shift instructions.
+class shift_rotate_imm32<bits<7> opcode, bits<3> funct3, bit arithshift, string instr_asm,
+                         SDNode OpNode>:
+  shift_rotate_imm<opcode, funct3, arithshift, instr_asm, OpNode, immZExt5, shamt, GPR>;
+
+
+class shift_rotate_reg<bits<7> opcode, bits<7> funct7, bits<3> funct3,
+                       bits<4> isRotate, string instr_asm,
+                       SDNode OpNode, RegisterClass RC>:
+  MYRISCVX_R<opcode, funct3, funct7, (outs RC:$ra), (ins RC:$rb, RC:$rc),
+          !strconcat(instr_asm, "\t$ra, $rb, $rc"),
+          [(set GPR:$ra, (OpNode RC:$rb, RC:$rc))], IIAlu> {
 }
 
 
@@ -163,10 +213,33 @@ class RetGPR<bits<7> opcode, bits<3> funct3, string instr_asm, RegisterClass RC>
 
 
 def ADDI : ArithLogicI<0b0010011, 0b000, "addi", add, simm12, immSExt12, GPR>;
+def XORI : ArithLogicI<0b0010011, 0b100, "xori", xor, uimm12, immZExt12, GPR>;
+def ORI  : ArithLogicI<0b0010011, 0b110, "ori",  or,  uimm12, immZExt12, GPR>;
+def ANDI : ArithLogicI<0b0010011, 0b111, "andi", and, uimm12, immZExt12, GPR>;
 
 def LUI  : ArithLogicU<0b0110111, "lui", GPR, simm20, immSExt20>;
 def ADD  : ArithLogicR<0b0110011, 0b000, 0b0000000, "add", add, GPR>;
 def SUB  : ArithLogicR<0b0110011, 0b000, 0b0100000, "sub", sub, GPR>;
+
+def SLL  : shift_rotate_reg<0b0110011, 0b0000000, 0b001, 0x0, "sll", shl, GPR>;
+def AND  : ArithLogicR<0b0110011, 0b111, 0b0000000, "and", and, GPR>;
+def SRL  : shift_rotate_reg<0b0110011, 0b0000000, 0b101, 0x0, "srl", srl, GPR>;
+def SRA  : shift_rotate_reg<0b0110011, 0b0100000, 0b101, 0x0, "sra", sra, GPR>;
+def OR   : ArithLogicR<0b0110011, 0b110, 0b0000000, "or",  or,  GPR>;
+def XOR  : ArithLogicR<0b0110011, 0b100, 0b0000000, "xor", xor, GPR>;
+
+def SRLI : shift_rotate_imm32<0b0010011, 0b101, 0, "srli", srl>;
+def SLLI : shift_rotate_imm32<0b0010011, 0b001, 0, "slli", shl>;
+def SRAI : shift_rotate_imm32<0b0010011, 0b101, 1, "srai", sra>;
+
+def MUL   : ArithLogicR<0b0110011, 0b000, 0b0000001, "mul",    mul,   GPR>;
+def MULH  : ArithLogicR<0b0110011, 0b001, 0b0000001, "mulh",   mulhs, GPR>;
+def MULHSU: ArithLogicR<0b0110011, 0b010, 0b0000001, "mulhsu", mulhs, GPR>;
+def MULHU : ArithLogicR<0b0110011, 0b011, 0b0000001, "mulhu",  mulhu, GPR>;
+def DIV   : ArithLogicR<0b0110011, 0b100, 0b0000001, "div",    sdiv,  GPR>;
+def DIVU  : ArithLogicR<0b0110011, 0b101, 0b0000001, "divu",   udiv,  GPR>;
+def REM   : ArithLogicR<0b0110011, 0b110, 0b0000001, "rem",    srem,  GPR>;
+def REMU  : ArithLogicR<0b0110011, 0b111, 0b0000001, "remu",   urem,  GPR>;
 
 def JR  : ArithLogicI<0b1100111, 0b000, "jr", add, simm12, immSExt12, GPR>;
 def RET : RetGPR<0b1100111, 0b000, "ret", GPR>;

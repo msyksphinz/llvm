@@ -191,6 +191,30 @@ class MYRISCVX_J<bits<7> opcode,
   let Inst{6-0}   = opcode;
 }
 
+
+//===----------------------------------------------------------------------===//
+// I-Type instruction class in MYRISCVX : <|opcode|ra|rb|cx|>
+//===----------------------------------------------------------------------===//
+class MYRISCVX_ISHIFT<bits<7> opcode, bits<3> funct3, bit arithshift,
+                      dag outs, dag ins, string asmstr, list<dag> pattern,
+                      InstrItinClass itin>:
+  MYRISCVXInst<outs, ins, asmstr, pattern, itin, FrmI>
+{
+  bits<5> rs1;
+  bits<5> rd;
+  bits<6> shamt;
+
+  let Inst{31} = 0;
+  let Inst{30} = arithshift;
+  let Inst{29-26} = 0;
+  let Inst{25-20} = shamt;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = funct3;
+  let Inst{11-7}  = rd;
+  let Inst{6-0}   = opcode;
+}
+
+
 //===-------------------------------===//
 // MYRISCVX Pseudo Instructions Format
 //===-------------------------------===//
