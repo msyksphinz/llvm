@@ -29,16 +29,12 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "MYRISCVX-framelowering"
-
 MYRISCVXSEFrameLowering::MYRISCVXSEFrameLowering(const MYRISCVXSubtarget &STI)
     : MYRISCVXFrameLowering(STI, STI.stackAlignment()) {}
 
 //@emitPrologue {
 void MYRISCVXSEFrameLowering::emitPrologue(MachineFunction &MF,
                                            MachineBasicBlock &MBB) const {
-  LLVM_DEBUG(dbgs() << "Start MYRISCVXSEFrameLowering::emitPrologue\n");
-
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
   MachineFrameInfo MFI    = MF.getFrameInfo();
   // MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
@@ -95,15 +91,12 @@ void MYRISCVXSEFrameLowering::emitPrologue(MachineFunction &MF,
       }
     }
   }
-  LLVM_DEBUG(dbgs() << "End MYRISCVXSEFrameLowering::emitPrologue\n");
 }
 //}
 
 //@emitEpilogue {
 void MYRISCVXSEFrameLowering::emitEpilogue(MachineFunction &MF,
                                            MachineBasicBlock &MBB) const {
-  LLVM_DEBUG(dbgs() << "Start MYRISCVXSEFrameLowering::emitEpilogue\n");
-
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
   MachineFrameInfo MFI             = MF.getFrameInfo();
   // MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
@@ -125,23 +118,18 @@ void MYRISCVXSEFrameLowering::emitEpilogue(MachineFunction &MF,
 
   // Adjust stack.
   TII.adjustStackPtr(SP, StackSize, MBB, MBBI);
-
-  LLVM_DEBUG(dbgs() << "End MYRISCVXSEFrameLowering::emitEpilogue\n");
 }
 //}
 
 
 bool
 MYRISCVXSEFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
-  LLVM_DEBUG(dbgs() << "Start MYRISCVXSEFrameLowering::hasReservedCallFrame\n");
-
   const MachineFrameInfo MFI = MF.getFrameInfo();
 
   // Reserve call frame if the size of the maximum call frame fits into 16-bit
   // immediate field and there are no variable sized objects on the stack.
   // Make sure the second register scavenger spill slot can be accessed with one
   // instruction.
-  LLVM_DEBUG(dbgs() << "End MYRISCVXSEFrameLowering::hasReservedCallFrame\n");
 
   return isInt<16>(MFI.getMaxCallFrameSize() + getStackAlignment()) &&
       !MFI.hasVarSizedObjects();
