@@ -63,6 +63,12 @@ def immZExt12 : PatLeaf<(imm), [{
     return (uint64_t)N->getZExtValue() == (unsigned short)N->getZExtValue();
 }], LO12>;
 
+// Immediate can be loaded with LUi (32-bit int with lower 16-bit cleared).
+def immLow12Zero : PatLeaf<(imm), [{
+  int64_t Val = N->getSExtValue();
+  return isInt<32>(Val) && !(Val & 0x0fff);
+}]>;
+
 // shamt field must fit in 5 bits.
 def immZExt5 : ImmLeaf<i32, [{return Imm == (Imm & 0x1f);}]>;
 
@@ -260,3 +266,11 @@ defm SW     : StoreM32<0b0100011, 0b010, "sw",  store_a>;
 // Small immediates
 def : Pat<(i32 immSExt12:$in),
           (ADDI ZERO, imm:$in)>;
+
+def : Pat<(i32 immZExt12:$in),
+          (ORI ZERO, imm:$in)>;
+def : Pat<(i32 immLow12Zero:$in),
+          (LUI (HI20 imm:$in))>;
+
+def : Pat<(i32 imm:$imm),
+          (ORI (LUI (HI20 imm:$imm)), (LO12 imm:$imm))>;
