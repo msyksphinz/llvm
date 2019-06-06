@@ -60,13 +60,14 @@ void MYRISCVXSEInstrInfo::adjustStackPtr(unsigned SP, int64_t Amount,
   unsigned ADDI = MYRISCVX::ADDI;
 
   MachineFunction *MF = MBB.getParent();
-  MachineRegisterInfo &MRI = MF->getRegInfo();
+  // MachineRegisterInfo &MRI = MF->getRegInfo();
 
   if (isInt<12>(Amount)) {
     // addiu sp, sp, amount
     BuildMI(MBB, I, DL, get(ADDI), SP).addReg(SP).addImm(Amount);
   } else { // Expand immediate that doesn't fit in 12-bit.
-    unsigned Reg = MRI.createVirtualRegister(&MYRISCVX::GPRRegClass);
+    // unsigned Reg = MRI.createVirtualRegister(&MYRISCVX::GPRRegClass);
+    unsigned Reg = MYRISCVX::T0;
     loadImmediate(Amount, MBB, I, DL, Reg, nullptr);
     BuildMI(MBB, I, DL, get(ADD), SP).addReg(SP).addReg(Reg, RegState::Kill);
   }
