@@ -10,6 +10,8 @@
 #ifndef LLVM_LIB_TARGET_MYRISCVX_MYRISCVXMCINSTLOWER_H
 #define LLVM_LIB_TARGET_MYRISCVX_MYRISCVXMCINSTLOWER_H
 
+#include "MCTargetDesc/MYRISCVXMCExpr.h"
+
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/Support/Compiler.h"
