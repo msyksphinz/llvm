@@ -186,9 +186,9 @@ class RetGPR<bits<7> opcode, bits<3> funct3, string instr_asm, RegisterClass RC>
 }
 
 // Shifts
-class shift_rotate_imm<bits<7> opcode, bits<3> funct3, bit arithshift, string instr_asm,
-                       SDNode OpNode, PatFrag PF, Operand ImmOpnd,
-                       RegisterClass RC>:
+class ShiftImm<bits<7> opcode, bits<3> funct3, bit arithshift, string instr_asm,
+               SDNode OpNode, PatFrag PF, Operand ImmOpnd,
+               RegisterClass RC>:
   MYRISCVX_ISHIFT<opcode, funct3, arithshift, (outs RC:$rd), (ins RC:$rs1, ImmOpnd:$shamt),
                   !strconcat(instr_asm, "\t$rd, $rs1, $shamt"),
                   [(set GPR:$rd, (OpNode RC:$rs1, PF:$shamt))], IIAlu> {
@@ -196,14 +196,14 @@ class shift_rotate_imm<bits<7> opcode, bits<3> funct3, bit arithshift, string in
 
 
 // 32-bit shift instructions.
-class shift_rotate_imm32<bits<7> opcode, bits<3> funct3, bit arithshift, string instr_asm,
+class ShiftImm32<bits<7> opcode, bits<3> funct3, bit arithshift, string instr_asm,
                          SDNode OpNode>:
-  shift_rotate_imm<opcode, funct3, arithshift, instr_asm, OpNode, immZExt5, shamt, GPR>;
+  ShiftImm<opcode, funct3, arithshift, instr_asm, OpNode, immZExt5, shamt, GPR>;
 
 
-class shift_rotate_reg<bits<7> opcode, bits<7> funct7, bits<3> funct3,
-                       bits<4> isRotate, string instr_asm,
-                       SDNode OpNode, RegisterClass RC>:
+class ShiftR<bits<7> opcode, bits<7> funct7, bits<3> funct3,
+             bits<4> isRotate, string instr_asm,
+             SDNode OpNode, RegisterClass RC>:
   MYRISCVX_R<opcode, funct3, funct7, (outs RC:$ra), (ins RC:$rb, RC:$rc),
           !strconcat(instr_asm, "\t$ra, $rb, $rc"),
           [(set GPR:$ra, (OpNode RC:$rb, RC:$rc))], IIAlu> {
@@ -248,16 +248,16 @@ def LUI  : ArithLogicU<0b0110111, "lui", GPR, simm20, immSExt20>;
 def ADD  : ArithLogicR<0b0110011, 0b000, 0b0000000, "add", add, GPR>;
 def SUB  : ArithLogicR<0b0110011, 0b000, 0b0100000, "sub", sub, GPR>;
 
-def SLL  : shift_rotate_reg<0b0110011, 0b0000000, 0b001, 0x0, "sll", shl, GPR>;
+def SLL  : ShiftR<0b0110011, 0b0000000, 0b001, 0x0, "sll", shl, GPR>;
 def AND  : ArithLogicR<0b0110011, 0b111, 0b0000000, "and", and, GPR>;
-def SRL  : shift_rotate_reg<0b0110011, 0b0000000, 0b101, 0x0, "srl", srl, GPR>;
-def SRA  : shift_rotate_reg<0b0110011, 0b0100000, 0b101, 0x0, "sra", sra, GPR>;
+def SRL  : ShiftR<0b0110011, 0b0000000, 0b101, 0x0, "srl", srl, GPR>;
+def SRA  : ShiftR<0b0110011, 0b0100000, 0b101, 0x0, "sra", sra, GPR>;
 def OR   : ArithLogicR<0b0110011, 0b110, 0b0000000, "or",  or,  GPR>;
 def XOR  : ArithLogicR<0b0110011, 0b100, 0b0000000, "xor", xor, GPR>;
 
-def SRLI : shift_rotate_imm32<0b0010011, 0b101, 0, "srli", srl>;
-def SLLI : shift_rotate_imm32<0b0010011, 0b001, 0, "slli", shl>;
-def SRAI : shift_rotate_imm32<0b0010011, 0b101, 1, "srai", sra>;
+def SRLI : ShiftImm32<0b0010011, 0b101, 0, "srli", srl>;
+def SLLI : ShiftImm32<0b0010011, 0b001, 0, "slli", shl>;
+def SRAI : ShiftImm32<0b0010011, 0b101, 1, "srai", sra>;
 
 def MUL   : ArithLogicR<0b0110011, 0b000, 0b0000001, "mul",    mul,   GPR>;
 def MULH  : ArithLogicR<0b0110011, 0b001, 0b0000001, "mulh",   mulhs, GPR>;
@@ -303,9 +303,9 @@ defm SW     : StoreM32<0b0100011, 0b010, "sw",  store_a>;
 // Small immediates
 def : Pat<(i32 immSExt12:$in),
           (ADDI ZERO, imm:$in)>;
-
 def : Pat<(i32 immZExt12:$in),
           (ORI ZERO, imm:$in)>;
+
 def : Pat<(i32 immLow12Zero:$in),
           (LUI (HI20 imm:$in))>;
 

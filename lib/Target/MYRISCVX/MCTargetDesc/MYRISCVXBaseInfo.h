@@ -15,7 +15,9 @@
 #ifndef LLVM_LIB_TARGET_MYRISCVX_MCTARGETDESC_MYRISCVXBASEINFO_H
 #define LLVM_LIB_TARGET_MYRISCVX_MCTARGETDESC_MYRISCVXBASEINFO_H
 
+#include "MYRISCVXFixupKinds.h"
 #include "MYRISCVXMCTargetDesc.h"
+
 #include "llvm/MC/MCExpr.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
