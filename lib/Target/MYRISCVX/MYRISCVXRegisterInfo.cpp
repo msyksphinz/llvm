@@ -63,6 +63,7 @@ getReservedRegs(const MachineFunction &MF) const {
 
   for (unsigned I = 0; I < array_lengthof(ReservedCPURegs); ++I)
     Reserved.set(ReservedCPURegs[I]);
+  Reserved.set(MYRISCVX::GP);
 
   return Reserved;
 }
@@ -100,13 +101,13 @@ eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
              << "stackSize  : " << stackSize << "\n");
 
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
-  int MinCSFI = 0;
-  int MaxCSFI = -1;
-
-  if (CSI.size()) {
-    MinCSFI = CSI[0].getFrameIdx();
-    MaxCSFI = CSI[CSI.size() - 1].getFrameIdx();
-  }
+  // int MinCSFI = 0;
+  // int MaxCSFI = -1;
+  //
+  // if (CSI.size()) {
+  //   MinCSFI = CSI[0].getFrameIdx();
+  //   MaxCSFI = CSI[CSI.size() - 1].getFrameIdx();
+  // }
 
   // The following stack frame objects are always referenced relative to $sp:
   //  1. Outgoing arguments.

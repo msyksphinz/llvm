@@ -34,6 +34,20 @@ using namespace llvm;
 
 extern bool FixGlobalBaseReg;
 
+static cl::opt<bool> UseSmallSectionOpt
+("myriscvx-use-small-section", cl::Hidden, cl::init(false),
+ cl::desc("Use small section. Only work when -relocation-model="
+          "static. pic always not use small section."));
+static cl::opt<bool> ReserveGPOpt
+("myriscvx-reserve-gp", cl::Hidden, cl::init(false),
+ cl::desc("Never allocate $gp to variable"));
+static cl::opt<bool> NoCploadOpt
+("myriscvx-no-cpload", cl::Hidden, cl::init(false),
+ cl::desc("No issue .cpload"));
+
+bool MYRISCVXReserveGP;
+bool MYRISCVXNoCpload;
+
 void MYRISCVXSubtarget::anchor() { }
 
 //@1 {

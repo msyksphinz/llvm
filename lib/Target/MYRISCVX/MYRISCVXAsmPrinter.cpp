@@ -13,11 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "MYRISCVXAsmPrinter.h"
-
 #include "InstPrinter/MYRISCVXInstPrinter.h"
 #include "MCTargetDesc/MYRISCVXBaseInfo.h"
 #include "MYRISCVX.h"
 #include "MYRISCVXInstrInfo.h"
+
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
@@ -198,9 +198,15 @@ void MYRISCVXAsmPrinter::EmitFunctionEntryLabel() {
 /// EmitFunctionBodyStart - Targets can override this to emit stuff before
 /// the first basic block in the function.
 void MYRISCVXAsmPrinter::EmitFunctionBodyStart() {
+
   MCInstLowering.Initialize(&MF->getContext());
 
   emitFrameDirective();
+  bool EmitCPLoad = (MF->getTarget().getRelocationModel() == Reloc::PIC_) &&
+    MYRISCVXFI->globalBaseRegSet() &&
+    MYRISCVXFI->globalBaseRegFixed();
+  if (MYRISCVXNoCpload)
+    EmitCPLoad = false;
 
   if (OutStreamer->hasRawTextSupport()) {
     SmallString<128> Str;
@@ -208,9 +214,18 @@ void MYRISCVXAsmPrinter::EmitFunctionBodyStart() {
     printSavedRegsBitmask(OS);
     OutStreamer->EmitRawText(OS.str());
     OutStreamer->EmitRawText(StringRef("\t.set\tnoreorder"));
+    // Emit .cpload directive if needed.
+    if (EmitCPLoad)
+      OutStreamer->EmitRawText(StringRef("\t.cpload\t$t9"));
     OutStreamer->EmitRawText(StringRef("\t.set\tnomacro"));
-    if (MYRISCVXFI->getEmitNOAT())
-      OutStreamer->EmitRawText(StringRef("\t.set\tnoat"));
+    // if (MYRISCVXFI->getEmitNOAT())
+    //   OutStreamer->EmitRawText(StringRef("\t.set\tnoat"));
+  } else if (EmitCPLoad) {
+    SmallVector<MCInst, 4> MCInsts;
+    MCInstLowering.LowerCPLOAD(MCInsts);
+    for (SmallVector<MCInst, 4>::iterator I = MCInsts.begin();
+       I != MCInsts.end(); ++I)
+      OutStreamer->EmitInstruction(*I, getSubtargetInfo());
   }
 }
 
@@ -230,6 +245,7 @@ void MYRISCVXAsmPrinter::EmitFunctionBodyEnd() {
     OutStreamer->EmitRawText(StringRef("\t.set\treorder"));
     OutStreamer->EmitRawText("\t.end\t" + Twine(CurrentFnSym->getName()));
   }
+
 }
 
 //	.section .mdebug.abi32

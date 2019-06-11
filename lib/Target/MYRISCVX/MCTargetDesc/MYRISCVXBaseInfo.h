@@ -50,6 +50,11 @@ namespace llvm {
       MO_ABS_HI,
       MO_ABS_LO,
 
+      /// MO_GOT16 - Represents the offset into the global offset table at which
+      /// the address the relocation entry symbol resides during execution.
+      MO_GOT16,
+      MO_GOT,
+
       /// MO_GOT_HI16/LO16 - Relocations used for large GOTs.
       MO_GOT_HI16,
       MO_GOT_LO16

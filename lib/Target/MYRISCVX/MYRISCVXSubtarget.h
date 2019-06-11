@@ -26,8 +26,11 @@
 #define GET_SUBTARGETINFO_HEADER
 #include "MYRISCVXGenSubtargetInfo.inc"
 
+extern bool MYRISCVXReserveGP;
+extern bool MYRISCVXNoCpload;
+
 namespace llvm {
-  class StringRef;
+class StringRef;
 
   class MYRISCVXTargetMachine;
 
@@ -47,6 +50,9 @@ namespace llvm {
 
     // IsLittle - The target is Little Endian
     bool IsLittle;
+    // UseSmallSection - Small section is used.
+    bool UseSmallSection;
+
     InstrItineraryData InstrItins;
 
     const MYRISCVXTargetMachine &TM;
@@ -74,7 +80,7 @@ namespace llvm {
     void ParseSubtargetFeatures(StringRef CPU, StringRef FS);
 
     bool isLittle() const { return IsLittle; }
-
+    bool useSmallSection() const { return UseSmallSection; }
 
     bool abiUsesSoftFloat() const;
 

@@ -59,7 +59,7 @@ void MYRISCVXSEInstrInfo::adjustStackPtr(unsigned SP, int64_t Amount,
   unsigned ADD = MYRISCVX::ADD;
   unsigned ADDI = MYRISCVX::ADDI;
 
-  MachineFunction *MF = MBB.getParent();
+  // MachineFunction *MF = MBB.getParent();
   // MachineRegisterInfo &MRI = MF->getRegInfo();
 
   if (isInt<12>(Amount)) {
