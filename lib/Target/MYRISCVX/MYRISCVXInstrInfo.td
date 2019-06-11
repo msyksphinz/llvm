@@ -41,6 +41,12 @@ def HI20 : SDNodeXForm<imm, [{
   return getImm(N, (N->getZExtValue() >> 12) & 0xfffff);
 }]>;
 
+// Hi and Lo nodes are used to handle global addresses. Used on
+// MYRISCVXISelLowering to lower stuff like GlobalAddress, ExternalSymbol
+// static model. (nothing to do with MYRISCVX Registers Hi and Lo)
+def MYRISCVXHi    : SDNode<"MYRISCVXISD::Hi", SDTIntUnaryOp>;
+def MYRISCVXLo    : SDNode<"MYRISCVXISD::Lo", SDTIntUnaryOp>;
+def MYRISCVXGPRel : SDNode<"MYRISCVXISD::GPRel", SDTIntUnaryOp>;
 
 // Signed Operand
 def simm12 : Operand<i32> {
@@ -91,6 +97,10 @@ def mem : Operand<iPTR> {
 // since load and store instructions from stack used it.
 def addr :
   ComplexPattern<iPTR, 2, "SelectAddr", [frameindex]>;
+
+def MYRISCVXWrapper    : SDNode<"MYRISCVXISD::Wrapper", SDTIntBinOp>;
+
+def RelocPIC : Predicate<"TM.getRelocationModel() == Reloc::PIC_">;
 
 //===----------------------------------------------------------------------===//
 // Pattern fragment for load/store
@@ -311,3 +321,19 @@ def : Pat<(i32 immLow12Zero:$in),
 
 def : Pat<(i32 imm:$imm),
           (ORI (LUI (HI20 imm:$imm)), (LO12 imm:$imm))>;
+
+// hi/lo relocs
+def : Pat<(MYRISCVXHi tglobaladdr:$in), (LUI tglobaladdr:$in)>;
+def : Pat<(MYRISCVXLo tglobaladdr:$in), (ORI ZERO, tglobaladdr:$in)>;
+def : Pat<(add GPR:$hi, (MYRISCVXLo tglobaladdr:$lo)),
+          (ORI GPR:$hi, tglobaladdr:$lo)>;
+// gp_rel relocs
+def : Pat<(add GPR:$gp, (MYRISCVXGPRel tglobaladdr:$in)),
+          (ORI GPR:$gp, tglobaladdr:$in)>;
+
+//@ wrapper_pic
+class WrapperPat<SDNode node, Instruction ORiOp, RegisterClass RC>:
+      Pat<(MYRISCVXWrapper RC:$gp, node:$in),
+          (ORiOp RC:$gp, node:$in)>;
+
+def : WrapperPat<tglobaladdr, ORI, GPR>;

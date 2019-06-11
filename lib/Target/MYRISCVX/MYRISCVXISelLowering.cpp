@@ -60,6 +60,8 @@ MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
                                                const MYRISCVXSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI), ABI(TM.getABI()) {
 
+  setOperationAction(ISD::GlobalAddress,      MVT::i32,   Custom);
+
 }
 
 const MYRISCVXTargetLowering *MYRISCVXTargetLowering::create(const MYRISCVXTargetMachine &TM,
@@ -172,10 +174,67 @@ MYRISCVXTargetLowering::LowerReturn(SDValue Chain,
 }
 
 
+SDValue MYRISCVXTargetLowering::
+LowerOperation(SDValue Op, SelectionDAG &DAG) const
+{
+  switch (Op.getOpcode())
+  {
+    case ISD::GlobalAddress    : return lowerGlobalAddress(Op, DAG);
+  }
+  return SDValue();
+}
+
+
+SDValue MYRISCVXTargetLowering::lowerGlobalAddress(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  //@lowerGlobalAddress }
+  SDLoc DL(Op);
+  const MYRISCVXTargetObjectFile *TLOF =
+      static_cast<const MYRISCVXTargetObjectFile *>(
+          getTargetMachine().getObjFileLowering());
+  //@lga 1 {
+  EVT Ty = Op.getValueType();
+  GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
+  const GlobalValue *GV = N->getGlobal();
+  //@lga 1 }
+
+  if (!isPositionIndependent()) {
+    const GlobalObject *GO = GV->getBaseObject();
+    //@ %gp_rel relocation
+    if (TLOF->IsGlobalInSmallSection(GO, getTargetMachine())) {
+      SDValue GA = DAG.getTargetGlobalAddress(GO, DL, MVT::i32, 0,
+                                              MYRISCVXII::MO_GPREL);
+      SDValue GPRelNode = DAG.getNode(MYRISCVXISD::GPRel, DL,
+                                      DAG.getVTList(MVT::i32), GA);
+      SDValue GPReg = DAG.getRegister(MYRISCVX::GP, MVT::i32);
+      return DAG.getNode(ISD::ADD, DL, MVT::i32, GPReg, GPRelNode);
+    }
+
+    //@ %hi/%lo relocation
+    return getAddrNonPIC(N, Ty, DAG);
+  }
+
+  if (GV->hasInternalLinkage() || (GV->hasLocalLinkage() && !isa<Function>(GV)))
+    return getAddrLocal(N, Ty, DAG);
+
+  //@large section
+  const GlobalObject *GO = GV->getBaseObject();
+  if (!TLOF->IsGlobalInSmallSection(GO, getTargetMachine()))
+    return getAddrGlobalLargeGOT(
+        N, Ty, DAG, MYRISCVXII::MO_GOT_HI16, MYRISCVXII::MO_GOT_LO16,
+        DAG.getEntryNode(),
+        MachinePointerInfo::getGOT(DAG.getMachineFunction()));
+  return getAddrGlobal(
+      N, Ty, DAG, MYRISCVXII::MO_GOT, DAG.getEntryNode(),
+      MachinePointerInfo::getGOT(DAG.getMachineFunction()));
+}
+
+
+
 MYRISCVXTargetLowering::MYRISCVXCC::MYRISCVXCC(
-  CallingConv::ID CC, bool IsLP32_, CCState &Info,
-  MYRISCVXCC::SpecialCallingConvType SpecialCallingConv_)
-  : CCInfo(Info), CallConv(CC), IsLP32(IsLP32_) {
+    CallingConv::ID CC, bool IsLP32_, CCState &Info,
+    MYRISCVXCC::SpecialCallingConvType SpecialCallingConv_)
+    : CCInfo(Info), CallConv(CC), IsLP32(IsLP32_) {
   // Pre-allocate reserved argument area.
   CCInfo.AllocateStack(reservedArgArea(), 1);
 }
@@ -201,6 +260,7 @@ analyzeReturn(const SmallVectorImpl<Ty> &RetVals, bool IsSoftFloat,
   }
 }
 
+
 void MYRISCVXTargetLowering::MYRISCVXCC::
 analyzeCallResult(const SmallVectorImpl<ISD::InputArg> &Ins, bool IsSoftFloat,
                   const SDNode *CallNode, const Type *RetTy) const {
@@ -224,4 +284,24 @@ MVT MYRISCVXTargetLowering::MYRISCVXCC::getRegVT(MVT VT, const Type *OrigTy,
     return VT;
 
   return VT;
+}
+
+
+SDValue MYRISCVXTargetLowering::getGlobalReg(SelectionDAG &DAG, EVT Ty) const {
+  MYRISCVXFunctionInfo *FI = DAG.getMachineFunction().getInfo<MYRISCVXFunctionInfo>();
+  return DAG.getRegister(FI->getGlobalBaseReg(), Ty);
+}
+
+//@getTargetNode(GlobalAddressSDNode
+SDValue MYRISCVXTargetLowering::getTargetNode(GlobalAddressSDNode *N, EVT Ty,
+                                              SelectionDAG &DAG,
+                                              unsigned Flag) const {
+  return DAG.getTargetGlobalAddress(N->getGlobal(), SDLoc(N), Ty, 0, Flag);
+}
+
+//@getTargetNode(ExternalSymbolSDNode
+SDValue MYRISCVXTargetLowering::getTargetNode(ExternalSymbolSDNode *N, EVT Ty,
+                                              SelectionDAG &DAG,
+                                              unsigned Flag) const {
+  return DAG.getTargetExternalSymbol(N->getSymbol(), Ty, Flag);
 }

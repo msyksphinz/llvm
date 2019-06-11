@@ -53,6 +53,16 @@ bool MYRISCVXDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   return Ret;
 }
 
+/// getGlobalBaseReg - Output the instructions required to put the
+/// GOT address into a register.
+SDNode *MYRISCVXDAGToDAGISel::getGlobalBaseReg() {
+  unsigned GlobalBaseReg = MF->getInfo<MYRISCVXFunctionInfo>()->getGlobalBaseReg();
+  return CurDAG->getRegister(GlobalBaseReg, getTargetLowering()->getPointerTy(
+      CurDAG->getDataLayout()))
+      .getNode();
+}
+
+
 //@SelectAddr {
 /// ComplexPattern used on MYRISCVXInstrInfo
 /// Used on MYRISCVX Load/Store instructions
@@ -69,10 +79,25 @@ SelectAddr(SDValue Addr, SDValue &Base, SDValue &Offset) {
     return true;
   }
 
+  // on PIC code Load GA
+  if (Addr.getOpcode() == MYRISCVXISD::Wrapper) {
+    Base   = Addr.getOperand(0);
+    Offset = Addr.getOperand(1);
+    return true;
+  }
+
+  //@static
+  if (TM.getRelocationModel() != Reloc::PIC_) {
+    if ((Addr.getOpcode() == ISD::TargetExternalSymbol ||
+        Addr.getOpcode() == ISD::TargetGlobalAddress))
+      return false;
+  }
+
   Base   = Addr;
   Offset = CurDAG->getTargetConstant(0, DL, ValTy);
   return true;
 }
+
 
 //@Select {
 /// Select instructions not customized! Used for
@@ -96,8 +121,11 @@ void MYRISCVXDAGToDAGISel::Select(SDNode *Node) {
     return;
 
   switch(Opcode) {
+    // Get target GOT address.
+    case ISD::GLOBAL_OFFSET_TABLE:
+      ReplaceNode(Node, getGlobalBaseReg());
+      return;
     default: break;
-
   }
 
   // Select the default instruction

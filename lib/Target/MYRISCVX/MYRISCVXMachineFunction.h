@@ -31,6 +31,7 @@ class MYRISCVXFunctionInfo : public MachineFunctionInfo {
  public:
   MYRISCVXFunctionInfo(MachineFunction& MF)
       : MF(MF),
+        GlobalBaseReg(0),
         SRetReturnReg(0), CallsEhReturn(false), CallsEhDwarf(false),
         VarArgsFrameIndex(0),
         MaxCallFrameSize(0),
@@ -68,10 +69,19 @@ class MYRISCVXFunctionInfo : public MachineFunctionInfo {
   unsigned getMaxCallFrameSize() const { return MaxCallFrameSize; }
   void setMaxCallFrameSize(unsigned S) { MaxCallFrameSize = S; }
 
+  bool globalBaseRegFixed() const;
+  bool globalBaseRegSet() const;
+  unsigned getGlobalBaseReg();
+
  private:
   virtual void anchor();
 
   MachineFunction& MF;
+
+  /// GlobalBaseReg - keeps track of the virtual register initialized for
+  /// use as the global base register. This is used for PIC in some PIC
+  /// relocation models.
+  unsigned GlobalBaseReg;
 
   /// SRetReturnReg - Some subtargets require that sret lowering includes
   /// returning the value of the returned struct in a register. This field
@@ -97,6 +107,8 @@ class MYRISCVXFunctionInfo : public MachineFunctionInfo {
   int VarArgsFrameIndex;
 
   unsigned MaxCallFrameSize;
+
+  int GPFI; // Index of the frame object for restoring $gp
 
   bool EmitNOAT;
 };
