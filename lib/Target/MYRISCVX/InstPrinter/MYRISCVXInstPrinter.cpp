@@ -85,7 +85,6 @@ printMemOperand(const MCInst *MI, int opNum, raw_ostream &O) {
 }
 
 // The DAG data node, mem_ea of MYRISCVXInstrInfo.td, cannot be disabled by
-// ch7_1, only opcode node can be disabled.
 void MYRISCVXInstPrinter::
 printMemOperandEA(const MCInst *MI, int opNum, raw_ostream &O) {
   // when using stack locations for not load/store instructions
