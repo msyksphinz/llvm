@@ -59,9 +59,19 @@ const char *MYRISCVXTargetLowering::getTargetNodeName(unsigned Opcode) const {
 MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
                                                const MYRISCVXSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI), ABI(TM.getABI()) {
+  // MYRISCVX does not have i1 type, so use i32 for
+  // setcc operations results (slt, sgt, ...).
+  setBooleanContents(ZeroOrOneBooleanContent);
+  setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
 
   setOperationAction(ISD::GlobalAddress,      MVT::i32,   Custom);
 
+  // Load extented operations for i1 types must be promoted
+  for (MVT VT : MVT::integer_valuetypes()) {
+    setLoadExtAction(ISD::EXTLOAD,  VT, MVT::i1,  Promote);
+    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i1,  Promote);
+    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1,  Promote);
+  }
 }
 
 const MYRISCVXTargetLowering *MYRISCVXTargetLowering::create(const MYRISCVXTargetMachine &TM,
