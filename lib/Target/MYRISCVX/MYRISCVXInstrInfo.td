@@ -80,6 +80,22 @@ def immZExt5 : ImmLeaf<i32, [{return Imm == (Imm & 0x1f);}]>;
 
 def shamt : Operand<i32>;
 
+// JAL
+def brtarget20    : Operand<OtherVT> {
+  let EncoderMethod = "getBranch20TargetOpValue";
+  let OperandType   = "OPERAND_PCREL";
+  let DecoderMethod = "DecodeBranch20Target";
+}
+
+
+// BEQ, BNE
+def brtarget12    : Operand<OtherVT> {
+  let EncoderMethod = "getBranch12TargetOpValue";
+  let OperandType   = "OPERAND_PCREL";
+  let DecoderMethod = "DecodeBranch12Target";
+}
+
+
 def MYRISCVXMemAsmOperand : AsmOperandClass {
   let Name = "Mem";
   let ParserMethod = "parseMemOperand";
@@ -214,6 +230,35 @@ class ArithLogicU<bits<7> opcode,
 }
 
 
+// Branch instructions with 2 register operands.
+class CBranch12<bits<7> opcode, bits<3> funct3,
+                string instr_asm,
+                PatFrag cond_op, RegisterClass RC> :
+  MYRISCVX_B<opcode, funct3, (outs), (ins RC:$rs1, RC:$rs2, brtarget12:$imm12),
+  !strconcat(instr_asm, "\t$rs1, $rs2, $imm12"),
+  [], IIAlu> {
+    let isBranch = 1;
+    let isTerminator = 1;
+}
+
+
+// Unconditional Branch
+class JumpOffset<bits<7> opcode, string instr_asm, RegisterClass RC>:
+  MYRISCVX_J<opcode, (outs RC:$rd), (ins brtarget20:$addr),
+  !strconcat(instr_asm, "\t$rd, $addr"), [], IIAlu> {
+    let isBranch = 1;
+    let isTerminator = 1;
+    let isBarrier = 1;
+    let hasDelaySlot = 0;
+}
+
+
+class JumpOffsetX0<bits<7> opcode, string instr_asm>:
+  JumpOffset<opcode, instr_asm, GPR> {
+    let rd = 0;
+}
+
+
 // Return instruction
 class RetGPR<bits<7> opcode, bits<3> funct3, string instr_asm, RegisterClass RC>:
   MYRISCVX_I<opcode, funct3, (outs), (ins RC:$rs1),
@@ -310,17 +355,8 @@ def SLTIU : SetCC_I<0b0010011, 0b011, "sltiu", setult, simm12, immSExt12, GPR>;
 def SLT   : SetCC_R<0b0110011, 0b010, 0b0000000, "slt",  setlt,  GPR>;
 def SLTU  : SetCC_R<0b0110011, 0b011, 0b0000000, "sltu", setult, GPR>;
 
-// Define pattern expansions for setcc operations that aren't directly
-// handled by a RISC-V instruction.
-def : Pat<(seteq  GPR:$rs1, GPR:$rs2), (SLTIU (XOR GPR:$rs1, GPR:$rs2), 1)>;
-def : Pat<(setne  GPR:$rs1, GPR:$rs2), (SLTU ZERO, (XOR GPR:$rs1, GPR:$rs2))>;
-def : Pat<(setugt GPR:$rs1, GPR:$rs2), (SLTU GPR:$rs2, GPR:$rs1)>;
-def : Pat<(setuge GPR:$rs1, GPR:$rs2), (XORI (SLTU GPR:$rs1, GPR:$rs2), 1)>;
-def : Pat<(setule GPR:$rs1, GPR:$rs2), (XORI (SLTU GPR:$rs2, GPR:$rs1), 1)>;
-def : Pat<(setgt  GPR:$rs1, GPR:$rs2), (SLT GPR:$rs2, GPR:$rs1)>;
-def : Pat<(setge  GPR:$rs1, GPR:$rs2), (XORI (SLT GPR:$rs1, GPR:$rs2), 1)>;
-def : Pat<(setle  GPR:$rs1, GPR:$rs2), (XORI (SLT GPR:$rs2, GPR:$rs1), 1)>;
-
+def JAL : JumpOffset<0b1101111, "jal", GPR>;
+def J   : JumpOffsetX0<0b1101111, "j">;
 def JR  : ArithLogicI<0b1100111, 0b000, "jr", add, simm12, immSExt12, GPR>;
 def RET : RetGPR<0b1100111, 0b000, "ret", GPR>;
 
@@ -338,6 +374,13 @@ defm SB     : StoreM32<0b0100011, 0b000, "sb",  truncstorei8_a>;
 defm LH     : LoadM32 <0b0000011, 0b001, "lh",  sextloadi16_a>;
 defm LHU    : LoadM32 <0b0000011, 0b101, "lhu", zextloadi16_a>;
 defm SH     : StoreM32<0b0100011, 0b001, "sh",  truncstorei16_a>;
+
+def BEQ     : CBranch12<0b1100011, 0b000, "beq" , seteq,  GPR>;
+def BNE     : CBranch12<0b1100011, 0b001, "bne" , setne,  GPR>;
+def BLT     : CBranch12<0b1100011, 0b100, "blt" , setlt,  GPR>;
+def BGE     : CBranch12<0b1100011, 0b101, "bge" , setge,  GPR>;
+def BLTU    : CBranch12<0b1100011, 0b110, "bltu", setult, GPR>;
+def BGEU    : CBranch12<0b1100011, 0b111, "bgeu", setuge, GPR>;
 
 //===----------------------------------------------------------------------===//
 //  Arbitrary patterns that map to one or more instructions
@@ -370,7 +413,6 @@ class WrapperPat<SDNode node, Instruction ORiOp, RegisterClass RC>:
           (ORiOp RC:$gp, node:$in)>;
 
 def : WrapperPat<tglobaladdr, ORI, GPR>;
-
 def : Pat<(i32 (zextloadi1  addr:$src)), (LBU addr:$src)>;
 def : Pat<(i32 (zextloadi8  addr:$src)), (LBU addr:$src)>;
 def : Pat<(i32 (zextloadi16 addr:$src)), (LHU addr:$src)>;
@@ -385,6 +427,58 @@ def : Pat<(i32 (extloadi16 addr:$src)), (LHU addr:$src)>;
 
 def : Pat<(sext_inreg GPR:$ra, i8),  (SRAI (SLLI GPR:$ra, 24), 24)>;
 def : Pat<(sext_inreg GPR:$ra, i16), (SRAI (SLLI GPR:$ra, 16), 16)>;
+
+def : Pat<(br bb:$simm20), (J bb:$simm20)>;
+
+// Define pattern expansions for setcc operations that aren't directly
+// handled by a RISC-V instruction.
+def : Pat<(seteq  GPR:$rs1, GPR:$rs2), (SLTIU (XOR GPR:$rs1, GPR:$rs2), 1)>;
+def : Pat<(setne  GPR:$rs1, GPR:$rs2), (SLTU ZERO, (XOR GPR:$rs1, GPR:$rs2))>;
+def : Pat<(setugt GPR:$rs1, GPR:$rs2), (SLTU GPR:$rs2, GPR:$rs1)>;
+def : Pat<(setuge GPR:$rs1, GPR:$rs2), (XORI (SLTU GPR:$rs1, GPR:$rs2), 1)>;
+def : Pat<(setule GPR:$rs1, GPR:$rs2), (XORI (SLTU GPR:$rs2, GPR:$rs1), 1)>;
+def : Pat<(setgt  GPR:$rs1, GPR:$rs2), (SLT GPR:$rs2, GPR:$rs1)>;
+def : Pat<(setge  GPR:$rs1, GPR:$rs2), (XORI (SLT GPR:$rs1, GPR:$rs2), 1)>;
+def : Pat<(setle  GPR:$rs1, GPR:$rs2), (XORI (SLT GPR:$rs2, GPR:$rs1), 1)>;
+
+// brcond for slt instruction
+multiclass BrcondPatsSlt<RegisterClass RC, Instruction BEQOp, Instruction BNEOp,
+                      Instruction SLTOp, Instruction SLTuOp, Instruction SLTiOp,
+                      Instruction SLTiuOp, Register ZEROReg> {
+def : Pat<(brcond (i32 (setne RC:$lhs, 0)), bb:$dst),
+              (BNEOp RC:$lhs, ZEROReg, bb:$dst)>;
+def : Pat<(brcond (i32 (seteq RC:$lhs, 0)), bb:$dst),
+              (BEQOp RC:$lhs, ZEROReg, bb:$dst)>;
+
+def : Pat<(brcond (i32 (seteq RC:$lhs, RC:$rhs)), bb:$dst),
+              (BEQOp RC:$lhs, RC:$rhs, bb:$dst)>;
+def : Pat<(brcond (i32 (setueq RC:$lhs, RC:$rhs)), bb:$dst),
+              (BEQOp RC:$lhs, RC:$rhs, bb:$dst)>;
+def : Pat<(brcond (i32 (setne RC:$lhs, RC:$rhs)), bb:$dst),
+              (BNEOp RC:$lhs, RC:$rhs, bb:$dst)>;
+def : Pat<(brcond (i32 (setune RC:$lhs, RC:$rhs)), bb:$dst),
+              (BNEOp RC:$lhs, RC:$rhs, bb:$dst)>;
+def : Pat<(brcond (i32 (setlt RC:$lhs, RC:$rhs)), bb:$dst),
+              (BNE (SLTOp RC:$lhs, RC:$rhs), ZERO, bb:$dst)>;
+def : Pat<(brcond (i32 (setult RC:$lhs, RC:$rhs)), bb:$dst),
+              (BNE (SLTuOp RC:$lhs, RC:$rhs), ZERO, bb:$dst)>;
+def : Pat<(brcond (i32 (setgt RC:$lhs, RC:$rhs)), bb:$dst),
+              (BNE (SLTOp RC:$rhs, RC:$lhs), ZERO, bb:$dst)>;
+def : Pat<(brcond (i32 (setugt RC:$lhs, RC:$rhs)), bb:$dst),
+              (BNE (SLTuOp RC:$rhs, RC:$lhs), ZERO, bb:$dst)>;
+def : Pat<(brcond (i32 (setle RC:$lhs, RC:$rhs)), bb:$dst),
+              (BEQ (SLTOp RC:$rhs, RC:$lhs), ZERO, bb:$dst)>;
+def : Pat<(brcond (i32 (setule RC:$lhs, RC:$rhs)), bb:$dst),
+              (BEQ (SLTuOp RC:$rhs, RC:$lhs), ZERO, bb:$dst)>;
+def : Pat<(brcond (i32 (setge RC:$lhs, RC:$rhs)), bb:$dst),
+              (BEQ (SLTOp RC:$lhs, RC:$rhs), ZERO, bb:$dst)>;
+def : Pat<(brcond (i32 (setuge RC:$lhs, RC:$rhs)), bb:$dst),
+              (BEQ (SLTuOp RC:$lhs, RC:$rhs), ZERO, bb:$dst)>;
+def : Pat<(brcond RC:$cond, bb:$dst),
+              (BNEOp RC:$cond, ZEROReg, bb:$dst)>;
+}
+
+defm : BrcondPatsSlt<GPR, BEQ, BNE, SLT, SLTU, SLTI, SLTIU, ZERO>;
 
 // // peepholes
 // def : Pat<(store (i32 0), addr:$dst), (SW ZERO, addr:$dst)>;

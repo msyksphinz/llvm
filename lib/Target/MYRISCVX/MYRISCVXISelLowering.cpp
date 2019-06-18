@@ -50,7 +50,7 @@ const char *MYRISCVXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     case MYRISCVXISD::DivRem:            return "MYRISCVXISD::DivRem";
     case MYRISCVXISD::DivRemU:           return "MYRISCVXISD::DivRemU";
     case MYRISCVXISD::Wrapper:           return "MYRISCVXISD::Wrapper";
-    default:                         return NULL;
+    default:                             return NULL;
   }
 }
 //@3_1 1 }
@@ -72,6 +72,10 @@ MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
     setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i1,  Promote);
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1,  Promote);
   }
+
+  // Branch Instructions
+  setOperationAction(ISD::BR_CC, MVT::i32, Expand);
+
 }
 
 const MYRISCVXTargetLowering *MYRISCVXTargetLowering::create(const MYRISCVXTargetMachine &TM,
