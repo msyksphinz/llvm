@@ -150,6 +150,28 @@ getExprOpValue(const MCExpr *Expr,SmallVectorImpl<MCFixup> &Fixups,
   return 0;
 }
 
+/// getBranch12TargetOpValue - Return binary encoding of the branch
+/// target operand. If the machine operand requires relocation,
+/// record the relocation and return zero.
+unsigned MYRISCVXMCCodeEmitter::
+getBranch12TargetOpValue(const MCInst &MI, unsigned OpNo,
+                         SmallVectorImpl<MCFixup> &Fixups,
+                         const MCSubtargetInfo &STI) const {
+  return 0;
+}
+
+
+/// getBranch20TargetOpValue - Return binary encoding of the branch
+/// target operand. If the machine operand requires relocation,
+/// record the relocation and return zero.
+unsigned MYRISCVXMCCodeEmitter::
+getBranch20TargetOpValue(const MCInst &MI, unsigned OpNo,
+                         SmallVectorImpl<MCFixup> &Fixups,
+                         const MCSubtargetInfo &STI) const {
+  return 0;
+}
+
+
 /// getMachineOpValue - Return binary encoding of operand. If the machine
 /// operand requires relocation, record the relocation and return zero.
 unsigned MYRISCVXMCCodeEmitter::
