@@ -231,7 +231,7 @@ class ArithLogicU<bits<7> opcode,
 
 
 // Branch instructions with 2 register operands.
-class CBranch12<bits<7> opcode, bits<3> funct3,
+class CondBranch12<bits<7> opcode, bits<3> funct3,
                 string instr_asm,
                 PatFrag cond_op, RegisterClass RC> :
   MYRISCVX_B<opcode, funct3, (outs), (ins RC:$rs1, RC:$rs2, brtarget12:$imm12),
@@ -375,12 +375,12 @@ defm LH     : LoadM32 <0b0000011, 0b001, "lh",  sextloadi16_a>;
 defm LHU    : LoadM32 <0b0000011, 0b101, "lhu", zextloadi16_a>;
 defm SH     : StoreM32<0b0100011, 0b001, "sh",  truncstorei16_a>;
 
-def BEQ     : CBranch12<0b1100011, 0b000, "beq" , seteq,  GPR>;
-def BNE     : CBranch12<0b1100011, 0b001, "bne" , setne,  GPR>;
-def BLT     : CBranch12<0b1100011, 0b100, "blt" , setlt,  GPR>;
-def BGE     : CBranch12<0b1100011, 0b101, "bge" , setge,  GPR>;
-def BLTU    : CBranch12<0b1100011, 0b110, "bltu", setult, GPR>;
-def BGEU    : CBranch12<0b1100011, 0b111, "bgeu", setuge, GPR>;
+def BEQ     : CondBranch12<0b1100011, 0b000, "beq" , seteq,  GPR>;
+def BNE     : CondBranch12<0b1100011, 0b001, "bne" , setne,  GPR>;
+def BLT     : CondBranch12<0b1100011, 0b100, "blt" , setlt,  GPR>;
+def BGE     : CondBranch12<0b1100011, 0b101, "bge" , setge,  GPR>;
+def BLTU    : CondBranch12<0b1100011, 0b110, "bltu", setult, GPR>;
+def BGEU    : CondBranch12<0b1100011, 0b111, "bgeu", setuge, GPR>;
 
 //===----------------------------------------------------------------------===//
 //  Arbitrary patterns that map to one or more instructions
