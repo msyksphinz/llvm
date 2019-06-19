@@ -15,11 +15,18 @@
 // MYRISCVX profiles and nodes
 //===----------------------------------------------------------------------===//
 
+def SDT_MYRISCVXSelectCC   : SDTypeProfile<1, 5, [SDTCisSameAs<1, 2>,
+                                               SDTCisSameAs<0, 4>,
+                                               SDTCisSameAs<4, 5>]>;
+
 def SDT_MYRISCVXRet : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 
 // Return
 def MYRISCVXRet : SDNode<"MYRISCVXISD::Ret", SDTNone,
                          [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
+def SelectCC : SDNode<"MYRISCVXISD::SELECT_CC", SDT_MYRISCVXSelectCC,
+                      [SDNPInGlue]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction format superclass
@@ -381,6 +388,21 @@ def BLT     : CondBranch12<0b1100011, 0b100, "blt" , setlt,  GPR>;
 def BGE     : CondBranch12<0b1100011, 0b101, "bge" , setge,  GPR>;
 def BLTU    : CondBranch12<0b1100011, 0b110, "bltu", setult, GPR>;
 def BGEU    : CondBranch12<0b1100011, 0b111, "bgeu", setuge, GPR>;
+
+let usesCustomInserter = 1 in
+class SelectCC_rrirr<RegisterClass RC, RegisterClass cmpty>
+    : MYRISCVXPseudo<(outs RC:$dst),
+             (ins cmpty:$lhs, cmpty:$rhs, simm12:$imm,
+              RC:$truev, RC:$falsev),
+              "",
+             [(set RC:$dst,
+               (SelectCC cmpty:$lhs,
+                         cmpty:$rhs,
+                         (i32 imm:$imm),
+                         RC:$truev,
+                         RC:$falsev))]>;
+
+def Select_GPR_Using_CC_GPR : SelectCC_rrirr<GPR, GPR>;
 
 //===----------------------------------------------------------------------===//
 //  Arbitrary patterns that map to one or more instructions
