@@ -76,6 +76,11 @@ namespace llvm {
                                   const TargetRegisterInfo *TRI,
                                   int64_t Offset) const = 0;
 
+    void copyPhysReg(MachineBasicBlock &MBB,
+                     MachineBasicBlock::iterator MBBI,
+                     const DebugLoc &DL, unsigned DstReg,
+                     unsigned SrcReg, bool KillSrc) const override;
+
     MachineMemOperand *GetMemOperand(MachineBasicBlock &MBB, int FI,
                                      MachineMemOperand::Flags Flags) const;
    protected:
