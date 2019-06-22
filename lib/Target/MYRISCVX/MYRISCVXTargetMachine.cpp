@@ -155,6 +155,7 @@ class MYRISCVXPassConfig : public TargetPassConfig {
   }
 
   bool addInstSelector() override;
+  void addPreEmitPass() override;
 
 };
 } // namespace
@@ -168,4 +169,14 @@ TargetPassConfig *MYRISCVXTargetMachine::createPassConfig(PassManagerBase &PM) {
 bool MYRISCVXPassConfig::addInstSelector() {
   addPass(createMYRISCVXSEISelDag(getMYRISCVXTargetMachine(), getOptLevel()));
   return false;
+}
+
+
+// Implemented by targets that want to run passes immediately before
+// machine code is emitted. return true if -print-machineinstrs should
+// print out the code after the passes.
+void MYRISCVXPassConfig::addPreEmitPass() {
+  MYRISCVXTargetMachine &TM = getMYRISCVXTargetMachine();
+  addPass (createMYRISCVXDelJmpPass(TM));
+  return;
 }
