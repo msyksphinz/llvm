@@ -189,10 +189,35 @@ namespace llvm {
       void analyzeReturn(const SmallVectorImpl<ISD::OutputArg> &Outs,
                          bool IsSoftFloat, const Type *RetTy) const;
 
+      void analyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
+                                  bool IsSoftFloat,
+                                  Function::const_arg_iterator FuncArg);
+
       const CCState &getCCInfo() const { return CCInfo; }
+
+      /// regSize - Size (in number of bits) of integer registers.
+      unsigned regSize() const { return 4; }
+
+      /// Return pointer to array of integer argument registers.
+      const ArrayRef<MCPhysReg> intArgRegs() const;
+
+      /// numIntArgRegs - Number of integer registers available for calls.
+      unsigned numIntArgRegs() const;
+
 
       /// hasByValArg - Returns true if function has byval arguments.
       bool hasByValArg() const { return !ByValArgs.empty(); }
+
+      void handleByValArg(unsigned ValNo, MVT ValVT, MVT LocVT,
+                          CCValAssign::LocInfo LocInfo,
+                          ISD::ArgFlagsTy ArgFlags);
+
+      /// useRegsForByval - Returns true if the calling convention allows the
+      /// use of registers to pass byval arguments.
+      bool useRegsForByval() const { return CallConv != CallingConv::Fast; }
+
+      /// Return the function that analyzes fixed argument list functions.
+      llvm::CCAssignFn *fixedArgFn() const;
 
       /// reservedArgArea - The size of the area the caller reserves for
       /// register arguments. This is 16-byte if ABI is LP32.
@@ -201,6 +226,9 @@ namespace llvm {
       typedef SmallVectorImpl<ByValArgInfo>::const_iterator byval_iterator;
       byval_iterator byval_begin() const { return ByValArgs.begin(); }
       byval_iterator byval_end() const { return ByValArgs.end(); }
+
+      void allocateRegs(ByValArgInfo &ByVal, unsigned ByValSize,
+                        unsigned Align);
 
      private:
 
@@ -251,11 +279,11 @@ namespace llvm {
 
 	//- must be exist even without function all
     SDValue
-        LowerFormalArguments(SDValue Chain,
-                             CallingConv::ID CallConv, bool IsVarArg,
-                             const SmallVectorImpl<ISD::InputArg> &Ins,
-                             const SDLoc &dl, SelectionDAG &DAG,
-                             SmallVectorImpl<SDValue> &InVals) const override;
+    LowerFormalArguments(SDValue Chain,
+                         CallingConv::ID CallConv, bool IsVarArg,
+                         const SmallVectorImpl<ISD::InputArg> &Ins,
+                         const SDLoc &dl, SelectionDAG &DAG,
+                         SmallVectorImpl<SDValue> &InVals) const override;
 
     SDValue LowerReturn(SDValue Chain,
                         CallingConv::ID CallConv, bool IsVarArg,
@@ -269,9 +297,25 @@ namespace llvm {
     EmitInstrWithCustomInserter(MachineInstr &MI,
                                 MachineBasicBlock *BB) const override;
 
+    /// copyByValArg - Copy argument registers which were used to pass a byval
+    /// argument to the stack. Create a stack frame object for the byval
+    /// argument.
+    void copyByValRegs(SDValue Chain, const SDLoc &DL,
+                       std::vector<SDValue> &OutChains, SelectionDAG &DAG,
+                       const ISD::ArgFlagsTy &Flags,
+                       SmallVectorImpl<SDValue> &InVals,
+                       const Argument *FuncArg,
+                       const MYRISCVXCC &CC, const ByValArgInfo &ByVal) const;
+
+    SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
+                      SmallVectorImpl<SDValue> &InVals) const override;
+
   };
   const MYRISCVXTargetLowering *
       createMYRISCVXSETargetLowering(const MYRISCVXTargetMachine &TM, const MYRISCVXSubtarget &STI);
+
+
+
 }
 
 #endif // MYRISCVXISELLOWERING_H
