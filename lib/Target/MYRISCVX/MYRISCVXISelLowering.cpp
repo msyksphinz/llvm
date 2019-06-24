@@ -451,13 +451,17 @@ analyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Args,
   llvm::CCAssignFn *FixedFn = fixedArgFn();
   unsigned CurArgIdx = 0;
   for (unsigned I = 0; I != NumArgs; ++I) {
+    LLVM_DEBUG(dbgs() << "analyzeFormalArguments::I = " << I << '\n');
     MVT ArgVT = Args[I].VT;
     ISD::ArgFlagsTy ArgFlags = Args[I].Flags;
+    LLVM_DEBUG(dbgs() << "  analyzeFormalArguments::isOrigArg = " << Args[I].isOrigArg() << '\n');
     if (Args[I].isOrigArg()) {
       std::advance(FuncArg, Args[I].getOrigArgIndex() - CurArgIdx);
       CurArgIdx = Args[I].getOrigArgIndex();
+    } else {
+      CurArgIdx = Args[I].getOrigArgIndex();
     }
-    CurArgIdx = Args[I].OrigArgIndex;
+    LLVM_DEBUG(dbgs() << "  analyzeFormalArguments::isByVal = " << ArgFlags.isByVal() << '\n');
     if (ArgFlags.isByVal()) {
       handleByValArg(I, ArgVT, ArgVT, CCValAssign::Full, ArgFlags);
       continue;
@@ -724,9 +728,9 @@ MYRISCVXTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 // ---
 //===----------------------------------------------------------------------===//
 // Passed in stack only.
-static bool CC_MYRISCVXS32(unsigned ValNo, MVT ValVT, MVT LocVT,
-                           CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                           CCState &State) {
+static bool CC_MYRISCVX_STACK32(unsigned ValNo, MVT ValVT, MVT LocVT,
+                                CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                                CCState &State) {
   // Do not process byval args here.
   if (ArgFlags.isByVal())
     return true;
@@ -748,11 +752,14 @@ static bool CC_MYRISCVXS32(unsigned ValNo, MVT ValVT, MVT LocVT,
 }
 
 
-// Passed first two i32 arguments in registers and others in stack.
-static bool CC_MYRISCVXO32(unsigned ValNo, MVT ValVT, MVT LocVT,
-                           CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                           CCState &State) {
-  static const MCPhysReg IntRegs[] = { MYRISCVX::A0, MYRISCVX::A1 };
+// Passed first eight i32 arguments in registers and others in stack.
+static bool CC_MYRISCVX_LP32(unsigned ValNo, MVT ValVT, MVT LocVT,
+                             CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                             CCState &State) {
+  static const MCPhysReg IntRegs[] = { MYRISCVX::A0, MYRISCVX::A1,
+                                       MYRISCVX::A2, MYRISCVX::A3,
+                                       MYRISCVX::A4, MYRISCVX::A5,
+                                       MYRISCVX::A6, MYRISCVX::A7 };
   // Do not process byval args here.
   if (ArgFlags.isByVal())
     return true;
@@ -766,44 +773,33 @@ static bool CC_MYRISCVXO32(unsigned ValNo, MVT ValVT, MVT LocVT,
     else
       LocInfo = CCValAssign::AExt;
   }
+
   unsigned Reg;
-  // f32 and f64 are allocated in A0, A1 when either of the following
-  // is true: function is vararg, argument is 3rd or higher, there is previous
-  // argument which is not f32 or f64.
-  bool AllocateFloatsInIntReg = true;
-  unsigned OrigAlign = ArgFlags.getOrigAlign();
-  bool isI64 = (ValVT == MVT::i32 && OrigAlign == 8);
-  if (ValVT == MVT::i32 || (ValVT == MVT::f32 && AllocateFloatsInIntReg)) {
+  if (ValVT == MVT::i32) {
     Reg = State.AllocateReg(IntRegs);
-    // If this is the first part of an i64 arg,
-    // the allocated register must be A0.
-    if (isI64 && (Reg == MYRISCVX::A1))
-      Reg = State.AllocateReg(IntRegs);
     LocVT = MVT::i32;
-  } else if (ValVT == MVT::f64 && AllocateFloatsInIntReg) {
-    // Allocate int register. If first
-    // available register is MYRISCVX::A1, shadow it too.
-    Reg = State.AllocateReg(IntRegs);
-    if (Reg == MYRISCVX::A1)
-      Reg = State.AllocateReg(IntRegs);
-    State.AllocateReg(IntRegs);
-    LocVT = MVT::i32;
-  } else
+  } else {
     llvm_unreachable("Cannot handle this ValVT.");
+  }
+
+  LLVM_DEBUG (dbgs() << "State.AllocateReg Result = " << Reg << '\n');
+
   if (!Reg) {
-    unsigned Offset = State.AllocateStack(ValVT.getSizeInBits() >> 3,
-                                          OrigAlign);
+    unsigned OrigAlign = ArgFlags.getOrigAlign();
+    unsigned Offset    = State.AllocateStack(ValVT.getSizeInBits() >> 3,
+                                             OrigAlign);
     State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
-  } else
+  } else {
     State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+  }
+
   return false;
 }
 
 
 llvm::CCAssignFn *MYRISCVXTargetLowering::MYRISCVXCC::fixedArgFn() const {
   if (IsLP32)
-    return CC_MYRISCVXO32;
-
-  else // IsS32
-    return CC_MYRISCVXS32;
+    return CC_MYRISCVX_LP32;
+  else // otherwise
+    return CC_MYRISCVX_STACK32;
 }
