@@ -261,8 +261,13 @@ class JumpOffset<bits<7> opcode, string instr_asm, RegisterClass RC>:
 
 
 class JumpOffsetX0<bits<7> opcode, string instr_asm>:
-  JumpOffset<opcode, instr_asm, GPR> {
+  MYRISCVX_J<opcode, (outs), (ins brtarget20:$addr),
+  !strconcat(instr_asm, "\t$addr"), [], IIAlu> {
     let rd = 0;
+    let isBranch = 1;
+    let isTerminator = 1;
+    let isBarrier = 1;
+    let hasDelaySlot = 0;
 }
 
 
