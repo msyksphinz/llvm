@@ -400,7 +400,8 @@ class SelectCC_rrirr<RegisterClass RC, RegisterClass cmpty>
                          cmpty:$rhs,
                          (i32 imm:$imm),
                          RC:$truev,
-                         RC:$falsev))]>;
+                         RC:$falsev
+                         ))]>;
 
 def Select_GPR_Using_CC_GPR : SelectCC_rrirr<GPR, GPR>;
 
@@ -454,7 +455,9 @@ def : Pat<(br bb:$simm20), (J bb:$simm20)>;
 
 // Define pattern expansions for setcc operations that aren't directly
 // handled by a RISC-V instruction.
+def : Pat<(seteq  GPR:$rs1, 0)       , (SLTIU GPR:$rs1, 1)>;
 def : Pat<(seteq  GPR:$rs1, GPR:$rs2), (SLTIU (XOR GPR:$rs1, GPR:$rs2), 1)>;
+def : Pat<(setne  GPR:$rs1, 0)       , (SLTU ZERO, GPR:$rs1)>;
 def : Pat<(setne  GPR:$rs1, GPR:$rs2), (SLTU ZERO, (XOR GPR:$rs1, GPR:$rs2))>;
 def : Pat<(setugt GPR:$rs1, GPR:$rs2), (SLTU GPR:$rs2, GPR:$rs1)>;
 def : Pat<(setuge GPR:$rs1, GPR:$rs2), (XORI (SLTU GPR:$rs1, GPR:$rs2), 1)>;
