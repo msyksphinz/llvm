@@ -177,7 +177,8 @@ void MYRISCVXAsmPrinter::emitFrameDirective() {
 /// Emit Set directives.
 const char *MYRISCVXAsmPrinter::getCurrentABIString() const {
   switch (static_cast<MYRISCVXTargetMachine &>(TM).getABI().GetEnumValue()) {
-    case MYRISCVXABIInfo::ABI::LP32:  return "abilp32";
+    case MYRISCVXABIInfo::ABI::LP32:    return "abilp32";
+    case MYRISCVXABIInfo::ABI::STACK32: return "abistack32";
     default: llvm_unreachable("Unknown MYRISCVX ABI");
   }
 }
