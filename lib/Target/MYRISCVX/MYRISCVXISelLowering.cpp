@@ -132,6 +132,7 @@ MYRISCVXTargetLowering::LowerReturn(SDValue Chain,
                  *DAG.getContext());
   MYRISCVXCC MYRISCVXCCInfo(CallConv, ABI.IsLP32(), CCInfo);
 
+
   // Analyze return values.
   MYRISCVXCCInfo.analyzeReturn(Outs, Subtarget.abiUsesSoftFloat(),
                                MF.getFunction().getReturnType());
@@ -323,10 +324,7 @@ MYRISCVXTargetLowering::LowerFormalArguments (SDValue Chain,
   Function::const_arg_iterator FuncArg =
       DAG.getMachineFunction().getFunction().arg_begin();
   bool UseSoftFloat = Subtarget.abiUsesSoftFloat();
-
-  MYRISCVXCCInfo.analyzeFormalArguments(Ins, UseSoftFloat, FuncArg);
-  MYRISCVXFI->setFormalArgInfo(CCInfo.getNextStackOffset(),
-                               MYRISCVXCCInfo.hasByValArg());
+  CCInfo.AnalyzeFormalArguments (Ins, CC_MYRISCVX);
 
   // Used with vargs to acumulate store chains.
   std::vector<SDValue> OutChains;
@@ -360,10 +358,8 @@ MYRISCVXTargetLowering::LowerFormalArguments (SDValue Chain,
     }
     //@byval pass }
 
-    LLVM_DEBUG(dbgs() << "ABI.IsLP32() = " << ABI.IsLP32() << " && IsRegLoc = " << IsRegLoc << "\n");
-
     // Arguments stored on registers
-    if (ABI.IsLP32() && IsRegLoc) {
+    if (IsRegLoc) {
       MVT RegVT = VA.getLocVT();
       unsigned ArgReg = VA.getLocReg();
       const TargetRegisterClass *RC = getRegClassFor(RegVT);
@@ -401,7 +397,7 @@ MYRISCVXTargetLowering::LowerFormalArguments (SDValue Chain,
 
       // The stack pointer offset is relative to the caller stack frame.
       int FI = MFI.CreateFixedObject(ValVT.getSizeInBits()/8,
-                                      VA.getLocMemOffset(), true);
+                                     VA.getLocMemOffset(), true);
 
       // Create load nodes to retrieve arguments from the stack
       SDValue FIN = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));

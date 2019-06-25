@@ -14,6 +14,8 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/CommandLine.h"
 
+#include <stdio.h>
+
 using namespace llvm;
 
 static cl::opt<bool>
@@ -25,34 +27,48 @@ namespace {
 static const MCPhysReg LP32IntRegs[8] = {
   MYRISCVX::A0, MYRISCVX::A1, MYRISCVX::A2, MYRISCVX::A3,
   MYRISCVX::A4, MYRISCVX::A5, MYRISCVX::A6, MYRISCVX::A7};
+static const MCPhysReg STACK32IntRegs = {};
 }
 
 ArrayRef<MCPhysReg> MYRISCVXABIInfo::GetByValArgRegs() const {
-  if (IsLP32())
+  if (IsLP32()) {
     return makeArrayRef(LP32IntRegs);
+  } else if (IsSTACK32()) {
+    return makeArrayRef(STACK32IntRegs);
+  }
   llvm_unreachable("Unhandled ABI");
 }
 
 ArrayRef<MCPhysReg> MYRISCVXABIInfo::GetVarArgRegs() const {
-  if (IsLP32())
+  if (IsLP32()) {
     return makeArrayRef(LP32IntRegs);
+  } else if (IsSTACK32()) {
+    return makeArrayRef(STACK32IntRegs);
+  }
   llvm_unreachable("Unhandled ABI");
 }
 
 unsigned MYRISCVXABIInfo::GetCalleeAllocdArgSizeInBytes(CallingConv::ID CC) const {
-  if (IsLP32())
+  if (IsLP32()) {
     return CC != 0;
+  } else if (IsSTACK32()) {
+    return 0;
+  }
   llvm_unreachable("Unhandled ABI");
 }
 
-MYRISCVXABIInfo MYRISCVXABIInfo::computeTargetABI() {
+MYRISCVXABIInfo MYRISCVXABIInfo::computeTargetABI(const MCTargetOptions &Options) {
   MYRISCVXABIInfo abi(ABI::Unknown);
 
-  abi = ABI::LP32;
-  // Assert exactly one ABI was chosen.
-  assert(abi.ThisABI != ABI::Unknown);
+  fprintf(stderr, "computeTargetABI = %s\n", Options.getABIName().str().c_str());
 
-  return abi;
+  if (Options.getABIName().startswith("lp32")) {
+    return MYRISCVXABIInfo::LP32();
+  } else if (Options.getABIName().startswith("stack32")) {
+    return MYRISCVXABIInfo::STACK32();
+  } else {
+    return MYRISCVXABIInfo::LP32();
+  }
 }
 
 unsigned MYRISCVXABIInfo::GetStackPtr() const {

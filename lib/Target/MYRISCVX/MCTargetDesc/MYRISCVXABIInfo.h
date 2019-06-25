@@ -23,7 +23,7 @@ namespace llvm {
 
   class MYRISCVXABIInfo {
    public:
-    enum class ABI { Unknown, LP32 };
+    enum class ABI { Unknown, STACK32, LP32 };
 
    protected:
     ABI ThisABI;
@@ -33,10 +33,12 @@ namespace llvm {
 
     static MYRISCVXABIInfo Unknown() { return MYRISCVXABIInfo(ABI::Unknown); }
     static MYRISCVXABIInfo LP32() { return MYRISCVXABIInfo(ABI::LP32); }
-    static MYRISCVXABIInfo computeTargetABI();
+    static MYRISCVXABIInfo STACK32() { return MYRISCVXABIInfo(ABI::STACK32); }
+    static MYRISCVXABIInfo computeTargetABI(const MCTargetOptions &Options);
 
-    bool IsKnown() const { return ThisABI != ABI::Unknown; }
-    bool IsLP32 () const { return ThisABI == ABI::LP32; }
+    bool IsKnown   () const { return ThisABI != ABI::Unknown; }
+    bool IsLP32    () const { return ThisABI == ABI::LP32; }
+    bool IsSTACK32 () const { return ThisABI == ABI::STACK32; }
     ABI GetEnumValue() const { return ThisABI; }
 
     /// The registers to use for byval arguments.

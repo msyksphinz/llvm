@@ -69,6 +69,9 @@ class StringRef;
     bool isPositionIndependent() const;
     const MYRISCVXABIInfo &getABI() const;
 
+    bool isABI_LP32()    const { return getABI().IsLP32(); }
+    bool isABI_STACK32() const { return getABI().IsSTACK32(); }
+
     /// This constructor initializes the data members to match that
     /// of the specified triple.
     MYRISCVXSubtarget(const Triple &TT, const std::string &CPU, const std::string &FS,
