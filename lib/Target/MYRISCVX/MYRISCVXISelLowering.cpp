@@ -40,7 +40,7 @@ using namespace llvm;
 //@3_1 1 {
 const char *MYRISCVXTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch (Opcode) {
-    case MYRISCVXISD::JmpLink:           return "MYRISCVXISD::JmpLink";
+    case MYRISCVXISD::CALL:              return "MYRISCVXISD::CALL";
     case MYRISCVXISD::TailCall:          return "MYRISCVXISD::TailCall";
     case MYRISCVXISD::Hi:                return "MYRISCVXISD::Hi";
     case MYRISCVXISD::Lo:                return "MYRISCVXISD::Lo";
@@ -290,7 +290,308 @@ static const MCPhysReg O32IntRegs[] = {
 SDValue
 MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                   SmallVectorImpl<SDValue> &InVals) const {
-  return CLI.Chain;
+
+  SelectionDAG &DAG                     = CLI.DAG;
+  SDLoc DL                              = CLI.DL;
+  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  SmallVectorImpl<SDValue> &OutVals     = CLI.OutVals;
+  SmallVectorImpl<ISD::InputArg> &Ins   = CLI.Ins;
+  SDValue Chain                         = CLI.Chain;
+  SDValue Callee                        = CLI.Callee;
+  bool &IsTailCall                      = CLI.IsTailCall;
+  CallingConv::ID CallConv              = CLI.CallConv;
+  bool IsVarArg                         = CLI.IsVarArg;
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
+  MYRISCVXFunctionInfo *FuncInfo = MF.getInfo<MYRISCVXFunctionInfo>();
+  bool IsPIC = isPositionIndependent();
+  MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
+
+  // Analyze operands of the call, assigning locations to each operand.
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(),
+                 ArgLocs, *DAG.getContext());
+  CCInfo.AnalyzeCallOperands (Outs, CC_MYRISCVX);
+  // MYRISCVXCC::SpecialCallingConvType SpecialCallingConv =
+  //     getSpecialCallingConv(Callee);
+  // MYRISCVXCC MYRISCVXCCInfo(CallConv, ABI.IsO32(),
+  //                           CCInfo, SpecialCallingConv);
+  //
+  // MYRISCVXCCInfo.analyzeCallOperands(Outs, IsVarArg,
+  //                                    Subtarget.abiUsesSoftFloat(),
+  //                                    Callee.getNode(), CLI.getArgs());
+
+  // Get a count of how many bytes are to be pushed on the stack.
+  unsigned NextStackOffset = CCInfo.getNextStackOffset();
+
+  //@TailCall 1 {
+  // Check if it's really possible to do a tail call.
+  // if (IsTailCall)
+  //   IsTailCall =
+  //       isEligibleForTailCallOptimization(MYRISCVXCCInfo, NextStackOffset,
+  //                                         *MF.getInfo<MYRISCVXFunctionInfo>());
+  //
+  // if (!IsTailCall && CLI.CS && CLI.CS->isMustTailCall())
+  //   report_fatal_error("failed to perform tail call elimination on a call "
+  //                      "site marked musttail");
+  //
+  // if (IsTailCall)
+  //   ++NumTailCalls;
+  //@TailCall 1 }
+
+  // Chain is the output chain of the last Load/Store or CopyToReg node.
+  // ByValChain is the output chain of the last Memcpy node created for copying
+  // byval arguments to the stack.
+  unsigned StackAlignment = TFL->getStackAlignment();
+  NextStackOffset = alignTo(NextStackOffset, StackAlignment);
+  SDValue NextStackOffsetVal = DAG.getIntPtrConstant(NextStackOffset, DL, true);
+
+  //@TailCall 2 {
+  if (!IsTailCall)
+    Chain = DAG.getCALLSEQ_START(Chain, NextStackOffset, 0, DL);
+  //@TailCall 2 }
+
+  SDValue StackPtr =
+      DAG.getCopyFromReg(Chain, DL, MYRISCVX::SP,
+                         getPointerTy(DAG.getDataLayout()));
+
+  // With EABI is it possible to have 16 args on registers.
+  std::deque< std::pair<unsigned, SDValue> > RegsToPass;
+  SmallVector<SDValue, 8> MemOpChains;
+  // MYRISCVXCC::byval_iterator ByValArg = MYRISCVXCCInfo.byval_begin();
+
+  //@1 {
+  // Walk the register/memloc assignments, inserting copies/loads.
+  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
+    //@1 }
+    SDValue Arg = OutVals[i];
+    CCValAssign &VA = ArgLocs[i];
+    MVT LocVT = VA.getLocVT();
+    ISD::ArgFlagsTy Flags = Outs[i].Flags;
+
+    //@ByVal Arg {
+    // if (Flags.isByVal()) {
+    //   assert(Flags.getByValSize() &&
+    //          "ByVal args of size 0 should have been ignored by front-end.");
+    //   assert(ByValArg != MYRISCVXCCInfo.byval_end());
+    //   assert(!IsTailCall &&
+    //          "Do not tail-call optimize if there is a byval argument.");
+    //   passByValArg(Chain, DL, RegsToPass, MemOpChains, StackPtr, MFI, DAG, Arg,
+    //                MYRISCVXCCInfo, *ByValArg, Flags, Subtarget.isLittle());
+    //   ++ByValArg;
+    //   continue;
+    // }
+    //@ByVal Arg }
+
+    // Promote the value if needed.
+    switch (VA.getLocInfo()) {
+      default: llvm_unreachable("Unknown loc info!");
+      case CCValAssign::Full:
+        break;
+      case CCValAssign::SExt:
+        Arg = DAG.getNode(ISD::SIGN_EXTEND, DL, LocVT, Arg);
+        break;
+      case CCValAssign::ZExt:
+        Arg = DAG.getNode(ISD::ZERO_EXTEND, DL, LocVT, Arg);
+        break;
+      case CCValAssign::AExt:
+        Arg = DAG.getNode(ISD::ANY_EXTEND, DL, LocVT, Arg);
+        break;
+    }
+
+    // Arguments that can be passed on register must be kept at
+    // RegsToPass vector
+    if (VA.isRegLoc()) {
+      RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
+      continue;
+    }
+
+    // Register can't get to this point...
+    assert(VA.isMemLoc());
+
+    // emit ISD::STORE whichs stores the
+    // parameter value to a stack Location
+    MemOpChains.push_back(passArgOnStack(StackPtr, VA.getLocMemOffset(),
+                                         Chain, Arg, DL, IsTailCall, DAG));
+  }
+
+  // Transform all store nodes into one single node because all store
+  // nodes are independent of each other.
+  if (!MemOpChains.empty())
+    Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOpChains);
+
+  // If the callee is a GlobalAddress/ExternalSymbol node (quite common, every
+  // direct call is) turn it into a TargetGlobalAddress/TargetExternalSymbol
+  // node so that legalize doesn't hack it.
+  bool IsPICCall = IsPIC; // true if calls are translated to
+  // jalr $t9
+  bool GlobalOrExternal = false, InternalLinkage = false;
+  SDValue CalleeLo;
+  EVT Ty = Callee.getValueType();
+
+  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
+    if (IsPICCall) {
+      const GlobalValue *Val = G->getGlobal();
+      InternalLinkage = Val->hasInternalLinkage();
+
+      if (InternalLinkage)
+        Callee = getAddrLocal(G, Ty, DAG);
+      else
+        Callee = getAddrGlobal(G, Ty, DAG, MYRISCVXII::MO_GOT_CALL, Chain,
+                               FuncInfo->callPtrInfo(Val));
+    } else
+      Callee = DAG.getTargetGlobalAddress(G->getGlobal(), DL,
+                                          getPointerTy(DAG.getDataLayout()), 0,
+                                          MYRISCVXII::MO_NO_FLAG);
+    GlobalOrExternal = true;
+  } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
+    const char *Sym = S->getSymbol();
+
+    if (!IsPIC) // static
+      Callee = DAG.getTargetExternalSymbol(Sym,
+                                           getPointerTy(DAG.getDataLayout()),
+                                           MYRISCVXII::MO_NO_FLAG);
+    else // PIC
+      Callee = getAddrGlobal(S, Ty, DAG, MYRISCVXII::MO_GOT_CALL, Chain,
+                             FuncInfo->callPtrInfo(Sym));
+
+    GlobalOrExternal = true;
+  }
+
+  SmallVector<SDValue, 8> Ops(1, Chain);
+  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
+
+  getOpndList(Ops, RegsToPass, IsPICCall, GlobalOrExternal, InternalLinkage,
+              CLI, Callee, Chain);
+
+  //@TailCall 3 {
+  // if (IsTailCall)
+  //   return DAG.getNode(MYRISCVXISD::TailCall, DL, MVT::Other, Ops);
+  //@TailCall 3 }
+
+  Chain = DAG.getNode(MYRISCVXISD::CALL, DL, NodeTys, Ops);
+  SDValue InFlag = Chain.getValue(1);
+
+  // Create the CALLSEQ_END node.
+  Chain = DAG.getCALLSEQ_END(Chain, NextStackOffsetVal,
+                             DAG.getIntPtrConstant(0, DL, true), InFlag, DL);
+  InFlag = Chain.getValue(1);
+
+  // Handle result values, copying them out of physregs into vregs that we
+  // return.
+  return LowerCallResult(Chain, InFlag, CallConv, IsVarArg,
+                         Ins, DL, DAG, InVals, CLI.Callee.getNode(), CLI.RetTy);
+
+}
+
+
+/// LowerCallResult - Lower the result values of a call into the
+/// appropriate copies out of appropriate physical registers.
+SDValue
+MYRISCVXTargetLowering::LowerCallResult(SDValue Chain, SDValue InFlag,
+                                        CallingConv::ID CallConv, bool IsVarArg,
+                                        const SmallVectorImpl<ISD::InputArg> &Ins,
+                                        const SDLoc &DL, SelectionDAG &DAG,
+                                        SmallVectorImpl<SDValue> &InVals,
+                                        const SDNode *CallNode,
+                                        const Type *RetTy) const {
+  // Assign locations to each value returned by this call.
+  SmallVector<CCValAssign, 16> RVLocs;
+  CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(),
+                 RVLocs, *DAG.getContext());
+  const ExternalSymbolSDNode *ES =
+      dyn_cast_or_null<const ExternalSymbolSDNode>(CallNode);
+  CCInfo.AnalyzeCallResult(Ins, RetCC_MYRISCVX);
+
+  // Copy all of the result registers out of their specified physreg.
+  for (unsigned i = 0; i != RVLocs.size(); ++i) {
+    SDValue Val = DAG.getCopyFromReg(Chain, DL, RVLocs[i].getLocReg(),
+                                     RVLocs[i].getLocVT(), InFlag);
+    Chain = Val.getValue(1);
+    InFlag = Val.getValue(2);
+
+    if (RVLocs[i].getValVT() != RVLocs[i].getLocVT())
+      Val = DAG.getNode(ISD::BITCAST, DL, RVLocs[i].getValVT(), Val);
+
+    InVals.push_back(Val);
+  }
+
+  return Chain;
+}
+
+
+SDValue
+MYRISCVXTargetLowering::passArgOnStack(SDValue StackPtr, unsigned Offset,
+                                       SDValue Chain, SDValue Arg, const SDLoc &DL,
+                                       bool IsTailCall, SelectionDAG &DAG) const {
+  if (!IsTailCall) {
+    SDValue PtrOff =
+        DAG.getNode(ISD::ADD, DL, getPointerTy(DAG.getDataLayout()), StackPtr,
+                    DAG.getIntPtrConstant(Offset, DL));
+    return DAG.getStore(Chain, DL, Arg, PtrOff, MachinePointerInfo());
+  }
+
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+  int FI = MFI.CreateFixedObject(Arg.getValueSizeInBits() / 8, Offset, false);
+  SDValue FIN = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
+  return DAG.getStore(Chain, DL, Arg, FIN, MachinePointerInfo(),
+                      /* Alignment = */ 0, MachineMemOperand::MOVolatile);
+}
+
+
+void MYRISCVXTargetLowering::
+getOpndList(SmallVectorImpl<SDValue> &Ops,
+            std::deque< std::pair<unsigned, SDValue> > &RegsToPass,
+            bool IsPICCall, bool GlobalOrExternal, bool InternalLinkage,
+            CallLoweringInfo &CLI, SDValue Callee, SDValue Chain) const {
+  // T9 should contain the address of the callee function if
+  // -reloction-model=pic or it is an indirect call.
+  if (IsPICCall || !GlobalOrExternal) {
+    unsigned T0Reg = MYRISCVX::T0;
+    RegsToPass.push_front(std::make_pair(T0Reg, Callee));
+  } else
+    Ops.push_back(Callee);
+
+  // Insert node "GP copy globalreg" before call to function.
+  //
+  // R_MYRISCVX_CALL* operators (emitted when non-internal functions are called
+  // in PIC mode) allow symbols to be resolved via lazy binding.
+  // The lazy binding stub requires GP to point to the GOT.
+  if (IsPICCall && !InternalLinkage) {
+    unsigned GPReg = MYRISCVX::GP;
+    EVT Ty = MVT::i32;
+    RegsToPass.push_back(std::make_pair(GPReg, getGlobalReg(CLI.DAG, Ty)));
+  }
+
+  // Build a sequence of copy-to-reg nodes chained together with token
+  // chain and flag operands which copy the outgoing args into registers.
+  // The InFlag in necessary since all emitted instructions must be
+  // stuck together.
+  SDValue InFlag;
+
+  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
+    Chain = CLI.DAG.getCopyToReg(Chain, CLI.DL, RegsToPass[i].first,
+                                 RegsToPass[i].second, InFlag);
+    InFlag = Chain.getValue(1);
+  }
+
+  // Add argument registers to the end of the list so that they are
+  // known live into the call.
+  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i)
+    Ops.push_back(CLI.DAG.getRegister(RegsToPass[i].first,
+                                      RegsToPass[i].second.getValueType()));
+
+  // Add a register mask operand representing the call-preserved registers.
+  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
+  const uint32_t *Mask =
+      TRI->getCallPreservedMask(CLI.DAG.getMachineFunction(), CLI.CallConv);
+  assert(Mask && "Missing call preserved mask for calling convention");
+  Ops.push_back(CLI.DAG.getRegisterMask(Mask));
+
+  if (InFlag.getNode())
+    Ops.push_back(InFlag);
 }
 
 

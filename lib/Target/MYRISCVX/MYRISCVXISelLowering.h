@@ -31,7 +31,7 @@ namespace llvm {
       FIRST_NUMBER = ISD::BUILTIN_OP_END,
 
       // Jump and link (call)
-      JmpLink,
+      CALL,
 
       // Tail call
       TailCall,
@@ -277,7 +277,35 @@ namespace llvm {
     SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
 
-	//- must be exist even without function all
+
+    SDValue
+    LowerCall(TargetLowering::CallLoweringInfo &CLI,
+              SmallVectorImpl<SDValue> &InVals) const override;
+    SDValue
+    LowerCallResult(SDValue Chain, SDValue InFlag,
+                    CallingConv::ID CallConv, bool IsVarArg,
+                    const SmallVectorImpl<ISD::InputArg> &Ins,
+                    const SDLoc &DL, SelectionDAG &DAG,
+                    SmallVectorImpl<SDValue> &InVals,
+                    const SDNode *CallNode,
+                    const Type *RetTy) const;
+
+
+    SDValue
+    passArgOnStack(SDValue StackPtr, unsigned Offset,
+                   SDValue Chain, SDValue Arg, const SDLoc &DL,
+                   bool IsTailCall, SelectionDAG &DAG) const;
+
+    /// This function fills Ops, which is the list of operands that will later
+    /// be used when a function call node is created. It also generates
+    /// copyToReg nodes to set up argument registers.
+    virtual void
+    getOpndList(SmallVectorImpl<SDValue> &Ops,
+                std::deque< std::pair<unsigned, SDValue> > &RegsToPass,
+                bool IsPICCall, bool GlobalOrExternal, bool InternalLinkage,
+                CallLoweringInfo &CLI, SDValue Callee, SDValue Chain) const;
+
+    //- must be exist even without function all
     SDValue
     LowerFormalArguments(SDValue Chain,
                          CallingConv::ID CallConv, bool IsVarArg,
@@ -306,9 +334,6 @@ namespace llvm {
                        SmallVectorImpl<SDValue> &InVals,
                        const Argument *FuncArg,
                        const MYRISCVXCC &CC, const ByValArgInfo &ByVal) const;
-
-    SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
-                      SmallVectorImpl<SDValue> &InVals) const override;
 
   };
   const MYRISCVXTargetLowering *

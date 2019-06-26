@@ -69,6 +69,14 @@ class MYRISCVXFunctionInfo : public MachineFunctionInfo {
   unsigned getMaxCallFrameSize() const { return MaxCallFrameSize; }
   void setMaxCallFrameSize(unsigned S) { MaxCallFrameSize = S; }
 
+  /// Create a MachinePointerInfo that has an ExternalSymbolPseudoSourceValue
+  /// object representing a GOT entry for an external function.
+  MachinePointerInfo callPtrInfo(const char *ES);
+
+  /// Create a MachinePointerInfo that has a GlobalValuePseudoSourceValue object
+  /// representing a GOT entry for a global function.
+  MachinePointerInfo callPtrInfo(const GlobalValue *GV);
+
   bool globalBaseRegFixed() const;
   bool globalBaseRegSet() const;
   unsigned getGlobalBaseReg();
