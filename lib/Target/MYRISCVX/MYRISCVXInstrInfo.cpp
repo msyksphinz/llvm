@@ -30,7 +30,7 @@ void MYRISCVXInstrInfo::anchor() {}
 
 //@MYRISCVXInstrInfo {
 MYRISCVXInstrInfo::MYRISCVXInstrInfo(const MYRISCVXSubtarget &STI)
-    :
+    : MYRISCVXGenInstrInfo(MYRISCVX::ADJCALLSTACKDOWN, MYRISCVX::ADJCALLSTACKUP),
     Subtarget(STI) {}
 
 const MYRISCVXInstrInfo *MYRISCVXInstrInfo::create(MYRISCVXSubtarget &STI) {

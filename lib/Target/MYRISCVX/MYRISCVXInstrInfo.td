@@ -15,11 +15,15 @@
 // MYRISCVX profiles and nodes
 //===----------------------------------------------------------------------===//
 
+def SDT_MYRISCVXCall       : SDTypeProfile<0, 1, [SDTCisVT<0, iPTR>]>;
 def SDT_MYRISCVXSelectCC   : SDTypeProfile<1, 5, [SDTCisSameAs<1, 2>,
                                                SDTCisSameAs<0, 4>,
                                                SDTCisSameAs<4, 5>]>;
 
 def SDT_MYRISCVXRet : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
+
+def SDT_MYRISCVXCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>]>;
+def SDT_MYRISCVXCallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
 
 // Return
 def MYRISCVXRet : SDNode<"MYRISCVXISD::Ret", SDTNone,
@@ -27,6 +31,15 @@ def MYRISCVXRet : SDNode<"MYRISCVXISD::Ret", SDTNone,
 
 def SelectCC : SDNode<"MYRISCVXISD::SELECT_CC", SDT_MYRISCVXSelectCC,
                       [SDNPInGlue]>;
+
+def MYRISCVXCall : SDNode<"MYRISCVXISD::CALL", SDT_MYRISCVXCall,
+                          [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                           SDNPVariadic]>;
+// These are target-independent nodes, but have target-specific formats.
+def MYRISCVXCallSeqStart : SDNode<"ISD::CALLSEQ_START", SDT_MYRISCVXCallSeqStart,
+                                  [SDNPHasChain, SDNPOutGlue]>;
+def MYRISCVXCallSeqEnd : SDNode<"ISD::CALLSEQ_END", SDT_MYRISCVXCallSeqEnd,
+                                [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction format superclass
@@ -86,6 +99,10 @@ def immLow12Zero : PatLeaf<(imm), [{
 def immZExt5 : ImmLeaf<i32, [{return Imm == (Imm & 0x1f);}]>;
 
 def shamt : Operand<i32>;
+
+def calltarget : Operand<iPTR> {
+  let EncoderMethod = "getJumpTargetOpValue";
+}
 
 // JAL
 def brtarget20    : Operand<OtherVT> {
@@ -250,6 +267,7 @@ class CondBranch12<bits<7> opcode, bits<3> funct3,
 
 
 // Unconditional Branch
+//  !strconcat(instr_asm, "\t$target"), [(MYRISCVXCall tglobaladdr:$target)], IIAlu> {
 class JumpOffset<bits<7> opcode, string instr_asm, RegisterClass RC>:
   MYRISCVX_J<opcode, (outs RC:$rd), (ins brtarget20:$addr),
   !strconcat(instr_asm, "\t$rd, $addr"), [], IIAlu> {
@@ -270,6 +288,36 @@ class JumpOffsetX0<bits<7> opcode, string instr_asm>:
     let hasDelaySlot = 0;
 }
 
+
+class JumpRegister<bits<7> opcode, bits<3> funct3,
+      string instr_asm>:
+  MYRISCVX_I<opcode, funct3, (outs), (ins GPR:$rs1),
+    !strconcat(instr_asm, "\t$rs1, 0"),
+    [(MYRISCVXCall GPR:$rs1)], IIAlu> {
+    let rd = 0;
+    let imm12 = 0;
+    let isBranch = 1;
+    let isTerminator = 1;
+    let isBarrier = 1;
+    let hasDelaySlot = 0;
+}
+
+
+class JumpRegisterX0<bits<7> opcode, bits<3> funct3, string instr_asm>:
+  JumpRegister<opcode, funct3, instr_asm> {
+    let rd = 0;
+}
+
+
+// Jump and Link (Call)
+let isCall=1, hasDelaySlot=0, Defs = [RA], isCodeGenOnly = 0 in {
+  class JumpLink<bits<7> opcode, string opstr, DAGOperand opnd> :
+    MYRISCVX_J<opcode, (outs), (ins opnd:$target), !strconcat(opstr, "\t$target"),
+                   [(MYRISCVXCall tglobaladdr:$target)], IIAlu> {
+    let rd = 0;
+    let DecoderMethod = "DecodeJumpTarget";
+  }
+}
 
 // Return instruction
 class RetGPR<bits<7> opcode, bits<3> funct3, string instr_asm, RegisterClass RC>:
@@ -367,10 +415,18 @@ def SLTIU : SetCC_I<0b0010011, 0b011, "sltiu", setult, simm12, immSExt12, GPR>;
 def SLT   : SetCC_R<0b0110011, 0b010, 0b0000000, "slt",  setlt,  GPR>;
 def SLTU  : SetCC_R<0b0110011, 0b011, 0b0000000, "sltu", setult, GPR>;
 
-def JAL : JumpOffset<0b1101111, "jal", GPR>;
+// def JAL : JumpOffset<0b1101111, "jal", GPR>;
+def JAL : JumpLink<0b1101111, "jal", calltarget>;
 def J   : JumpOffsetX0<0b1101111, "j">;
-def JR  : ArithLogicI<0b1100111, 0b000, "jr", add, simm12, immSExt12, GPR>;
-def RET : RetGPR<0b1100111, 0b000, "ret", GPR>;
+def JALR : JumpRegister <0b1100111, 0b000, "jalr">;
+def JR   : JumpRegisterX0<0b1100111, 0b000, "jr">;
+// def JR  : ArithLogicI<0b1100111, 0b000, "jr", add, simm12, immSExt12, GPR>;
+def RET  : RetGPR<0b1100111, 0b000, "ret", GPR>;
+
+def : Pat<(MYRISCVXCall (i32 tglobaladdr:$dst)),  (JAL tglobaladdr:$dst)>;
+def : Pat<(MYRISCVXCall (i32 texternalsym:$dst)), (JAL texternalsym:$dst)>;
+def : Pat<(MYRISCVXCall (i32 tglobaladdr:$dst)),  (JALR tglobaladdr:$dst)>;
+def : Pat<(MYRISCVXCall (i32 texternalsym:$dst)), (JALR texternalsym:$dst)>;
 
 let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
   def RetRA : MYRISCVXPseudo<(outs), (ins), "", [(MYRISCVXRet)]>;
@@ -409,6 +465,21 @@ class SelectCC_rrirr<RegisterClass RC, RegisterClass cmpty>
                          ))]>;
 
 def Select_GPR_Using_CC_GPR : SelectCC_rrirr<GPR, GPR>;
+
+// As stack alignment is always done with addi, we need a 16-bit immediate
+def ADJCALLSTACKDOWN : MYRISCVXPseudo<(outs), (ins simm12:$amt1, simm12:$amt2), "",
+                                      [(MYRISCVXCallSeqStart timm:$amt1, timm:$amt2)]>;
+def ADJCALLSTACKUP   : MYRISCVXPseudo<(outs), (ins simm12:$amt1, simm12:$amt2), "",
+                                      [(MYRISCVXCallSeqEnd timm:$amt1, timm:$amt2)]>;
+//}
+//@def CPRESTORE {
+// When handling PIC code the assembler needs .cpload and .cprestore
+// directives. If the real instructions corresponding these directives
+// are used, we have the same behavior, but get also a bunch of warnings
+// from the assembler.
+let hasSideEffects = 0 in
+def CPRESTORE : MYRISCVXPseudo<(outs), (ins simm12:$loc, GPR:$gp),
+                            ".cprestore\t$loc", []>;
 
 //===----------------------------------------------------------------------===//
 //  Arbitrary patterns that map to one or more instructions
