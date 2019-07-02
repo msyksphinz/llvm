@@ -87,10 +87,6 @@ class StringRef;
 
     bool abiUsesSoftFloat() const;
 
-    // bool enableLongBranchPass() const {
-    //   return hasMYRISCVX32II();
-    // }
-
     unsigned stackAlignment() const { return 8; }
 
     MYRISCVXSubtarget &initializeSubtargetDependencies(StringRef CPU, StringRef FS,
@@ -112,6 +108,7 @@ class StringRef;
     const InstrItineraryData *getInstrItineraryData() const override {
       return &InstrItins;
     }
+    unsigned getGPRSizeInBytes() const { return 4; }
   };
 } // End llvm namespace
 

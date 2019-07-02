@@ -25,6 +25,10 @@ def SDT_MYRISCVXRet : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 def SDT_MYRISCVXCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>]>;
 def SDT_MYRISCVXCallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
 
+// Tail call
+def MYRISCVXTailCall : SDNode<"MYRISCVXISD::TailCall", SDT_MYRISCVXCall,
+                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
 // Return
 def MYRISCVXRet : SDNode<"MYRISCVXISD::Ret", SDTNone,
                          [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
@@ -289,10 +293,33 @@ class JumpOffsetX0<bits<7> opcode, string instr_asm>:
 }
 
 
-class JumpRegister<bits<7> opcode, bits<3> funct3,
-      string instr_asm>:
+let isCall=1, hasDelaySlot=0, Defs = [RA], isCodeGenOnly = 0 in {
+  class JumpRegister<bits<7> opcode, bits<3> funct3,
+        string instr_asm>:
+    MYRISCVX_I<opcode, funct3, (outs), (ins GPR:$rs1),
+      !strconcat(instr_asm, "\tx1, $rs1, 0"),
+      [(MYRISCVXCall GPR:$rs1)], IIAlu> {
+      let rd = 1;
+      let imm12 = 0;
+      let isBranch = 1;
+      let isTerminator = 1;
+      let isBarrier = 1;
+      let hasDelaySlot = 0;
+  }
+
+
+  // Jump and Link (Call)
+  class JumpLink<bits<7> opcode, string opstr, DAGOperand opnd> :
+    MYRISCVX_J<opcode, (outs), (ins opnd:$target), !strconcat(opstr, "\t$target"),
+                   [(MYRISCVXCall tglobaladdr:$target)], IIAlu> {
+    let rd = 1;
+    let DecoderMethod = "DecodeJumpTarget";
+  }
+}
+
+class JumpRegisterX0<bits<7> opcode, bits<3> funct3, string instr_asm>:
   MYRISCVX_I<opcode, funct3, (outs), (ins GPR:$rs1),
-    !strconcat(instr_asm, "\t$rs1, 0"),
+    !strconcat(instr_asm, "\t$rs1"),
     [(MYRISCVXCall GPR:$rs1)], IIAlu> {
     let rd = 0;
     let imm12 = 0;
@@ -300,23 +327,6 @@ class JumpRegister<bits<7> opcode, bits<3> funct3,
     let isTerminator = 1;
     let isBarrier = 1;
     let hasDelaySlot = 0;
-}
-
-
-class JumpRegisterX0<bits<7> opcode, bits<3> funct3, string instr_asm>:
-  JumpRegister<opcode, funct3, instr_asm> {
-    let rd = 0;
-}
-
-
-// Jump and Link (Call)
-let isCall=1, hasDelaySlot=0, Defs = [RA], isCodeGenOnly = 0 in {
-  class JumpLink<bits<7> opcode, string opstr, DAGOperand opnd> :
-    MYRISCVX_J<opcode, (outs), (ins opnd:$target), !strconcat(opstr, "\t$target"),
-                   [(MYRISCVXCall tglobaladdr:$target)], IIAlu> {
-    let rd = 0;
-    let DecoderMethod = "DecodeJumpTarget";
-  }
 }
 
 // Return instruction
@@ -370,6 +380,20 @@ class SetCC_I<bits<7> opcode, bits<3> funct3,
              !strconcat(instr_asm, "\t$ra, $rb, $imm12"),
              [(set GPR:$ra, (cond_op RC:$rb, imm_type:$imm12))], IIAlu> {
                let isReMaterializable = 1;
+}
+
+
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1,
+    hasExtraSrcRegAllocReq = 1 in {
+
+  class TailCall<Instruction JumpInst> :
+    MYRISCVXPseudo<(outs), (ins calltarget:$target), "", []>,
+    PseudoInstExpansion<(JumpInst calltarget:$target)>;
+
+  class TailCallReg<RegisterClass RO, Instruction JRInst,
+    RegisterClass ResRO = RO> :
+    MYRISCVXPseudo<(outs), (ins RO:$rs), "", [(MYRISCVXTailCall RO:$rs)]>,
+    PseudoInstExpansion<(JRInst ResRO:$rs)>;
 }
 
 
@@ -481,6 +505,9 @@ let hasSideEffects = 0 in
 def CPRESTORE : MYRISCVXPseudo<(outs), (ins simm12:$loc, GPR:$gp),
                             ".cprestore\t$loc", []>;
 
+def TAILCALL : TailCall<JAL>;
+def TAILCALL_R : TailCallReg<GPR, JALR>;
+
 //===----------------------------------------------------------------------===//
 //  Arbitrary patterns that map to one or more instructions
 //===----------------------------------------------------------------------===//
@@ -583,3 +610,8 @@ defm : BrcondPatsSlt<GPR, BEQ, BNE, SLT, SLTU, SLTI, SLTIU, ZERO>;
 
 // // peepholes
 // def : Pat<(store (i32 0), addr:$dst), (SW ZERO, addr:$dst)>;
+
+def : Pat<(MYRISCVXTailCall (iPTR tglobaladdr:$dst)),
+                             (TAILCALL tglobaladdr:$dst)>;
+def : Pat<(MYRISCVXTailCall (iPTR texternalsym:$dst)),
+                             (TAILCALL texternalsym:$dst)>;

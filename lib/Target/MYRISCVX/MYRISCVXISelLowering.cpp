@@ -37,6 +37,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "MYRISCVX-lower"
 
+// static cl::opt<bool>
+// EnableMYRISCVXTailCalls("enable-MYRISCVX-tail-calls", cl::Hidden,
+//                         cl::desc("MYRISCVX: Enable tail calls."), cl::init(true));
+
+STATISTIC(NumTailCalls, "Number of tail calls");
+
 //@3_1 1 {
 const char *MYRISCVXTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch (Opcode) {
@@ -314,31 +320,23 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(),
                  ArgLocs, *DAG.getContext());
   CCInfo.AnalyzeCallOperands (Outs, CC_MYRISCVX);
-  // MYRISCVXCC::SpecialCallingConvType SpecialCallingConv =
-  //     getSpecialCallingConv(Callee);
-  // MYRISCVXCC MYRISCVXCCInfo(CallConv, ABI.IsO32(),
-  //                           CCInfo, SpecialCallingConv);
-  //
-  // MYRISCVXCCInfo.analyzeCallOperands(Outs, IsVarArg,
-  //                                    Subtarget.abiUsesSoftFloat(),
-  //                                    Callee.getNode(), CLI.getArgs());
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NextStackOffset = CCInfo.getNextStackOffset();
 
   //@TailCall 1 {
   // Check if it's really possible to do a tail call.
-  // if (IsTailCall)
-  //   IsTailCall =
-  //       isEligibleForTailCallOptimization(MYRISCVXCCInfo, NextStackOffset,
-  //                                         *MF.getInfo<MYRISCVXFunctionInfo>());
-  //
-  // if (!IsTailCall && CLI.CS && CLI.CS->isMustTailCall())
-  //   report_fatal_error("failed to perform tail call elimination on a call "
-  //                      "site marked musttail");
-  //
-  // if (IsTailCall)
-  //   ++NumTailCalls;
+  if (IsTailCall)
+    IsTailCall =
+        isEligibleForTailCallOptimization(CCInfo, NextStackOffset,
+                                          *MF.getInfo<MYRISCVXFunctionInfo>());
+
+  if (!IsTailCall && CLI.CS && CLI.CS.isMustTailCall())
+    report_fatal_error("failed to perform tail call elimination on a call "
+                       "site marked musttail");
+
+  if (IsTailCall)
+    ++NumTailCalls;
   //@TailCall 1 }
 
   // Chain is the output chain of the last Load/Store or CopyToReg node.
@@ -360,7 +358,6 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // With EABI is it possible to have 16 args on registers.
   std::deque< std::pair<unsigned, SDValue> > RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
-  // MYRISCVXCC::byval_iterator ByValArg = MYRISCVXCCInfo.byval_begin();
 
   //@1 {
   // Walk the register/memloc assignments, inserting copies/loads.
@@ -372,17 +369,21 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     ISD::ArgFlagsTy Flags = Outs[i].Flags;
 
     //@ByVal Arg {
-    // if (Flags.isByVal()) {
-    //   assert(Flags.getByValSize() &&
-    //          "ByVal args of size 0 should have been ignored by front-end.");
-    //   assert(ByValArg != MYRISCVXCCInfo.byval_end());
-    //   assert(!IsTailCall &&
-    //          "Do not tail-call optimize if there is a byval argument.");
-    //   passByValArg(Chain, DL, RegsToPass, MemOpChains, StackPtr, MFI, DAG, Arg,
-    //                MYRISCVXCCInfo, *ByValArg, Flags, Subtarget.isLittle());
-    //   ++ByValArg;
-    //   continue;
-    // }
+    if (Flags.isByVal()) {
+      unsigned FirstByValReg, LastByValReg;
+      unsigned ByValIdx = CCInfo.getInRegsParamsProcessed();
+      CCInfo.getInRegsParamInfo(ByValIdx, FirstByValReg, LastByValReg);
+
+      assert(Flags.getByValSize() &&
+             "ByVal args of size 0 should have been ignored by front-end.");
+      assert(ByValIdx < CCInfo.getInRegsParamsCount());
+      assert(!IsTailCall &&
+             "Do not tail-call optimize if there is a byval argument.");
+      passByValArg(Chain, DL, RegsToPass, MemOpChains, StackPtr, MFI, DAG, Arg,
+                   CCInfo, FirstByValReg, LastByValReg, Flags, Subtarget.isLittle(), VA);
+      CCInfo.nextInRegsParam();
+      continue;
+    }
     //@ByVal Arg }
 
     // Promote the value if needed.
@@ -404,6 +405,7 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // Arguments that can be passed on register must be kept at
     // RegsToPass vector
     if (VA.isRegLoc()) {
+      LLVM_DEBUG(dbgs() << "isRegLoc make_pair(" << VA.getLocReg() << ", Arg)\n");
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
       continue;
     }
@@ -413,6 +415,7 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     // emit ISD::STORE whichs stores the
     // parameter value to a stack Location
+    LLVM_DEBUG(dbgs() << "isMemLoc make_pair(" << VA.getLocMemOffset() << ", Arg)\n");
     MemOpChains.push_back(passArgOnStack(StackPtr, VA.getLocMemOffset(),
                                          Chain, Arg, DL, IsTailCall, DAG));
   }
@@ -467,8 +470,8 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
               CLI, Callee, Chain);
 
   //@TailCall 3 {
-  // if (IsTailCall)
-  //   return DAG.getNode(MYRISCVXISD::TailCall, DL, MVT::Other, Ops);
+  if (IsTailCall)
+    return DAG.getNode(MYRISCVXISD::TailCall, DL, MVT::Other, Ops);
   //@TailCall 3 }
 
   Chain = DAG.getNode(MYRISCVXISD::CALL, DL, NodeTys, Ops);
@@ -538,6 +541,108 @@ MYRISCVXTargetLowering::passArgOnStack(SDValue StackPtr, unsigned Offset,
   SDValue FIN = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
   return DAG.getStore(Chain, DL, Arg, FIN, MachinePointerInfo(),
                       /* Alignment = */ 0, MachineMemOperand::MOVolatile);
+}
+
+
+// Copy byVal arg to registers and stack.
+void MYRISCVXTargetLowering::
+passByValArg(SDValue Chain, const SDLoc &DL,
+             std::deque< std::pair<unsigned, SDValue> > &RegsToPass,
+             SmallVectorImpl<SDValue> &MemOpChains, SDValue StackPtr,
+             MachineFrameInfo &MFI, SelectionDAG &DAG, SDValue Arg,
+             const CCState &CC, unsigned FirstReg, unsigned LastReg,
+             const ISD::ArgFlagsTy &Flags, bool isLittle,
+             const CCValAssign &VA) const {
+  unsigned ByValSizeInBytes = Flags.getByValSize();
+  unsigned OffsetInBytes = 0; // From beginning of struct
+  unsigned RegSizeInBytes = Subtarget.getGPRSizeInBytes();
+  unsigned Alignment = std::min(Flags.getByValAlign(), RegSizeInBytes);
+  EVT PtrTy = getPointerTy(DAG.getDataLayout()),
+      RegTy = MVT::getIntegerVT(RegSizeInBytes * 8);
+  unsigned NumRegs = LastReg - FirstReg;
+
+  if (NumRegs) {
+    const ArrayRef<MCPhysReg> ArgRegs = ABI.GetByValArgRegs();
+    bool LeftoverBytes = (NumRegs * RegSizeInBytes > ByValSizeInBytes);
+    unsigned I = 0;
+
+    // Copy words to registers.
+    for (; I < NumRegs - LeftoverBytes;
+         ++I, OffsetInBytes += RegSizeInBytes) {
+      SDValue LoadPtr = DAG.getNode(ISD::ADD, DL, PtrTy, Arg,
+                                    DAG.getConstant(OffsetInBytes, DL, PtrTy));
+      SDValue LoadVal = DAG.getLoad(RegTy, DL, Chain, LoadPtr,
+                                    MachinePointerInfo());
+      MemOpChains.push_back(LoadVal.getValue(1));
+      unsigned ArgReg = ArgRegs[FirstReg + I];
+      RegsToPass.push_back(std::make_pair(ArgReg, LoadVal));
+    }
+
+    // Return if the struct has been fully copied.
+    if (ByValSizeInBytes == OffsetInBytes)
+      return;
+
+    // Copy the remainder of the byval argument with sub-word loads and shifts.
+    if (LeftoverBytes) {
+      assert((ByValSizeInBytes > OffsetInBytes) &&
+             (ByValSizeInBytes < OffsetInBytes + RegSizeInBytes) &&
+             "Size of the remainder should be smaller than RegSizeInBytes.");
+      SDValue Val;
+
+      for (unsigned LoadSizeInBytes = RegSizeInBytes / 2, TotalBytesLoaded = 0;
+           OffsetInBytes < ByValSizeInBytes; LoadSizeInBytes /= 2) {
+        unsigned RemainingSizeInBytes = ByValSizeInBytes - OffsetInBytes;
+
+        if (RemainingSizeInBytes < LoadSizeInBytes)
+          continue;
+
+        // Load subword.
+        SDValue LoadPtr = DAG.getNode(ISD::ADD, DL, PtrTy, Arg,
+                                      DAG.getConstant(OffsetInBytes, DL, PtrTy));
+        SDValue LoadVal = DAG.getExtLoad(
+            ISD::ZEXTLOAD, DL, RegTy, Chain, LoadPtr, MachinePointerInfo(),
+            MVT::getIntegerVT(LoadSizeInBytes * 8), Alignment);
+        MemOpChains.push_back(LoadVal.getValue(1));
+
+        // Shift the loaded value.
+        unsigned Shamt;
+
+        if (isLittle)
+          Shamt = TotalBytesLoaded * 8;
+        else
+          Shamt = (RegSizeInBytes - (TotalBytesLoaded + LoadSizeInBytes)) * 8;
+
+        SDValue Shift = DAG.getNode(ISD::SHL, DL, RegTy, LoadVal,
+                                    DAG.getConstant(Shamt, DL, MVT::i32));
+
+        if (Val.getNode())
+          Val = DAG.getNode(ISD::OR, DL, RegTy, Val, Shift);
+        else
+          Val = Shift;
+
+        OffsetInBytes += LoadSizeInBytes;
+        TotalBytesLoaded += LoadSizeInBytes;
+        Alignment = std::min(Alignment, LoadSizeInBytes);
+      }
+
+      unsigned ArgReg = ArgRegs[FirstReg + I];
+      RegsToPass.push_back(std::make_pair(ArgReg, Val));
+      return;
+    }
+  }
+
+  // Copy remainder of byval arg to it with memcpy.
+  unsigned MemCpySize = ByValSizeInBytes - OffsetInBytes;
+  SDValue Src = DAG.getNode(ISD::ADD, DL, PtrTy, Arg,
+                            DAG.getConstant(OffsetInBytes, DL, PtrTy));
+  SDValue Dst = DAG.getNode(ISD::ADD, DL, PtrTy, StackPtr,
+                            DAG.getIntPtrConstant(VA.getLocMemOffset(), DL));
+  Chain = DAG.getMemcpy(Chain, DL, Dst, Src,
+                        DAG.getConstant(MemCpySize, DL, PtrTy),
+                        Alignment, /*isVolatile=*/false, /*AlwaysInline=*/false,
+                        /*isTailCall=*/false,
+                        MachinePointerInfo(), MachinePointerInfo());
+  MemOpChains.push_back(Chain);
 }
 
 
@@ -624,7 +729,7 @@ MYRISCVXTargetLowering::LowerFormalArguments (SDValue Chain,
 
   Function::const_arg_iterator FuncArg =
       DAG.getMachineFunction().getFunction().arg_begin();
-  bool UseSoftFloat = Subtarget.abiUsesSoftFloat();
+  // bool UseSoftFloat = Subtarget.abiUsesSoftFloat();
   CCInfo.AnalyzeFormalArguments (Ins, CC_MYRISCVX);
 
   // Used with vargs to acumulate store chains.
