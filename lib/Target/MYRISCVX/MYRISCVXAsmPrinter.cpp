@@ -17,6 +17,7 @@
 #include "MCTargetDesc/MYRISCVXBaseInfo.h"
 #include "MYRISCVX.h"
 #include "MYRISCVXInstrInfo.h"
+#include "MYRISCVXMCInstLower.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -48,6 +49,14 @@ bool MYRISCVXAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
+bool MYRISCVXAsmPrinter::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
+  MCOp = MCInstLowering.LowerOperand(MO);
+  return MCOp.isValid();
+}
+
+
+#include "MYRISCVXGenMCPseudoLowering.inc"
+
 //@EmitInstruction {
 //- EmitInstruction() must exists or will have run time error.
 void MYRISCVXAsmPrinter::EmitInstruction(const MachineInstr *MI) {
@@ -66,6 +75,9 @@ void MYRISCVXAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   MachineBasicBlock::const_instr_iterator E = MI->getParent()->instr_end();
 
   do {
+    // Do any auto-generated pseudo lowerings.
+    if (emitPseudoExpansionLowering(*OutStreamer, &*I))
+      continue;
 
     if (I->isPseudo())
       llvm_unreachable("Pseudo opcode found in EmitInstruction()");
@@ -269,6 +281,7 @@ void MYRISCVXAsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
   // TODO: implement
   OS << "PrintDebugValueComment()";
 }
+
 
 // Force static initialization.
 extern "C" void LLVMInitializeMYRISCVXAsmPrinter() {

@@ -26,7 +26,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "MYRISCVX-isel"
+#define DEBUG_TYPE "isel"
 
 static cl::opt<bool>
 EnableMYRISCVXTailCalls("enable-MYRISCVX-tail-calls", cl::Hidden,
@@ -53,6 +53,24 @@ SDValue MYRISCVXSETargetLowering::LowerOperation(SDValue Op,
 
   return MYRISCVXTargetLowering::LowerOperation(Op, DAG);
 }
+
+
+bool MYRISCVXSETargetLowering::
+isEligibleForTailCallOptimization(const CCState &CCInfo,
+                                  unsigned NextStackOffset,
+                                  const MYRISCVXFunctionInfo& FI) const {
+  if (!EnableMYRISCVXTailCalls)
+    return false;
+
+  // Return false if either the callee or caller has a byval argument.
+  if (CCInfo.getInRegsParamsCount() > 0 || FI.hasByvalArg())
+    return false;
+
+  // Return true if the callee's argument area is no larger than the
+  // caller's.
+  return NextStackOffset <= FI.getIncomingArgSize();
+}
+
 
 const MYRISCVXTargetLowering *
 llvm::createMYRISCVXSETargetLowering(const MYRISCVXTargetMachine &TM,

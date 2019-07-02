@@ -69,6 +69,9 @@ namespace llvm {
     void EmitFunctionBodyEnd() override;
     void EmitStartOfAsmFile(Module &M) override;
     void PrintDebugValueComment(const MachineInstr *MI, raw_ostream &OS);
+    // tblgen'erated function.
+    bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
+                                     const MachineInstr *MI);
   };
 }
 

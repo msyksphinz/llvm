@@ -296,6 +296,15 @@ namespace llvm {
                    SDValue Chain, SDValue Arg, const SDLoc &DL,
                    bool IsTailCall, SelectionDAG &DAG) const;
 
+    /// passByValArg - Pass a byval argument in registers or on stack.
+    void passByValArg(SDValue Chain, const SDLoc &DL,
+                      std::deque< std::pair<unsigned, SDValue> > &RegsToPass,
+                      SmallVectorImpl<SDValue> &MemOpChains, SDValue StackPtr,
+                      MachineFrameInfo &MFI, SelectionDAG &DAG, SDValue Arg,
+                      const CCState &CC, unsigned FirstReg, unsigned LastReg,
+                      const ISD::ArgFlagsTy &Flags, bool isLittle,
+                      const CCValAssign &VA) const;
+
     /// This function fills Ops, which is the list of operands that will later
     /// be used when a function call node is created. It also generates
     /// copyToReg nodes to set up argument registers.
@@ -324,6 +333,13 @@ namespace llvm {
     MachineBasicBlock *
     EmitInstrWithCustomInserter(MachineInstr &MI,
                                 MachineBasicBlock *BB) const override;
+
+    /// isEligibleForTailCallOptimization - Check whether the call is eligible
+    /// for tail call optimization.
+    virtual bool
+    isEligibleForTailCallOptimization(const CCState &MYRISCVXCCInfo,
+                                      unsigned NextStackOffset,
+                                      const MYRISCVXFunctionInfo& FI) const = 0;
 
     /// copyByValArg - Copy argument registers which were used to pass a byval
     /// argument to the stack. Create a stack frame object for the byval
