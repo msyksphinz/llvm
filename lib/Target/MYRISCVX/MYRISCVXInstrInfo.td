@@ -383,9 +383,8 @@ class SetCC_I<bits<7> opcode, bits<3> funct3,
 }
 
 
-let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1,
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 0,
     hasExtraSrcRegAllocReq = 1 in {
-
   class TailCall<Instruction JumpInst> :
     MYRISCVXPseudo<(outs), (ins calltarget:$target), "", []>,
     PseudoInstExpansion<(JumpInst calltarget:$target)>;
@@ -490,12 +489,14 @@ class SelectCC_rrirr<RegisterClass RC, RegisterClass cmpty>
 
 def Select_GPR_Using_CC_GPR : SelectCC_rrirr<GPR, GPR>;
 
+let Defs = [SP], Uses = [SP], hasSideEffects = 1 in {
 // As stack alignment is always done with addi, we need a 16-bit immediate
 def ADJCALLSTACKDOWN : MYRISCVXPseudo<(outs), (ins simm12:$amt1, simm12:$amt2), "",
                                       [(MYRISCVXCallSeqStart timm:$amt1, timm:$amt2)]>;
 def ADJCALLSTACKUP   : MYRISCVXPseudo<(outs), (ins simm12:$amt1, simm12:$amt2), "",
                                       [(MYRISCVXCallSeqEnd timm:$amt1, timm:$amt2)]>;
-//}
+}
+
 //@def CPRESTORE {
 // When handling PIC code the assembler needs .cpload and .cprestore
 // directives. If the real instructions corresponding these directives

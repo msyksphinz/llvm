@@ -405,7 +405,6 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // Arguments that can be passed on register must be kept at
     // RegsToPass vector
     if (VA.isRegLoc()) {
-      LLVM_DEBUG(dbgs() << "isRegLoc make_pair(" << VA.getLocReg() << ", Arg)\n");
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
       continue;
     }
@@ -415,7 +414,6 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     // emit ISD::STORE whichs stores the
     // parameter value to a stack Location
-    LLVM_DEBUG(dbgs() << "isMemLoc make_pair(" << VA.getLocMemOffset() << ", Arg)\n");
     MemOpChains.push_back(passArgOnStack(StackPtr, VA.getLocMemOffset(),
                                          Chain, Arg, DL, IsTailCall, DAG));
   }
@@ -738,8 +736,6 @@ MYRISCVXTargetLowering::LowerFormalArguments (SDValue Chain,
   unsigned CurArgIdx = 0;
   MYRISCVXCC::byval_iterator ByValArg = MYRISCVXCCInfo.byval_begin();
 
-  LLVM_DEBUG(dbgs() << "ArgLocs.size() = " << ArgLocs.size() << "\n");
-
   //@2 {
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     //@2 }
@@ -853,17 +849,14 @@ analyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Args,
   llvm::CCAssignFn *FixedFn = fixedArgFn();
   unsigned CurArgIdx = 0;
   for (unsigned I = 0; I != NumArgs; ++I) {
-    LLVM_DEBUG(dbgs() << "analyzeFormalArguments::I = " << I << '\n');
     MVT ArgVT = Args[I].VT;
     ISD::ArgFlagsTy ArgFlags = Args[I].Flags;
-    LLVM_DEBUG(dbgs() << "  analyzeFormalArguments::isOrigArg = " << Args[I].isOrigArg() << '\n');
     if (Args[I].isOrigArg()) {
       std::advance(FuncArg, Args[I].getOrigArgIndex() - CurArgIdx);
       CurArgIdx = Args[I].getOrigArgIndex();
     } else {
       CurArgIdx = Args[I].getOrigArgIndex();
     }
-    LLVM_DEBUG(dbgs() << "  analyzeFormalArguments::isByVal = " << ArgFlags.isByVal() << '\n');
     if (ArgFlags.isByVal()) {
       handleByValArg(I, ArgVT, ArgVT, CCValAssign::Full, ArgFlags);
       continue;
@@ -871,8 +864,6 @@ analyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Args,
     MVT RegVT = getRegVT(ArgVT, FuncArg->getType(), nullptr, IsSoftFloat);
     if (!FixedFn(I, ArgVT, RegVT, CCValAssign::Full, ArgFlags, CCInfo))
       continue;
-    LLVM_DEBUG(dbgs() << "Formal Arg #" << I << " has unhandled type "
-               << EVT(ArgVT).getEVTString());
     llvm_unreachable(nullptr);
   }
 }
@@ -1183,8 +1174,6 @@ static bool CC_MYRISCVX_LP32(unsigned ValNo, MVT ValVT, MVT LocVT,
   } else {
     llvm_unreachable("Cannot handle this ValVT.");
   }
-
-  LLVM_DEBUG (dbgs() << "State.AllocateReg Result = " << Reg << '\n');
 
   if (!Reg) {
     unsigned OrigAlign = ArgFlags.getOrigAlign();
