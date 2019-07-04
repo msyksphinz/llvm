@@ -28,6 +28,8 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "MYRISCVX-framelowering"
+
 //- emitPrologue() and emitEpilogue must exist for main().
 
 //===----------------------------------------------------------------------===//
@@ -105,6 +107,7 @@ MachineBasicBlock::iterator MYRISCVXFrameLowering::
 eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator I) const {
   unsigned SP = MYRISCVX::SP;
+
   if (!hasReservedCallFrame(MF)) {
     int64_t Amount = I->getOperand(0).getImm();
     if (I->getOpcode() == MYRISCVX::ADJCALLSTACKDOWN)
