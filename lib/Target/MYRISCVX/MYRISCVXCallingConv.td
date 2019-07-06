@@ -19,11 +19,17 @@ class CCIfSubtarget<string F, CCAction A, string Invert = "">
                       F),
            A>;
 
+def CC_MYRISCVX_ByVal : CallingConv<[
+  CCIfByVal<CCPassByVal<4, 4>>
+]>;
+
 //===----------------------------------------------------------------------===//
 // MYRISCVX LP32 Calling Convention
 //===----------------------------------------------------------------------===//
 
 def CC_LP32 : CallingConv<[
+  CCIfByVal<CCDelegateTo<CC_MYRISCVX_ByVal>>,
+
   // Promote i8/i16 arguments to i32.
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
 
@@ -40,6 +46,8 @@ def CC_LP32 : CallingConv<[
 //===----------------------------------------------------------------------===//
 
 def CC_STACK32 : CallingConv<[
+  CCIfByVal<CCDelegateTo<CC_MYRISCVX_ByVal>>,
+
   // Promote i8/i16 arguments to i32.
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
 

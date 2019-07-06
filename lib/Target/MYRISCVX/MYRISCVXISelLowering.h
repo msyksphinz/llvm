@@ -162,6 +162,9 @@ namespace llvm {
     }
 
 
+    void HandleByVal(CCState *State, unsigned &Size,
+                     unsigned Align) const override;
+
    protected:
 
     /// ByValArgInfo - Byval argument information.
@@ -344,12 +347,12 @@ namespace llvm {
     /// copyByValArg - Copy argument registers which were used to pass a byval
     /// argument to the stack. Create a stack frame object for the byval
     /// argument.
-    void copyByValRegs(SDValue Chain, const SDLoc &DL,
-                       std::vector<SDValue> &OutChains, SelectionDAG &DAG,
-                       const ISD::ArgFlagsTy &Flags,
-                       SmallVectorImpl<SDValue> &InVals,
-                       const Argument *FuncArg,
-                       const MYRISCVXCC &CC, const ByValArgInfo &ByVal) const;
+    void copyByValRegs(
+        SDValue Chain, const SDLoc &DL, std::vector<SDValue> &OutChains,
+        SelectionDAG &DAG, const ISD::ArgFlagsTy &Flags,
+        SmallVectorImpl<SDValue> &InVals, const Argument *FuncArg,
+        unsigned FirstReg, unsigned LastReg, const CCValAssign &VA,
+        CCState &State) const;
 
   };
   const MYRISCVXTargetLowering *
