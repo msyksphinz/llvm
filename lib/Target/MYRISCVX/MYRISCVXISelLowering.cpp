@@ -359,6 +359,8 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   std::deque< std::pair<unsigned, SDValue> > RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
 
+  CCInfo.rewindByValRegsInfo();
+
   //@1 {
   // Walk the register/memloc assignments, inserting copies/loads.
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
@@ -372,6 +374,8 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     if (Flags.isByVal()) {
       unsigned FirstByValReg, LastByValReg;
       unsigned ByValIdx = CCInfo.getInRegsParamsProcessed();
+
+      LLVM_DEBUG(dbgs() << "ByValIdx = " << ByValIdx << " , ByValRegs.size() = " << CCInfo.getInRegsParamsCount() << '\n');
       CCInfo.getInRegsParamInfo(ByValIdx, FirstByValReg, LastByValReg);
 
       assert(Flags.getByValSize() &&
@@ -485,6 +489,55 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   return LowerCallResult(Chain, InFlag, CallConv, IsVarArg,
                          Ins, DL, DAG, InVals, CLI.Callee.getNode(), CLI.RetTy);
 
+}
+
+
+void MYRISCVXTargetLowering::HandleByVal(CCState *State, unsigned &Size,
+                                         unsigned Align) const
+{
+  const TargetFrameLowering *TFL = Subtarget.getFrameLowering();
+
+  assert(Size && "Byval argument's size shouldn't be 0.");
+
+  Align = std::min(Align, TFL->getStackAlignment());
+
+  unsigned FirstReg = 0;
+  unsigned NumRegs = 0;
+
+  if (State->getCallingConv() != CallingConv::Fast) {
+    unsigned RegSizeInBytes = Subtarget.getGPRSizeInBytes();
+    ArrayRef<MCPhysReg> IntArgRegs = ABI.GetByValArgRegs();
+    // FIXME: The O32 case actually describes no shadow registers.
+    const MCPhysReg *ShadowRegs = IntArgRegs.data();
+
+    // We used to check the size as well but we can't do that anymore since
+    // CCState::HandleByVal() rounds up the size after calling this function.
+    assert(!(Align % RegSizeInBytes) &&
+           "Byval argument's alignment should be a multiple of"
+           "RegSizeInBytes.");
+
+    FirstReg = State->getFirstUnallocated(IntArgRegs);
+
+    // If Align > RegSizeInBytes, the first arg register must be even.
+    // FIXME: This condition happens to do the right thing but it's not the
+    //        right way to test it. We want to check that the stack frame offset
+    //        of the register is aligned.
+    if ((Align > RegSizeInBytes) && (FirstReg % 2)) {
+      State->AllocateReg(IntArgRegs[FirstReg], ShadowRegs[FirstReg]);
+      ++FirstReg;
+    }
+
+    // Mark the registers allocated.
+    Size = alignTo(Size, RegSizeInBytes);
+    LLVM_DEBUG(dbgs() << "HandbleByVal = " << IntArgRegs.size() << '\n');
+    for (unsigned I = FirstReg; Size > 0 && (I < IntArgRegs.size());
+         Size -= RegSizeInBytes, ++I, ++NumRegs) {
+      LLVM_DEBUG(dbgs() << "Size = " << Size << ", I = " << I << ", NumRegs = " << NumRegs << '\n');
+      State->AllocateReg(IntArgRegs[I], ShadowRegs[I]);
+    }
+  }
+
+  State->addInRegsParamInfo(FirstReg, FirstReg + NumRegs);
 }
 
 
@@ -734,7 +787,7 @@ MYRISCVXTargetLowering::LowerFormalArguments (SDValue Chain,
   std::vector<SDValue> OutChains;
 
   unsigned CurArgIdx = 0;
-  MYRISCVXCC::byval_iterator ByValArg = MYRISCVXCCInfo.byval_begin();
+  CCInfo.rewindByValRegsInfo();
 
   //@2 {
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
@@ -750,12 +803,17 @@ MYRISCVXTargetLowering::LowerFormalArguments (SDValue Chain,
 
     //@byval pass {
     if (Flags.isByVal()) {
+      assert(Ins[i].isOrigArg() && "Byval arguments cannot be implicit");
+      unsigned FirstByValReg, LastByValReg;
+      unsigned ByValIdx = CCInfo.getInRegsParamsProcessed();
+      CCInfo.getInRegsParamInfo(ByValIdx, FirstByValReg, LastByValReg);
+
       assert(Flags.getByValSize() &&
              "ByVal args of size 0 should have been ignored by front-end.");
-      assert(ByValArg != MYRISCVXCCInfo.byval_end());
+      assert(ByValIdx < CCInfo.getInRegsParamsCount());
       copyByValRegs(Chain, DL, OutChains, DAG, Flags, InVals, &*FuncArg,
-                    MYRISCVXCCInfo, *ByValArg);
-      ++ByValArg;
+                    FirstByValReg, LastByValReg, VA, CCInfo);
+      CCInfo.nextInRegsParam();
       continue;
     }
     //@byval pass }
@@ -869,36 +927,50 @@ analyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Args,
 }
 
 
-void MYRISCVXTargetLowering::
-copyByValRegs(SDValue Chain, const SDLoc &DL, std::vector<SDValue> &OutChains,
-              SelectionDAG &DAG, const ISD::ArgFlagsTy &Flags,
-              SmallVectorImpl<SDValue> &InVals, const Argument *FuncArg,
-              const MYRISCVXCC &CC, const ByValArgInfo &ByVal) const {
+void MYRISCVXTargetLowering::copyByValRegs(
+    SDValue Chain, const SDLoc &DL, std::vector<SDValue> &OutChains,
+    SelectionDAG &DAG, const ISD::ArgFlagsTy &Flags,
+    SmallVectorImpl<SDValue> &InVals, const Argument *FuncArg,
+    unsigned FirstReg, unsigned LastReg, const CCValAssign &VA,
+    CCState &State) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  unsigned RegAreaSize = ByVal.NumRegs * CC.regSize();
+  unsigned GPRSizeInBytes = Subtarget.getGPRSizeInBytes();
+  unsigned NumRegs = LastReg - FirstReg;
+  unsigned RegAreaSize = NumRegs * GPRSizeInBytes;
   unsigned FrameObjSize = std::max(Flags.getByValSize(), RegAreaSize);
   int FrameObjOffset;
-  const ArrayRef<MCPhysReg> ByValArgRegs = CC.intArgRegs();
+  ArrayRef<MCPhysReg> ByValArgRegs = ABI.GetByValArgRegs();
+
   if (RegAreaSize)
-    FrameObjOffset = (int)CC.reservedArgArea() -
-        (int)((CC.numIntArgRegs() - ByVal.FirstIdx) * CC.regSize());
+    FrameObjOffset =
+        (int)ABI.GetCalleeAllocdArgSizeInBytes(State.getCallingConv()) -
+        (int)((ByValArgRegs.size() - FirstReg) * GPRSizeInBytes);
   else
-    FrameObjOffset = ByVal.Address;
+    FrameObjOffset = VA.getLocMemOffset();
+
   // Create frame object.
   EVT PtrTy = getPointerTy(DAG.getDataLayout());
-  int FI = MFI.CreateFixedObject(FrameObjSize, FrameObjOffset, true);
+  // Make the fixed object stored to mutable so that the load instructions
+  // referencing it have their memory dependencies added.
+  // Set the frame object as isAliased which clears the underlying objects
+  // vector in ScheduleDAGInstrs::buildSchedGraph() resulting in addition of all
+  // stores as dependencies for loads referencing this fixed object.
+  int FI = MFI.CreateFixedObject(FrameObjSize, FrameObjOffset, false, true);
   SDValue FIN = DAG.getFrameIndex(FI, PtrTy);
   InVals.push_back(FIN);
-  if (!ByVal.NumRegs)
+
+  if (!NumRegs)
     return;
+
   // Copy arg registers.
-  MVT RegTy = MVT::getIntegerVT(CC.regSize() * 8);
+  MVT RegTy = MVT::getIntegerVT(GPRSizeInBytes * 8);
   const TargetRegisterClass *RC = getRegClassFor(RegTy);
-  for (unsigned I = 0; I < ByVal.NumRegs; ++I) {
-    unsigned ArgReg = ByValArgRegs[ByVal.FirstIdx + I];
+
+  for (unsigned I = 0; I < NumRegs; ++I) {
+    unsigned ArgReg = ByValArgRegs[FirstReg + I];
     unsigned VReg = addLiveIn(MF, ArgReg, RC);
-    unsigned Offset = I * CC.regSize();
+    unsigned Offset = I * GPRSizeInBytes;
     SDValue StorePtr = DAG.getNode(ISD::ADD, DL, PtrTy, FIN,
                                    DAG.getConstant(Offset, DL, PtrTy));
     SDValue Store = DAG.getStore(Chain, DL, DAG.getRegister(VReg, RegTy),

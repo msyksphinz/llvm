@@ -3056,6 +3056,8 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       unsigned ByValIdx = CCInfo.getInRegsParamsProcessed();
       CCInfo.getInRegsParamInfo(ByValIdx, FirstByValReg, LastByValReg);
 
+      LLVM_DEBUG(dbgs() << "ByValIdx = " << ByValIdx << " , ByValRegs.size() = " << CCInfo.getInRegsParamsCount() << '\n');
+
       assert(Flags.getByValSize() &&
              "ByVal args of size 0 should have been ignored by front-end.");
       assert(ByValIdx < CCInfo.getInRegsParamsCount());
@@ -4323,9 +4325,12 @@ void MipsTargetLowering::HandleByVal(CCState *State, unsigned &Size,
 
     // Mark the registers allocated.
     Size = alignTo(Size, RegSizeInBytes);
+    LLVM_DEBUG(dbgs() << "HandbleByVal = " << IntArgRegs.size() << '\n');
     for (unsigned I = FirstReg; Size > 0 && (I < IntArgRegs.size());
-         Size -= RegSizeInBytes, ++I, ++NumRegs)
+         Size -= RegSizeInBytes, ++I, ++NumRegs) {
+      LLVM_DEBUG(dbgs() << "Size = " << Size << ", I = " << I << ", NumRegs = " << NumRegs << '\n');
       State->AllocateReg(IntArgRegs[I], ShadowRegs[I]);
+    }
   }
 
   State->addInRegsParamInfo(FirstReg, FirstReg + NumRegs);
