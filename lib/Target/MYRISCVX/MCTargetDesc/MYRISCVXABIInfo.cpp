@@ -27,7 +27,7 @@ namespace {
 static const MCPhysReg LP32IntRegs[8] = {
   MYRISCVX::A0, MYRISCVX::A1, MYRISCVX::A2, MYRISCVX::A3,
   MYRISCVX::A4, MYRISCVX::A5, MYRISCVX::A6, MYRISCVX::A7};
-static const MCPhysReg STACK32IntRegs = {};
+static const MCPhysReg STACK32IntRegs[1] = {MYRISCVX::A0};
 }
 
 ArrayRef<MCPhysReg> MYRISCVXABIInfo::GetByValArgRegs() const {
