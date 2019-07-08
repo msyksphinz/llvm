@@ -89,6 +89,20 @@ MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
 
   setOperationAction(ISD::SELECT,    MVT::i32, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::i32, Expand);
+
+  // For Var Arguments
+  setOperationAction(ISD::VASTART,   MVT::Other, Custom);
+
+  // Support va_arg(): variable numbers (not fixed numbers) of arguments
+  //  (parameters) for function all
+  setOperationAction(ISD::VAARG,        MVT::Other, Expand);
+  setOperationAction(ISD::VACOPY,       MVT::Other, Expand);
+  setOperationAction(ISD::VAEND,        MVT::Other, Expand);
+
+  //@llvm.stacksave
+  // Use the default for now
+  setOperationAction(ISD::STACKSAVE,    MVT::Other, Expand);
+  setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
 }
 
 const MYRISCVXTargetLowering *MYRISCVXTargetLowering::create(const MYRISCVXTargetMachine &TM,
@@ -199,8 +213,9 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
 {
   switch (Op.getOpcode())
   {
-    case ISD::SELECT           : return lowerSELECT(Op, DAG);
-    case ISD::GlobalAddress    : return lowerGlobalAddress(Op, DAG);
+    case ISD::SELECT        : return lowerSELECT(Op, DAG);
+    case ISD::GlobalAddress : return lowerGlobalAddress(Op, DAG);
+    case ISD::VASTART       : return lowerVASTART(Op, DAG);
   }
   return SDValue();
 }
@@ -811,6 +826,11 @@ MYRISCVXTargetLowering::LowerFormalArguments (SDValue Chain,
       assert(Flags.getByValSize() &&
              "ByVal args of size 0 should have been ignored by front-end.");
       assert(ByValIdx < CCInfo.getInRegsParamsCount());
+
+      LLVM_DEBUG(dbgs() << "LowerFormalArguments ByValIdx = " << ByValIdx <<
+                 ", FirstByValRegs = " << FirstByValReg <<
+                 ", LastByValRegs = " << LastByValReg << '\n');
+
       copyByValRegs(Chain, DL, OutChains, DAG, Flags, InVals, &*FuncArg,
                     FirstByValReg, LastByValReg, VA, CCInfo);
       CCInfo.nextInRegsParam();
@@ -895,6 +915,9 @@ MYRISCVXTargetLowering::LowerFormalArguments (SDValue Chain,
     Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, OutChains);
   }
 
+  if (IsVarArg)
+    writeVarArgRegs(OutChains, Chain, DL, DAG, CCInfo);
+
   return Chain;
 }
 // @LowerFormalArguments }
@@ -949,6 +972,9 @@ void MYRISCVXTargetLowering::copyByValRegs(
   else
     FrameObjOffset = VA.getLocMemOffset();
 
+  LLVM_DEBUG(dbgs() << "copyByValRegs : RegAreaSize = " << RegAreaSize << '\n');
+  LLVM_DEBUG(dbgs() << "copyByValRegs : FrameObjOffset = " << FrameObjOffset << '\n');
+
   // Create frame object.
   EVT PtrTy = getPointerTy(DAG.getDataLayout());
   // Make the fixed object stored to mutable so that the load instructions
@@ -959,6 +985,8 @@ void MYRISCVXTargetLowering::copyByValRegs(
   int FI = MFI.CreateFixedObject(FrameObjSize, FrameObjOffset, false, true);
   SDValue FIN = DAG.getFrameIndex(FI, PtrTy);
   InVals.push_back(FIN);
+
+  LLVM_DEBUG(dbgs() << "copyByValRegs : NumRegs = " << NumRegs << '\n');
 
   if (!NumRegs)
     return;
@@ -976,6 +1004,9 @@ void MYRISCVXTargetLowering::copyByValRegs(
     SDValue Store = DAG.getStore(Chain, DL, DAG.getRegister(VReg, RegTy),
                                  StorePtr, MachinePointerInfo(FuncArg, Offset));
     OutChains.push_back(Store);
+
+    LLVM_DEBUG(dbgs() << "copyByValRegs : Store(" << I << ") = " << "VReg = " << VReg << ", Offset = " << Offset << '\n');
+
   }
 }
 
@@ -1265,4 +1296,68 @@ llvm::CCAssignFn *MYRISCVXTargetLowering::MYRISCVXCC::fixedArgFn() const {
     return CC_MYRISCVX_LP32;
   else // otherwise
     return CC_MYRISCVX_STACK32;
+}
+
+
+SDValue MYRISCVXTargetLowering::lowerVASTART(SDValue Op, SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  MYRISCVXFunctionInfo *FuncInfo = MF.getInfo<MYRISCVXFunctionInfo>();
+
+  SDLoc DL = SDLoc(Op);
+  SDValue FI = DAG.getFrameIndex(FuncInfo->getVarArgsFrameIndex(),
+                                 getPointerTy(MF.getDataLayout()));
+
+  // vastart just stores the address of the VarArgsFrameIndex slot into the
+  // memory location argument.
+  const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
+  return DAG.getStore(Op.getOperand(0), DL, FI, Op.getOperand(1),
+                      MachinePointerInfo(SV));
+}
+
+
+void MYRISCVXTargetLowering::writeVarArgRegs(std::vector<SDValue> &OutChains,
+                                             SDValue Chain, const SDLoc &DL,
+                                             SelectionDAG &DAG,
+                                             CCState &State) const {
+  ArrayRef<MCPhysReg> ArgRegs = ABI.GetVarArgRegs();
+  unsigned Idx = State.getFirstUnallocated(ArgRegs);
+  unsigned RegSizeInBytes = Subtarget.getGPRSizeInBytes();
+  MVT RegTy = MVT::getIntegerVT(RegSizeInBytes * 8);
+  const TargetRegisterClass *RC = getRegClassFor(RegTy);
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
+
+  // Offset of the first variable argument from stack pointer.
+  int VaArgOffset;
+
+  if (ArgRegs.size() == Idx)
+    VaArgOffset = alignTo(State.getNextStackOffset(), RegSizeInBytes);
+  else {
+    VaArgOffset =
+        (int)ABI.GetCalleeAllocdArgSizeInBytes(State.getCallingConv()) -
+        (int)(RegSizeInBytes * (ArgRegs.size() - Idx));
+  }
+
+  // Record the frame index of the first variable argument
+  // which is a value necessary to VASTART.
+  int FI = MFI.CreateFixedObject(RegSizeInBytes, VaArgOffset, true);
+  MYRISCVXFI->setVarArgsFrameIndex(FI);
+
+  // Copy the integer registers that have not been used for argument passing
+  // to the argument register save area. For O32, the save area is allocated
+  // in the caller's stack frame, while for N32/64, it is allocated in the
+  // callee's stack frame.
+  for (unsigned I = Idx; I < ArgRegs.size();
+       ++I, VaArgOffset += RegSizeInBytes) {
+    unsigned Reg = addLiveIn(MF, ArgRegs[I], RC);
+    SDValue ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegTy);
+    FI = MFI.CreateFixedObject(RegSizeInBytes, VaArgOffset, true);
+    SDValue PtrOff = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
+    SDValue Store =
+        DAG.getStore(Chain, DL, ArgValue, PtrOff, MachinePointerInfo());
+    cast<StoreSDNode>(Store.getNode())->getMemOperand()->setValue(
+        (Value *)nullptr);
+    OutChains.push_back(Store);
+  }
 }
