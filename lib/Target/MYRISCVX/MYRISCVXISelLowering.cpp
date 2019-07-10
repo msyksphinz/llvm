@@ -790,8 +790,6 @@ MYRISCVXTargetLowering::LowerFormalArguments (SDValue Chain,
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(),
                  ArgLocs, *DAG.getContext());
-  MYRISCVXCC MYRISCVXCCInfo(CallConv, ABI.IsLP32(),
-                            CCInfo);
 
   Function::const_arg_iterator FuncArg =
       DAG.getMachineFunction().getFunction().arg_begin();
@@ -908,15 +906,15 @@ MYRISCVXTargetLowering::LowerFormalArguments (SDValue Chain,
   }
   //@Ordinary struct type: 1 }
 
+  if (IsVarArg)
+    writeVarArgRegs(OutChains, Chain, DL, DAG, CCInfo);
+
   // All stores are grouped in one node to allow the matching between
   // the size of Ins and InVals. This only happens when on varg functions
   if (!OutChains.empty()) {
     OutChains.push_back(Chain);
     Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, OutChains);
   }
-
-  if (IsVarArg)
-    writeVarArgRegs(OutChains, Chain, DL, DAG, CCInfo);
 
   return Chain;
 }
@@ -1350,6 +1348,9 @@ void MYRISCVXTargetLowering::writeVarArgRegs(std::vector<SDValue> &OutChains,
   // callee's stack frame.
   for (unsigned I = Idx; I < ArgRegs.size();
        ++I, VaArgOffset += RegSizeInBytes) {
+
+    LLVM_DEBUG(dbgs() << "writeVarArgRegs I = " << I << '\n');
+
     unsigned Reg = addLiveIn(MF, ArgRegs[I], RC);
     SDValue ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegTy);
     FI = MFI.CreateFixedObject(RegSizeInBytes, VaArgOffset, true);
