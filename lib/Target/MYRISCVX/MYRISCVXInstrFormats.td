@@ -130,8 +130,6 @@ class MYRISCVX_S<bits<7> opcode, bits<3> funct3,
   let Inst{14-12} = funct3;
   let Inst{11-7}  = simm12{4-0};
   let Inst{6-0}   = opcode;
-
-  let DecoderMethod = "DecodeStore";
 }
 
 

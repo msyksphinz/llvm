@@ -355,10 +355,6 @@ namespace llvm {
         CCState &State) const;
 
     SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
-    SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
-    SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
-    SDValue lowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
-    SDValue lowerADD(SDValue Op, SelectionDAG &DAG) const;
 
     /// writeVarArgRegs - Write variable function arguments passed in registers
     /// to the stack. Also create a stack frame object for the first variable

@@ -99,10 +99,6 @@ MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
   setOperationAction(ISD::VACOPY,       MVT::Other, Expand);
   setOperationAction(ISD::VAEND,        MVT::Other, Expand);
 
-  //@llvm.stacksave
-  // Use the default for now
-  setOperationAction(ISD::STACKSAVE,    MVT::Other, Expand);
-  setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
 }
 
 const MYRISCVXTargetLowering *MYRISCVXTargetLowering::create(const MYRISCVXTargetMachine &TM,
