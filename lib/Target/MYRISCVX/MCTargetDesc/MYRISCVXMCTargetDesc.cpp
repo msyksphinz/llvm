@@ -48,7 +48,7 @@ static StringRef selectMYRISCVXArchFeature(const Triple &TT, StringRef CPU) {
   } else if (TT.getArch() == Triple::ArchType::myriscvx32) {
     return "-64bit";
   }
-  return "";
+  return "+simple32";
 }
 //@1 }
 
