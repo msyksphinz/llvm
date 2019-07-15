@@ -102,9 +102,9 @@ class MYRISCVX_I<bits<7> opcode, bits<3> funct3,
 {
   bits<5>  rd;
   bits<5>  rs1;
-  bits<12> imm12;
+  bits<12> simm12;
 
-  let Inst{31-20} = imm12;
+  let Inst{31-20} = simm12;
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
   let Inst{11-7}  = rd;
