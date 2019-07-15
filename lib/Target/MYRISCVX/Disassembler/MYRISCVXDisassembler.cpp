@@ -122,7 +122,8 @@ static MCDisassembler *createMYRISCVX32Disassembler(
     const Target &T,
     const MCSubtargetInfo &STI,
     MCContext &Ctx) {
-  return new MYRISCVXDisassembler(STI, Ctx, true);
+  // Little Endian
+  return new MYRISCVXDisassembler(STI, Ctx, false);
 }
 
 // static MCDisassembler *createMYRISCVX64Disassembler(
