@@ -188,17 +188,17 @@ def truncstorei16_a : AlignedStore<truncstorei16>;
 let canFoldAsLoad = 1 in
 class LoadM<bits<7> opcode, bits<3> funct3, string instr_asm, PatFrag OpNode, RegisterClass RC,
             Operand MemOpnd, bit Pseudo>:
-  MYRISCVX_I<opcode, funct3, (outs RC:$ra), (ins MemOpnd:$addr),
-     !strconcat(instr_asm, "\t$ra, $addr"),
-     [(set RC:$ra, (OpNode addr:$addr))], IILoad> {
+  MYRISCVX_I<opcode, funct3, (outs RC:$rd), (ins RC:$rs1, simm12:$simm12),
+     !strconcat(instr_asm, "\t$rd, ${simm12}(${rs1})"),
+     [], IILoad> {
   let isPseudo = Pseudo;
 }
 
 class StoreM<bits<7> opcode, bits<3> funct3, string instr_asm, PatFrag OpNode, RegisterClass RC,
              Operand MemOpnd, bit Pseudo>:
-  MYRISCVX_S<opcode, funct3, (outs), (ins RC:$ra, MemOpnd:$addr),
-     !strconcat(instr_asm, "\t$ra, $addr"),
-     [(OpNode RC:$ra, addr:$addr)], IIStore> {
+  MYRISCVX_S<opcode, funct3, (outs), (ins RC:$rs2, RC:$rs1, simm12:$simm12),
+     !strconcat(instr_asm, "\t$rs2, ${simm12}(${rs1})"),
+     [], IIStore> {
   let isPseudo = Pseudo;
 }
 
@@ -243,9 +243,9 @@ class ArithLogicR<bits<7> opcode, bits<3> funct3, bits<7>funct7,
 class ArithLogicI<bits<7> opcode, bits<3> funct3,
                   string instr_asm, SDNode OpNode,
                   Operand Od, PatLeaf imm_type, RegisterClass RC> :
-  MYRISCVX_I<opcode, funct3, (outs RC:$rd), (ins RC:$rs1, Od:$imm12),
-  !strconcat(instr_asm, "\t$rd, $rs1, $imm12"),
-  [(set RC:$rd, (OpNode RC:$rs1, imm_type:$imm12))], IIAlu> {
+  MYRISCVX_I<opcode, funct3, (outs RC:$rd), (ins RC:$rs1, Od:$simm12),
+  !strconcat(instr_asm, "\t$rd, $rs1, $simm12"),
+  [(set RC:$rd, (OpNode RC:$rs1, imm_type:$simm12))], IIAlu> {
     let isReMaterializable = 1;
 }
 
@@ -262,8 +262,8 @@ class ArithLogicU<bits<7> opcode,
 class CondBranch12<bits<7> opcode, bits<3> funct3,
                 string instr_asm,
                 PatFrag cond_op, RegisterClass RC> :
-  MYRISCVX_B<opcode, funct3, (outs), (ins RC:$rs1, RC:$rs2, brtarget12:$imm12),
-  !strconcat(instr_asm, "\t$rs1, $rs2, $imm12"),
+  MYRISCVX_B<opcode, funct3, (outs), (ins RC:$rs1, RC:$rs2, brtarget12:$simm12),
+  !strconcat(instr_asm, "\t$rs1, $rs2, $simm12"),
   [], IIAlu> {
     let isBranch = 1;
     let isTerminator = 1;
@@ -300,7 +300,7 @@ let isCall=1, hasDelaySlot=0, Defs = [RA], isCodeGenOnly = 0 in {
       !strconcat(instr_asm, "\tx1, $rs1, 0"),
       [(MYRISCVXCall GPR:$rs1)], IIAlu> {
       let rd = 1;
-      let imm12 = 0;
+      let simm12 = 0;
       let isBranch = 1;
       let isTerminator = 1;
       let isBarrier = 1;
@@ -322,7 +322,7 @@ class JumpRegisterX0<bits<7> opcode, bits<3> funct3, string instr_asm>:
     !strconcat(instr_asm, "\t$rs1"),
     [(MYRISCVXCall GPR:$rs1)], IIAlu> {
     let rd = 0;
-    let imm12 = 0;
+    let simm12 = 0;
     let isBranch = 1;
     let isTerminator = 1;
     let isBarrier = 1;
@@ -376,9 +376,9 @@ class SetCC_R<bits<7> opcode, bits<3> funct3, bits<7> funct7,
 class SetCC_I<bits<7> opcode, bits<3> funct3,
               string instr_asm, PatFrag cond_op,
               Operand imm, PatLeaf imm_type, RegisterClass RC> :
-  MYRISCVX_I<opcode, funct3, (outs RC:$ra), (ins RC:$rb, imm:$imm12),
-             !strconcat(instr_asm, "\t$ra, $rb, $imm12"),
-             [(set GPR:$ra, (cond_op RC:$rb, imm_type:$imm12))], IIAlu> {
+  MYRISCVX_I<opcode, funct3, (outs RC:$ra), (ins RC:$rb, imm:$simm12),
+             !strconcat(instr_asm, "\t$ra, $rb, $simm12"),
+             [(set GPR:$ra, (cond_op RC:$rb, imm_type:$simm12))], IIAlu> {
                let isReMaterializable = 1;
 }
 
@@ -540,17 +540,17 @@ class WrapperPat<SDNode node, Instruction ORiOp, RegisterClass RC>:
           (ORiOp RC:$gp, node:$in)>;
 
 def : WrapperPat<tglobaladdr, ORI, GPR>;
-def : Pat<(i32 (zextloadi1  addr:$src)), (LBU addr:$src)>;
-def : Pat<(i32 (zextloadi8  addr:$src)), (LBU addr:$src)>;
-def : Pat<(i32 (zextloadi16 addr:$src)), (LHU addr:$src)>;
+def : Pat<(i32 (zextloadi1  (add GPR:$rs1, simm12:$simm12))), (LBU GPR:$rs1, simm12:$simm12)>;
+def : Pat<(i32 (zextloadi8  (add GPR:$rs1, simm12:$simm12))), (LBU GPR:$rs1, simm12:$simm12)>;
+def : Pat<(i32 (zextloadi16 (add GPR:$rs1, simm12:$simm12))), (LHU GPR:$rs1, simm12:$simm12)>;
 
-def : Pat<(i32 (sextloadi1  addr:$src)), (LB addr:$src)>;
-def : Pat<(i32 (sextloadi8  addr:$src)), (LB addr:$src)>;
-def : Pat<(i32 (sextloadi16 addr:$src)), (LH addr:$src)>;
+def : Pat<(i32 (sextloadi1  (add GPR:$rs1, simm12:$simm12))), (LB  GPR:$rs1, simm12:$simm12)>;
+def : Pat<(i32 (sextloadi8  (add GPR:$rs1, simm12:$simm12))), (LB  GPR:$rs1, simm12:$simm12)>;
+def : Pat<(i32 (sextloadi16 (add GPR:$rs1, simm12:$simm12))), (LH  GPR:$rs1, simm12:$simm12)>;
 
-def : Pat<(i32 (extloadi1  addr:$src)), (LBU addr:$src)>;
-def : Pat<(i32 (extloadi8  addr:$src)), (LBU addr:$src)>;
-def : Pat<(i32 (extloadi16 addr:$src)), (LHU addr:$src)>;
+def : Pat<(i32 (extloadi1   (add GPR:$rs1, simm12:$simm12))), (LBU GPR:$rs1, simm12:$simm12)>;
+def : Pat<(i32 (extloadi8   (add GPR:$rs1, simm12:$simm12))), (LBU GPR:$rs1, simm12:$simm12)>;
+def : Pat<(i32 (extloadi16  (add GPR:$rs1, simm12:$simm12))), (LHU GPR:$rs1, simm12:$simm12)>;
 
 def : Pat<(sext_inreg GPR:$ra, i8),  (SRAI (SLLI GPR:$ra, 24), 24)>;
 def : Pat<(sext_inreg GPR:$ra, i16), (SRAI (SLLI GPR:$ra, 16), 16)>;
