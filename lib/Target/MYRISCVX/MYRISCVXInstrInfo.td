@@ -540,17 +540,17 @@ class WrapperPat<SDNode node, Instruction ORiOp, RegisterClass RC>:
           (ORiOp RC:$gp, node:$in)>;
 
 def : WrapperPat<tglobaladdr, ORI, GPR>;
-def : Pat<(i32 (zextloadi1  (add GPR:$rs1, simm12:$simm12))), (LBU GPR:$rs1, simm12:$simm12)>;
-def : Pat<(i32 (zextloadi8  (add GPR:$rs1, simm12:$simm12))), (LBU GPR:$rs1, simm12:$simm12)>;
-def : Pat<(i32 (zextloadi16 (add GPR:$rs1, simm12:$simm12))), (LHU GPR:$rs1, simm12:$simm12)>;
-
-def : Pat<(i32 (sextloadi1  (add GPR:$rs1, simm12:$simm12))), (LB  GPR:$rs1, simm12:$simm12)>;
-def : Pat<(i32 (sextloadi8  (add GPR:$rs1, simm12:$simm12))), (LB  GPR:$rs1, simm12:$simm12)>;
-def : Pat<(i32 (sextloadi16 (add GPR:$rs1, simm12:$simm12))), (LH  GPR:$rs1, simm12:$simm12)>;
-
-def : Pat<(i32 (extloadi1   (add GPR:$rs1, simm12:$simm12))), (LBU GPR:$rs1, simm12:$simm12)>;
-def : Pat<(i32 (extloadi8   (add GPR:$rs1, simm12:$simm12))), (LBU GPR:$rs1, simm12:$simm12)>;
-def : Pat<(i32 (extloadi16  (add GPR:$rs1, simm12:$simm12))), (LHU GPR:$rs1, simm12:$simm12)>;
+// def : Pat<(i32 (zextloadi1  (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
+// def : Pat<(i32 (zextloadi8  (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
+// def : Pat<(i32 (zextloadi16 (add GPR:$rs1, simm12:$simm12))), (LHU $rs1, $simm12)>;
+//
+// def : Pat<(i32 (sextloadi1  (add GPR:$rs1, simm12:$simm12))), (LB  $rs1, $simm12)>;
+// def : Pat<(i32 (sextloadi8  (add GPR:$rs1, simm12:$simm12))), (LB  $rs1, $simm12)>;
+// def : Pat<(i32 (sextloadi16 (add GPR:$rs1, simm12:$simm12))), (LH  $rs1, $simm12)>;
+//
+// def : Pat<(i32 (extloadi1   (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
+// def : Pat<(i32 (extloadi8   (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
+// def : Pat<(i32 (extloadi16  (add GPR:$rs1, simm12:$simm12))), (LHU $rs1, $simm12)>;
 
 def : Pat<(sext_inreg GPR:$ra, i8),  (SRAI (SLLI GPR:$ra, 24), 24)>;
 def : Pat<(sext_inreg GPR:$ra, i16), (SRAI (SLLI GPR:$ra, 16), 16)>;
