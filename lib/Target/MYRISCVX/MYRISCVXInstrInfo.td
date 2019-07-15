@@ -187,7 +187,7 @@ def truncstorei16_a : AlignedStore<truncstorei16>;
 // Memory Load/Store
 let canFoldAsLoad = 1 in
 class LoadM<bits<7> opcode, bits<3> funct3, string instr_asm, PatFrag OpNode, RegisterClass RC,
-            Operand MemOpnd, bit Pseudo>:
+            bit Pseudo>:
   MYRISCVX_I<opcode, funct3, (outs RC:$rd), (ins RC:$rs1, simm12:$simm12),
      !strconcat(instr_asm, "\t$rd, ${simm12}(${rs1})"),
      [], IILoad> {
@@ -195,7 +195,7 @@ class LoadM<bits<7> opcode, bits<3> funct3, string instr_asm, PatFrag OpNode, Re
 }
 
 class StoreM<bits<7> opcode, bits<3> funct3, string instr_asm, PatFrag OpNode, RegisterClass RC,
-             Operand MemOpnd, bit Pseudo>:
+             bit Pseudo>:
   MYRISCVX_S<opcode, funct3, (outs), (ins RC:$rs2, RC:$rs1, simm12:$simm12),
      !strconcat(instr_asm, "\t$rs2, ${simm12}(${rs1})"),
      [], IIStore> {
@@ -219,13 +219,13 @@ def LEA_ADDI : EffectiveAddress<"addi\t$ra, $addr", GPR, mem_ea> {
 //@ 32-bit load.
 multiclass LoadM32<bits<7> opcode, bits<3> funct3, string instr_asm, PatFrag OpNode,
                    bit Pseudo = 0> {
-  def #NAME# : LoadM<opcode, funct3, instr_asm, OpNode, GPR, mem, Pseudo>;
+  def #NAME# : LoadM<opcode, funct3, instr_asm, OpNode, GPR, Pseudo>;
 }
 
 // 32-bit store.
 multiclass StoreM32<bits<7> opcode, bits<3> funct3, string instr_asm, PatFrag OpNode,
                     bit Pseudo = 0> {
-  def #NAME# : StoreM<opcode, funct3, instr_asm, OpNode, GPR, mem, Pseudo>;
+  def #NAME# : StoreM<opcode, funct3, instr_asm, OpNode, GPR, Pseudo>;
 }
 
 // Arithmetic and logical instructions with 2 register operands.

@@ -248,10 +248,10 @@ static DecodeStatus DecodeBranch12Target(MCInst &Inst,
                                          unsigned Insn,
                                          uint64_t Address,
                                          const void *Decoder) {
-  int BranchOffset = SignExtend32<12>((fieldFromInstruction(Insn, 31, 31) << 12) |
-                                      (fieldFromInstruction(Insn, 30, 25) <<  5) |
-                                      (fieldFromInstruction(Insn, 11,  8) <<  1) |
-                                      (fieldFromInstruction(Insn,  7,  7) << 11));
+  int BranchOffset = SignExtend32<12>((fieldFromInstruction(Insn, 31, 1) << 12) |
+                                      (fieldFromInstruction(Insn, 25, 6) <<  5) |
+                                      (fieldFromInstruction(Insn,  8, 4) <<  1) |
+                                      (fieldFromInstruction(Insn,  7, 1) << 11));
   Inst.addOperand(MCOperand::createImm(BranchOffset));
   return MCDisassembler::Success;
 }
