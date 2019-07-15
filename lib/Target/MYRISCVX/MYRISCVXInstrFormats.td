@@ -159,15 +159,17 @@ class MYRISCVX_B<bits<7> opcode, bits<3> funct3,
                  InstrItinClass itin>:
   MYRISCVXInst<outs, ins, asmstr, pattern, itin, FrmB>
 {
-  bits<12> imm12;
+  bits<12> simm12;
   bits<5>  rs2;
   bits<5>  rs1;
 
-  let Inst{31}    = imm12{11};
-  let Inst{30-25} = imm12{9-4};
+  let Inst{31}    = simm12{11};
+  let Inst{30-25} = simm12{9-4};
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
-  let Inst{11-8}  = imm12{3-0};
-  let Inst{7}     = imm12{10};
+  let Inst{11-8}  = simm12{3-0};
+  let Inst{7}     = simm12{10};
   let Inst{6-0}   = opcode;
 }
 
