@@ -73,7 +73,7 @@ def MYRISCVXLo    : SDNode<"MYRISCVXISD::Lo", SDTIntUnaryOp>;
 def MYRISCVXGPRel : SDNode<"MYRISCVXISD::GPRel", SDTIntUnaryOp>;
 
 // Signed Operand
-def simm12 : Operand<i32> {
+def simm12 : Operand<i32>, ImmLeaf<i32, [{return isInt<12>(Imm);}]> {
   let DecoderMethod= "DecodeSimm12";
 }
 def simm20 : Operand<i32> {
@@ -145,8 +145,8 @@ def mem_ea : Operand<iPTR> {
 
 // MYRISCVX Address Mode! SDNode frameindex could possibily be a match
 // since load and store instructions from stack used it.
-def addr :
-  ComplexPattern<iPTR, 2, "SelectAddr", [frameindex]>;
+def addr_fi :
+  ComplexPattern<iPTR, 1, "SelectAddrFI", [frameindex], []>;
 
 def MYRISCVXWrapper    : SDNode<"MYRISCVXISD::Wrapper", SDTIntBinOp>;
 
@@ -203,17 +203,17 @@ class StoreM<bits<7> opcode, bits<3> funct3, string instr_asm, PatFrag OpNode, R
 }
 
 
-class EffectiveAddress<string instr_asm, RegisterClass RC, Operand Mem> :
-  MYRISCVX_I<0b0010011, 0b000, (outs RC:$ra), (ins Mem:$addr),
-     instr_asm, [(set RC:$ra, addr:$addr)], IIAlu>;
-
-// FrameIndexes are legalized when they are operands from load/store
-// instructions. The same not happens for stack address copies, so an
-// add op with mem ComplexPattern is used and the stack address copy
-// can be matched. It's similar to Sparc LEA_ADDRi
-def LEA_ADDI : EffectiveAddress<"addi\t$ra, $addr", GPR, mem_ea> {
-  let isCodeGenOnly = 1;
-}
+// class EffectiveAddress<string instr_asm, RegisterClass RC, Operand Mem> :
+//   MYRISCVX_I<0b0010011, 0b000, (outs RC:$ra), (ins Mem:$addr),
+//      instr_asm, [(set RC:$ra, addr_fi:$addr)], IIAlu>;
+//
+// // FrameIndexes are legalized when they are operands from load/store
+// // instructions. The same not happens for stack address copies, so an
+// // add op with mem ComplexPattern is used and the stack address copy
+// // can be matched. It's similar to Sparc LEA_ADDRi
+// def LEA_ADDI : EffectiveAddress<"addi\t$ra, $addr", GPR, mem_ea> {
+//   let isCodeGenOnly = 1;
+// }
 
 
 //@ 32-bit load.
@@ -556,6 +556,19 @@ def : Pat<(sext_inreg GPR:$ra, i8),  (SRAI (SLLI GPR:$ra, 24), 24)>;
 def : Pat<(sext_inreg GPR:$ra, i16), (SRAI (SLLI GPR:$ra, 16), 16)>;
 
 def : Pat<(br bb:$simm20), (J bb:$simm20)>;
+
+def : Pat<(i32 (load GPR:$rs1))                          , (LW GPR:$rs1, 0)           >;
+def : Pat<(i32 (load addr_fi:$rs1))                      , (LW addr_fi:$rs1, 0)       >;
+def : Pat<(i32 (load (add GPR:$rs1, simm12:$simm12)))    , (LW GPR:$rs1, $simm12)     >;
+def : Pat<(i32 (load (add addr_fi:$rs1, simm12:$simm12))), (LW addr_fi:$rs1, $simm12) >;
+// def : Pat<(i32 (load (IsOrAdd addr_fi:$rs1, simm12:$simm12))), (LW addr_fi:$rs1, simm12:$simm12)>;
+
+def : Pat<(store GPR:$rs2, GPR:$rs1)                          , (SW GPR:$rs2, GPR:$rs1, 0)                         >;
+def : Pat<(store GPR:$rs2, addr_fi:$rs1)                      , (SW GPR:$rs2, addr_fi:$rs1, 0)                     >;
+def : Pat<(store GPR:$rs2, (add GPR:$rs1, simm12:$simm12))    , (SW GPR:$rs2, GPR:$rs1, simm12:$simm12)            >;
+def : Pat<(store GPR:$rs2, (add addr_fi:$rs1, simm12:$simm12)), (SW GPR:$rs2, addr_fi:$rs1, simm12:$simm12)        >;
+// def : Pat<(store GPR:$rs2, (IsOrAdd addr_fi:$rs1, simm12:$simm12)), (SW GPR:$rs2, addr_fi:$rs1, simm12:$simm12) >;
+
 
 // Define pattern expansions for setcc operations that aren't directly
 // handled by a RISC-V instruction.

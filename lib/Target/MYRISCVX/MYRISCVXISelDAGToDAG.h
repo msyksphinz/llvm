@@ -67,6 +67,7 @@ namespace llvm {
 
     // Complex Pattern.
     bool SelectAddr(SDValue N, SDValue &Base, SDValue &Offset);
+    bool SelectAddrFI(SDValue Addr, SDValue &Base);
 
     // getImm - Return a target constant with the specified value.
     inline SDValue getImm(const SDNode *Node, unsigned Imm) {

@@ -63,6 +63,16 @@ SDNode *MYRISCVXDAGToDAGISel::getGlobalBaseReg() {
 }
 
 
+bool MYRISCVXDAGToDAGISel::SelectAddrFI(SDValue Addr, SDValue &Base) {
+  if (auto FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
+    EVT ValTy = Addr.getValueType();
+    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
+    return true;
+  }
+  return false;
+}
+
+
 //@SelectAddr {
 /// ComplexPattern used on MYRISCVXInstrInfo
 /// Used on MYRISCVX Load/Store instructions
