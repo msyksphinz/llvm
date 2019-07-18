@@ -97,7 +97,7 @@ getBranch16TargetOpValue(const MCInst &MI, unsigned OpNo,
   if (MO.isImm()) {
     return static_cast<unsigned>(MO.getImm());
   }
-  llvm_unreachable("getBranch20TargetOpValue should be imm.");
+  llvm_unreachable("getBranch16TargetOpValue should be imm.");
 }
 
 /// getBranch24TargetOpValue - Return binary encoding of the branch
@@ -196,7 +196,16 @@ getBranch20TargetOpValue(const MCInst &MI, unsigned OpNo,
   if (MO.isImm()) {
     return static_cast<unsigned>(MO.getImm());
   }
-  llvm_unreachable("getBranch20TargetOpValue should be imm.");
+
+  assert(MO.isExpr() &&
+         "getBranchTargetOpValue expects only expressions or immediates");
+
+  const MCExpr *FixupExpression = MCBinaryExpr::createAdd(
+      MO.getExpr(), MCConstantExpr::create(-4, Ctx), Ctx);
+  Fixups.push_back(MCFixup::create(0, FixupExpression,
+                                   MCFixupKind(MYRISCVX::fixup_MYRISCVX_PCREL_HI20)));
+
+  return 0;
 }
 
 

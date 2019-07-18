@@ -86,10 +86,10 @@ static DecodeStatus DecodeBranch12Target(MCInst &Inst,
                                          unsigned Insn,
                                          uint64_t Address,
                                          const void *Decoder);
-// static DecodeStatus DecodeBranch20Target(MCInst &Inst,
-//                                          unsigned Insn,
-//                                          uint64_t Address,
-//                                          const void *Decoder);
+static DecodeStatus DecodeBranch20Target(MCInst &Inst,
+                                         unsigned Insn,
+                                         uint64_t Address,
+                                         const void *Decoder);
 static DecodeStatus DecodeJumpTarget(MCInst &Inst,
                                      unsigned Insn,
                                      uint64_t Address,
@@ -275,18 +275,18 @@ static DecodeStatus DecodeBranch12Target(MCInst &Inst,
    printOperand(MI, 1, O);
    break;
 */
-// static DecodeStatus DecodeBranch20Target(MCInst &Inst,
-//                                          unsigned Insn,
-//                                          uint64_t Address,
-//                                          const void *Decoder) {
-//   int BranchOffset = SignExtend32<20>((fieldFromInstruction(Insn, 31, 31) << 20) |
-//                                       (fieldFromInstruction(Insn, 30, 21) <<  1) |
-//                                       (fieldFromInstruction(Insn, 20, 20) << 11) |
-//                                       (fieldFromInstruction(Insn, 19, 12) << 12));
-//   Inst.addOperand(MCOperand::createReg(MYRISCVX::SW));
-//   Inst.addOperand(MCOperand::createImm(BranchOffset));
-//   return MCDisassembler::Success;
-// }
+static DecodeStatus DecodeBranch20Target(MCInst &Inst,
+                                         unsigned Insn,
+                                         uint64_t Address,
+                                         const void *Decoder) {
+  int BranchOffset = SignExtend32<20>((fieldFromInstruction(Insn, 31,  1) << 20) |
+                                      (fieldFromInstruction(Insn, 21, 10) <<  1) |
+                                      (fieldFromInstruction(Insn, 20,  1) << 11) |
+                                      (fieldFromInstruction(Insn, 12,  8) << 12));
+  Inst.addOperand(MCOperand::createReg(MYRISCVX::SW));
+  Inst.addOperand(MCOperand::createImm(BranchOffset));
+  return MCDisassembler::Success;
+}
 
 static DecodeStatus DecodeJumpTarget(MCInst &Inst,
                                      unsigned Insn,
