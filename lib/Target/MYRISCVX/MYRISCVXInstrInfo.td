@@ -145,8 +145,8 @@ def mem_ea : Operand<iPTR> {
 
 // MYRISCVX Address Mode! SDNode frameindex could possibily be a match
 // since load and store instructions from stack used it.
-def addr_fi :
-  ComplexPattern<iPTR, 1, "SelectAddrFI", [frameindex], []>;
+def addr_fi : ComplexPattern<iPTR, 1, "SelectAddrFI", [frameindex], []>;
+def addr : ComplexPattern<iPTR, 2, "SelectAddr", [frameindex]>;
 
 def MYRISCVXWrapper    : SDNode<"MYRISCVXISD::Wrapper", SDTIntBinOp>;
 
@@ -203,18 +203,14 @@ class StoreM<bits<7> opcode, bits<3> funct3, string instr_asm, PatFrag OpNode, R
 }
 
 
-// class EffectiveAddress<string instr_asm, RegisterClass RC, Operand Mem> :
-//   MYRISCVX_I<0b0010011, 0b000, (outs RC:$ra), (ins Mem:$addr),
-//      instr_asm, [(set RC:$ra, addr_fi:$addr)], IIAlu>;
-//
-// // FrameIndexes are legalized when they are operands from load/store
-// // instructions. The same not happens for stack address copies, so an
-// // add op with mem ComplexPattern is used and the stack address copy
-// // can be matched. It's similar to Sparc LEA_ADDRi
-// def LEA_ADDI : EffectiveAddress<"addi\t$ra, $addr", GPR, mem_ea> {
-//   let isCodeGenOnly = 1;
-// }
+class EffectiveAddress<string instr_asm, RegisterClass RC, Operand Mem> :
+  MYRISCVX_I<0b0000011, 0b010, (outs RC:$rd), (ins Mem:$addr),
+     instr_asm, [(set RC:$rd, addr:$addr)], IIAlu> {
+}
 
+def LEA_ADDI : EffectiveAddress<"addi\t$rd, $addr", GPR, mem_ea> {
+  let isCodeGenOnly = 1;
+}
 
 //@ 32-bit load.
 multiclass LoadM32<bits<7> opcode, bits<3> funct3, string instr_asm, PatFrag OpNode,
@@ -356,9 +352,9 @@ class ShiftImm32<bits<7> opcode, bits<3> funct3, bit arithshift, string instr_as
 class ShiftR<bits<7> opcode, bits<7> funct7, bits<3> funct3,
              bits<4> isRotate, string instr_asm,
              SDNode OpNode, RegisterClass RC>:
-  MYRISCVX_R<opcode, funct3, funct7, (outs RC:$ra), (ins RC:$rb, RC:$rc),
-          !strconcat(instr_asm, "\t$ra, $rb, $rc"),
-          [(set GPR:$ra, (OpNode RC:$rb, RC:$rc))], IIAlu> {
+  MYRISCVX_R<opcode, funct3, funct7, (outs RC:$rd), (ins RC:$rs1, RC:$rs2),
+          !strconcat(instr_asm, "\t$rd, $rs1, $rs2"),
+          [(set GPR:$rd, (OpNode RC:$rs1, RC:$rs2))], IIAlu> {
 }
 
 
@@ -366,9 +362,9 @@ class ShiftR<bits<7> opcode, bits<7> funct7, bits<3> funct3,
 class SetCC_R<bits<7> opcode, bits<3> funct3, bits<7> funct7,
               string instr_asm, PatFrag cond_op,
               RegisterClass RC> :
-  MYRISCVX_R<opcode, funct3, funct7, (outs RC:$ra), (ins RC:$rb, RC:$rc),
-             !strconcat(instr_asm, "\t$ra, $rb, $rc"),
-             [(set GPR:$ra, (cond_op RC:$rb, RC:$rc))], IIAlu> {
+  MYRISCVX_R<opcode, funct3, funct7, (outs RC:$rd), (ins RC:$rs1, RC:$rs2),
+             !strconcat(instr_asm, "\t$rd, $rs1, $rs2"),
+             [(set GPR:$rd, (cond_op RC:$rs1, RC:$rs2))], IIAlu> {
                let isReMaterializable = 1;
 }
 
@@ -376,9 +372,9 @@ class SetCC_R<bits<7> opcode, bits<3> funct3, bits<7> funct7,
 class SetCC_I<bits<7> opcode, bits<3> funct3,
               string instr_asm, PatFrag cond_op,
               Operand imm, PatLeaf imm_type, RegisterClass RC> :
-  MYRISCVX_I<opcode, funct3, (outs RC:$ra), (ins RC:$rb, imm:$simm12),
-             !strconcat(instr_asm, "\t$ra, $rb, $simm12"),
-             [(set GPR:$ra, (cond_op RC:$rb, imm_type:$simm12))], IIAlu> {
+  MYRISCVX_I<opcode, funct3, (outs RC:$rd), (ins RC:$rs1, imm:$simm12),
+             !strconcat(instr_asm, "\t$rd, $rs1, $simm12"),
+             [(set GPR:$rd, (cond_op RC:$rs1, imm_type:$simm12))], IIAlu> {
                let isReMaterializable = 1;
 }
 
@@ -525,6 +521,9 @@ def : Pat<(i32 immLow12Zero:$in),
 def : Pat<(i32 imm:$imm),
           (ORI (LUI (HI20 imm:$imm)), (LO12 imm:$imm))>;
 
+def : Pat<(i32 addr_fi:$simm12),
+          (ADDI ZERO, imm:$simm12)>;
+
 // hi/lo relocs
 def : Pat<(MYRISCVXHi tglobaladdr:$in), (LUI tglobaladdr:$in)>;
 def : Pat<(MYRISCVXLo tglobaladdr:$in), (ORI ZERO, tglobaladdr:$in)>;
@@ -540,20 +539,20 @@ class WrapperPat<SDNode node, Instruction ORiOp, RegisterClass RC>:
           (ORiOp RC:$gp, node:$in)>;
 
 def : WrapperPat<tglobaladdr, ORI, GPR>;
-// def : Pat<(i32 (zextloadi1  (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
-// def : Pat<(i32 (zextloadi8  (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
-// def : Pat<(i32 (zextloadi16 (add GPR:$rs1, simm12:$simm12))), (LHU $rs1, $simm12)>;
-//
-// def : Pat<(i32 (sextloadi1  (add GPR:$rs1, simm12:$simm12))), (LB  $rs1, $simm12)>;
-// def : Pat<(i32 (sextloadi8  (add GPR:$rs1, simm12:$simm12))), (LB  $rs1, $simm12)>;
-// def : Pat<(i32 (sextloadi16 (add GPR:$rs1, simm12:$simm12))), (LH  $rs1, $simm12)>;
-//
-// def : Pat<(i32 (extloadi1   (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
-// def : Pat<(i32 (extloadi8   (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
-// def : Pat<(i32 (extloadi16  (add GPR:$rs1, simm12:$simm12))), (LHU $rs1, $simm12)>;
+def : Pat<(i32 (zextloadi1  (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
+def : Pat<(i32 (zextloadi8  (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
+def : Pat<(i32 (zextloadi16 (add GPR:$rs1, simm12:$simm12))), (LHU $rs1, $simm12)>;
 
-def : Pat<(sext_inreg GPR:$ra, i8),  (SRAI (SLLI GPR:$ra, 24), 24)>;
-def : Pat<(sext_inreg GPR:$ra, i16), (SRAI (SLLI GPR:$ra, 16), 16)>;
+def : Pat<(i32 (sextloadi1  (add GPR:$rs1, simm12:$simm12))), (LB  $rs1, $simm12)>;
+def : Pat<(i32 (sextloadi8  (add GPR:$rs1, simm12:$simm12))), (LB  $rs1, $simm12)>;
+def : Pat<(i32 (sextloadi16 (add GPR:$rs1, simm12:$simm12))), (LH  $rs1, $simm12)>;
+
+def : Pat<(i32 (extloadi1   (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
+def : Pat<(i32 (extloadi8   (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
+def : Pat<(i32 (extloadi16  (add GPR:$rs1, simm12:$simm12))), (LHU $rs1, $simm12)>;
+
+def : Pat<(sext_inreg GPR:$rd, i8),  (SRAI (SLLI GPR:$rd, 24), 24)>;
+def : Pat<(sext_inreg GPR:$rd, i16), (SRAI (SLLI GPR:$rd, 16), 16)>;
 
 def : Pat<(br bb:$simm20), (J bb:$simm20)>;
 
