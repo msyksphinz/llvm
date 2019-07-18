@@ -53,36 +53,30 @@ MCOperand MYRISCVXMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   const MCSymbol *Symbol;
 
   switch(MO.getTargetFlags()) {
-  default:                   llvm_unreachable("Invalid target flag!");
-  case MYRISCVXII::MO_NO_FLAG:
-    break;
-
-// MYRISCVX_GPREL is for llc -march=MYRISCVX -relocation-model=static -MYRISCVX-islinux-
-//  format=false (global var in .sdata).
-  case MYRISCVXII::MO_GPREL:
-    TargetKind = MYRISCVXMCExpr::CEK_GPREL;
-    break;
-
-  case MYRISCVXII::MO_GOT:
-    TargetKind = MYRISCVXMCExpr::CEK_GOT;
-    break;
-// ABS_HI and ABS_LO is for llc -march=MYRISCVX -relocation-model=static (global
-//  var in .data).
-  case MYRISCVXII::MO_ABS_HI:
-    TargetKind = MYRISCVXMCExpr::CEK_ABS_HI;
-    break;
-  case MYRISCVXII::MO_ABS_LO:
-    TargetKind = MYRISCVXMCExpr::CEK_ABS_LO;
-    break;
-  case MYRISCVXII::MO_GOT_HI16:
-    TargetKind = MYRISCVXMCExpr::CEK_GOT_HI16;
-    break;
-  case MYRISCVXII::MO_GOT_LO16:
-    TargetKind = MYRISCVXMCExpr::CEK_GOT_LO16;
-    break;
-  case MYRISCVXII::MO_GOT_CALL:
-    TargetKind = MYRISCVXMCExpr::CEK_GOT_CALL;
-    break;
+    default:                   llvm_unreachable("Invalid target flag!");
+    case MYRISCVXII::MO_NO_FLAG:
+      break;
+    case MYRISCVXII::MO_GPREL:
+      TargetKind = MYRISCVXMCExpr::CEK_GPREL;
+      break;
+    case MYRISCVXII::MO_GOT:
+      TargetKind = MYRISCVXMCExpr::CEK_GOT;
+      break;
+    case MYRISCVXII::MO_ABS_HI:
+      TargetKind = MYRISCVXMCExpr::CEK_ABS_HI;
+      break;
+    case MYRISCVXII::MO_ABS_LO:
+      TargetKind = MYRISCVXMCExpr::CEK_ABS_LO;
+      break;
+    case MYRISCVXII::MO_GOT_HI16:
+      TargetKind = MYRISCVXMCExpr::CEK_GOT_HI16;
+      break;
+    case MYRISCVXII::MO_GOT_LO16:
+      TargetKind = MYRISCVXMCExpr::CEK_GOT_LO16;
+      break;
+    case MYRISCVXII::MO_GOT_CALL:
+      TargetKind = MYRISCVXMCExpr::CEK_GOT_CALL;
+      break;
   }
 
   switch (MOTy) {

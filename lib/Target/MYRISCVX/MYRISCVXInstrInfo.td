@@ -306,8 +306,8 @@ let isCall=1, hasDelaySlot=0, Defs = [RA], isCodeGenOnly = 0 in {
 
   // Jump and Link (Call)
   class JumpLink<bits<7> opcode, string opstr, DAGOperand opnd> :
-    MYRISCVX_J<opcode, (outs), (ins opnd:$target), !strconcat(opstr, "\t$target"),
-                   [(MYRISCVXCall tglobaladdr:$target)], IIAlu> {
+    MYRISCVX_J<opcode, (outs), (ins opnd:$imm20), !strconcat(opstr, "\t$imm20"),
+                   [(MYRISCVXCall tglobaladdr:$imm20)], IIAlu> {
     let rd = 1;
     let DecoderMethod = "DecodeJumpTarget";
   }
@@ -435,8 +435,9 @@ def SLT   : SetCC_R<0b0110011, 0b010, 0b0000000, "slt",  setlt,  GPR>;
 def SLTU  : SetCC_R<0b0110011, 0b011, 0b0000000, "sltu", setult, GPR>;
 
 // def JAL : JumpOffset<0b1101111, "jal", GPR>;
-def JAL : JumpLink<0b1101111, "jal", calltarget>;
-def J   : JumpOffsetX0<0b1101111, "j">;
+def JAL  : JumpLink<0b1101111, "jal", calltarget>;
+// def J    : JumpOffsetX0<0b1101111, "j">;
+def      : InstAlias<"j $offset",   (JAL calltarget:$offset)>;
 def JALR : JumpRegister <0b1100111, 0b000, "jalr">;
 def JR   : JumpRegisterX0<0b1100111, 0b000, "jr">;
 // def JR  : ArithLogicI<0b1100111, 0b000, "jr", add, simm12, immSExt12, GPR>;
@@ -554,19 +555,17 @@ def : Pat<(i32 (extloadi16  (add GPR:$rs1, simm12:$simm12))), (LHU $rs1, $simm12
 def : Pat<(sext_inreg GPR:$rd, i8),  (SRAI (SLLI GPR:$rd, 24), 24)>;
 def : Pat<(sext_inreg GPR:$rd, i16), (SRAI (SLLI GPR:$rd, 16), 16)>;
 
-def : Pat<(br bb:$simm20), (J bb:$simm20)>;
+def : Pat<(br bb:$simm20), (JAL bb:$simm20)>;
 
 def : Pat<(i32 (load GPR:$rs1))                          , (LW GPR:$rs1, 0)           >;
 def : Pat<(i32 (load addr_fi:$rs1))                      , (LW addr_fi:$rs1, 0)       >;
 def : Pat<(i32 (load (add GPR:$rs1, simm12:$simm12)))    , (LW GPR:$rs1, $simm12)     >;
 def : Pat<(i32 (load (add addr_fi:$rs1, simm12:$simm12))), (LW addr_fi:$rs1, $simm12) >;
-// def : Pat<(i32 (load (IsOrAdd addr_fi:$rs1, simm12:$simm12))), (LW addr_fi:$rs1, simm12:$simm12)>;
 
 def : Pat<(store GPR:$rs2, GPR:$rs1)                          , (SW GPR:$rs2, GPR:$rs1, 0)                         >;
 def : Pat<(store GPR:$rs2, addr_fi:$rs1)                      , (SW GPR:$rs2, addr_fi:$rs1, 0)                     >;
 def : Pat<(store GPR:$rs2, (add GPR:$rs1, simm12:$simm12))    , (SW GPR:$rs2, GPR:$rs1, simm12:$simm12)            >;
 def : Pat<(store GPR:$rs2, (add addr_fi:$rs1, simm12:$simm12)), (SW GPR:$rs2, addr_fi:$rs1, simm12:$simm12)        >;
-// def : Pat<(store GPR:$rs2, (IsOrAdd addr_fi:$rs1, simm12:$simm12)), (SW GPR:$rs2, addr_fi:$rs1, simm12:$simm12) >;
 
 
 // Define pattern expansions for setcc operations that aren't directly
