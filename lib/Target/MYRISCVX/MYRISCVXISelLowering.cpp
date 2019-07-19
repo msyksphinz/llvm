@@ -253,7 +253,7 @@ SDValue MYRISCVXTargetLowering::lowerGlobalAddress(SDValue Op,
   const GlobalObject *GO = GV->getBaseObject();
   if (!TLOF->IsGlobalInSmallSection(GO, getTargetMachine()))
     return getAddrGlobalLargeGOT(
-        N, Ty, DAG, MYRISCVXII::MO_GOT_HI16, MYRISCVXII::MO_GOT_LO16,
+        N, Ty, DAG, MYRISCVXII::MO_GOT_HI20, MYRISCVXII::MO_GPREL,
         DAG.getEntryNode(),
         MachinePointerInfo::getGOT(DAG.getMachineFunction()));
   return getAddrGlobal(

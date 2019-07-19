@@ -56,8 +56,8 @@ namespace llvm {
       MO_GOT,
 
       /// MO_GOT_HI16/LO16 - Relocations used for large GOTs.
-      MO_GOT_HI16,
-      MO_GOT_LO16
+      MO_GOT_HI20,
+      MO_GOT_LO12
     }; // enum TOF {
 
     enum {
