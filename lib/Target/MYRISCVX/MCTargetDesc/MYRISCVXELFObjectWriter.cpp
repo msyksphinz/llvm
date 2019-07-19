@@ -79,6 +79,8 @@ unsigned MYRISCVXELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_MYRISCVX_CALL;
     case MYRISCVX::fixup_MYRISCVX_RELAX:
       return ELF::R_MYRISCVX_RELAX;
+    case MYRISCVX::fixup_MYRISCVX_GOT_HI20:
+      return ELF::R_MYRISCVX_GOT_HI20;
   }
 
   return Type;

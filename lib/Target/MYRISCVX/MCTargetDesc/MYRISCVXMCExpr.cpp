@@ -69,10 +69,10 @@ void MYRISCVXMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
     case CEK_GOT_DISP:
       OS << "%got_disp";
       break;
-    case CEK_GOT_HI16:
+    case CEK_GOT_HI20:
       OS << "%got_hi";
       break;
-    case CEK_GOT_LO16:
+    case CEK_GOT_LO12:
       OS << "%got_lo";
       break;
     case CEK_GPREL:

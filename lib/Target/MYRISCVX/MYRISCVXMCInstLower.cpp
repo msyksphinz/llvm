@@ -68,11 +68,11 @@ MCOperand MYRISCVXMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
     case MYRISCVXII::MO_ABS_LO:
       TargetKind = MYRISCVXMCExpr::CEK_ABS_LO;
       break;
-    case MYRISCVXII::MO_GOT_HI16:
-      TargetKind = MYRISCVXMCExpr::CEK_GOT_HI16;
+    case MYRISCVXII::MO_GOT_HI20:
+      TargetKind = MYRISCVXMCExpr::CEK_GOT_HI20;
       break;
-    case MYRISCVXII::MO_GOT_LO16:
-      TargetKind = MYRISCVXMCExpr::CEK_GOT_LO16;
+    case MYRISCVXII::MO_GOT_LO12:
+      TargetKind = MYRISCVXMCExpr::CEK_GOT_LO12;
       break;
     case MYRISCVXII::MO_GOT_CALL:
       TargetKind = MYRISCVXMCExpr::CEK_GOT_CALL;

@@ -59,6 +59,9 @@ namespace llvm {
       // fixup_MYRISCVX_RELAX - Used to generate an R_MYRISCVX_RELAX relocation type,
       // which indicates the linker may relax the instruction pair.
       fixup_MYRISCVX_RELAX,
+      // fixup_MYRISCVX_GOT_HI20 - Used to generate an R_RISCV_GOT_HI20 relocation type,
+      // which indicates the linker may  the instruction pair.
+      fixup_MYRISCVX_GOT_HI20,
 
       // fixup_MYRISCVX_invalid - used as a sentinel and a marker, must be last fixup
       LastTargetFixupKind,
