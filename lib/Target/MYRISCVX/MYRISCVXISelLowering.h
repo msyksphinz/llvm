@@ -363,6 +363,17 @@ namespace llvm {
                          const SDLoc &DL, SelectionDAG &DAG,
                          CCState &State) const;
 
+    /// 例外アドレスが格納されるレジスタを指定する。今回はA0レジスタ
+    unsigned
+    getExceptionPointerRegister(const Constant *PersonalityFn) const override {
+      return MYRISCVX::A0;
+    }
+    /// 例外要因が格納されるレジスタを指定する。今回はA1レジスタ
+    unsigned
+    getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
+      return MYRISCVX::A1;
+    }
+
   };
   const MYRISCVXTargetLowering *
       createMYRISCVXSETargetLowering(const MYRISCVXTargetMachine &TM, const MYRISCVXSubtarget &STI);
