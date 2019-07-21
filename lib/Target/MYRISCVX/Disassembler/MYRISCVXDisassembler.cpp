@@ -283,7 +283,7 @@ static DecodeStatus DecodeBranch20Target(MCInst &Inst,
                                       (fieldFromInstruction(Insn, 21, 10) <<  1) |
                                       (fieldFromInstruction(Insn, 20,  1) << 11) |
                                       (fieldFromInstruction(Insn, 12,  8) << 12));
-  Inst.addOperand(MCOperand::createReg(MYRISCVX::SW));
+  // Inst.addOperand(MCOperand::createReg(MYRISCVX::SW));
   Inst.addOperand(MCOperand::createImm(BranchOffset));
   return MCDisassembler::Success;
 }
