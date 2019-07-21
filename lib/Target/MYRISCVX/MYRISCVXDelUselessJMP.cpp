@@ -77,6 +77,11 @@ runOnMachineBasicBlock(MachineBasicBlock &MBB, MachineBasicBlock &MBBN) {
   else
     return Changed;
 
+  if (I->getOpcode() == MYRISCVX::JAL) {
+    LLVM_DEBUG(dbgs() << "runOnMachineBasicBlock getOperandSize = " <<
+               I->getNumOperands() << '\n');
+  }
+
   if (I->getOpcode() == MYRISCVX::JAL &&
       I->getOperand(0).getMBB() == &MBBN) {
     // I is the instruction of "jmp #offset=0", as follows,
