@@ -329,7 +329,8 @@ class JumpRegisterX0<bits<7> opcode, bits<3> funct3, string instr_asm>:
 class RetGPR<bits<7> opcode, bits<3> funct3, string instr_asm, RegisterClass RC>:
   MYRISCVX_I<opcode, funct3, (outs), (ins RC:$rs1),
              !strconcat(instr_asm, "\t$rs1"), [(brind RC:$rs1)], IIBranch> {
-  let rd = 0;
+  let rd  = 0;
+  let rs1 = 1;
   let isReturn = 1;
 }
 
@@ -441,7 +442,7 @@ def      : InstAlias<"j $offset",   (JAL calltarget:$offset)>;
 def JALR : JumpRegister <0b1100111, 0b000, "jalr">;
 def JR   : JumpRegisterX0<0b1100111, 0b000, "jr">;
 // def JR  : ArithLogicI<0b1100111, 0b000, "jr", add, simm12, immSExt12, GPR>;
-def RET  : RetGPR<0b1100111, 0b000, "ret", GPR>;
+def RET  : InstAlias<"ret",   (JR RA)>;
 
 def : Pat<(MYRISCVXCall (i32 tglobaladdr:$dst)),  (JAL tglobaladdr:$dst)>;
 def : Pat<(MYRISCVXCall (i32 texternalsym:$dst)), (JAL texternalsym:$dst)>;
@@ -627,3 +628,23 @@ def : Pat<(MYRISCVXTailCall (iPTR tglobaladdr:$dst)),
                              (TAILCALL tglobaladdr:$dst)>;
 def : Pat<(MYRISCVXTailCall (iPTR texternalsym:$dst)),
                              (TAILCALL texternalsym:$dst)>;
+
+
+//===----------------------------------------------------------------------===//
+// Pseudo Instruction definition
+//===----------------------------------------------------------------------===//
+
+class LoadImm32< string instr_asm, Operand Od, RegisterClass RC> :
+  MYRISCVXAsmPseudoInst<(outs RC:$rd), (ins Od:$imm32),
+                     !strconcat(instr_asm, "\t$rd, $imm32")> ;
+def LoadImm32Reg : LoadImm32<"li", shamt, GPR>;
+
+// class LoadAddress<string instr_asm, Operand MemOpnd, RegisterClass RC> :
+//   MYRISCVXAsmPseudoInst<(outs RC:$rd), (ins MemOpnd:$addr),
+//                      !strconcat(instr_asm, "\t$rd, $addr")> ;
+// def LoadAddr32Reg : LoadAddress<"la", mem, GPR>;
+
+class LoadAddressImm<string instr_asm, Operand Od, RegisterClass RC> :
+  MYRISCVXAsmPseudoInst<(outs RC:$rd), (ins Od:$imm32),
+                     !strconcat(instr_asm, "\t$rd, $imm32")> ;
+def LoadAddr32Imm : LoadAddressImm<"la", shamt, GPR>;

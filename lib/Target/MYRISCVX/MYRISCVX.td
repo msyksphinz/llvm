@@ -56,3 +56,8 @@ def MYRISCVX : Target {
 // def MYRISCVXInstrInfo : InstrInfo as before.
   let InstructionSet = MYRISCVXInstrInfo;
 }
+
+def MYRISCVXAsmParser : AsmParser {
+  let ShouldEmitMatchRegisterAltName = 1;
+  let AllowDuplicateRegisterNames = 1;
+}

@@ -154,7 +154,7 @@ loadRegFromStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
 
 void MYRISCVXSEInstrInfo::expandRetRA(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator I) const {
-  BuildMI(MBB, I, I->getDebugLoc(), get(MYRISCVX::RET)).addReg(MYRISCVX::RA);
+  BuildMI(MBB, I, I->getDebugLoc(), get(MYRISCVX::JR)).addReg(MYRISCVX::RA);
 }
 
 
