@@ -152,6 +152,11 @@ def MYRISCVXWrapper    : SDNode<"MYRISCVXISD::Wrapper", SDTIntBinOp>;
 
 def RelocPIC : Predicate<"TM.getRelocationModel() == Reloc::PIC_">;
 
+def PtrRC : Operand<iPTR> {
+  let MIOperandInfo = (ops ptr_rc);
+  let DecoderMethod = "DecodeCPURegsRegisterClass";
+}
+
 //===----------------------------------------------------------------------===//
 // Pattern fragment for load/store
 //===----------------------------------------------------------------------===//
@@ -392,6 +397,16 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 0,
     PseudoInstExpansion<(JRInst ResRO:$rs)>;
 }
 
+// Atomic instructions with 2 source operands (ATOMIC_SWAP & ATOMIC_LOAD_*).
+class Atomic2Ops<PatFrag Op, RegisterClass DRC> :
+  MYRISCVXPseudo<(outs DRC:$rd), (ins PtrRC:$ptr, DRC:$incr), "",
+                  [(set DRC:$rd, (Op iPTR:$ptr, DRC:$incr))]>;
+
+// Atomic Compare & Swap.
+class AtomicCmpSwap<PatFrag Op, RegisterClass DRC> :
+  MYRISCVXPseudo<(outs DRC:$rd), (ins PtrRC:$ptr, DRC:$cmp, DRC:$swap), "",
+                  [(set DRC:$rd, (Op iPTR:$ptr, DRC:$cmp, DRC:$swap))]>;
+
 
 //===----------------------------------------------------------------------===//
 // Instruction definition
@@ -629,6 +644,34 @@ def : Pat<(MYRISCVXTailCall (iPTR tglobaladdr:$dst)),
 def : Pat<(MYRISCVXTailCall (iPTR texternalsym:$dst)),
                              (TAILCALL texternalsym:$dst)>;
 
+let usesCustomInserter = 1 in {
+  def ATOMIC_LOAD_ADD_I8   : Atomic2Ops<atomic_load_add_8     , GPR>;
+  def ATOMIC_LOAD_ADD_I16  : Atomic2Ops<atomic_load_add_16    , GPR>;
+  def ATOMIC_LOAD_ADD_I32  : Atomic2Ops<atomic_load_add_32    , GPR>;
+  def ATOMIC_LOAD_SUB_I8   : Atomic2Ops<atomic_load_sub_8     , GPR>;
+  def ATOMIC_LOAD_SUB_I16  : Atomic2Ops<atomic_load_sub_16    , GPR>;
+  def ATOMIC_LOAD_SUB_I32  : Atomic2Ops<atomic_load_sub_32    , GPR>;
+  def ATOMIC_LOAD_AND_I8   : Atomic2Ops<atomic_load_and_8     , GPR>;
+  def ATOMIC_LOAD_AND_I16  : Atomic2Ops<atomic_load_and_16    , GPR>;
+  def ATOMIC_LOAD_AND_I32  : Atomic2Ops<atomic_load_and_32    , GPR>;
+  def ATOMIC_LOAD_OR_I8    : Atomic2Ops<atomic_load_or_8      , GPR>;
+  def ATOMIC_LOAD_OR_I16   : Atomic2Ops<atomic_load_or_16     , GPR>;
+  def ATOMIC_LOAD_OR_I32   : Atomic2Ops<atomic_load_or_32     , GPR>;
+  def ATOMIC_LOAD_XOR_I8   : Atomic2Ops<atomic_load_xor_8     , GPR>;
+  def ATOMIC_LOAD_XOR_I16  : Atomic2Ops<atomic_load_xor_16    , GPR>;
+  def ATOMIC_LOAD_XOR_I32  : Atomic2Ops<atomic_load_xor_32    , GPR>;
+  def ATOMIC_LOAD_NAND_I8  : Atomic2Ops<atomic_load_nand_8    , GPR>;
+  def ATOMIC_LOAD_NAND_I16 : Atomic2Ops<atomic_load_nand_16   , GPR>;
+  def ATOMIC_LOAD_NAND_I32 : Atomic2Ops<atomic_load_nand_32   , GPR>;
+
+  def ATOMIC_SWAP_I8       : Atomic2Ops<atomic_swap_8         , GPR>;
+  def ATOMIC_SWAP_I16      : Atomic2Ops<atomic_swap_16        , GPR>;
+  def ATOMIC_SWAP_I32      : Atomic2Ops<atomic_swap_32        , GPR>;
+
+  def ATOMIC_CMP_SWAP_I8   : AtomicCmpSwap<atomic_cmp_swap_8  , GPR>;
+  def ATOMIC_CMP_SWAP_I16  : AtomicCmpSwap<atomic_cmp_swap_16 , GPR>;
+  def ATOMIC_CMP_SWAP_I32  : AtomicCmpSwap<atomic_cmp_swap_32 , GPR>;
+}
 
 //===----------------------------------------------------------------------===//
 // Pseudo Instruction definition
