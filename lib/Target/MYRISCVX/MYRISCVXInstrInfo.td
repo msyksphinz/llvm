@@ -556,6 +556,7 @@ class WrapperPat<SDNode node, Instruction ORiOp, RegisterClass RC>:
           (ORiOp RC:$gp, node:$in)>;
 
 def : WrapperPat<tglobaladdr, ORI, GPR>;
+def : WrapperPat<texternalsym, ORI, GPR>;
 def : Pat<(i32 (zextloadi1  (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
 def : Pat<(i32 (zextloadi8  (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
 def : Pat<(i32 (zextloadi16 (add GPR:$rs1, simm12:$simm12))), (LHU $rs1, $simm12)>;
