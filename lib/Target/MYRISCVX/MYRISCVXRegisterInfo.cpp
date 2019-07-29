@@ -33,6 +33,13 @@ using namespace llvm;
 MYRISCVXRegisterInfo::MYRISCVXRegisterInfo(const MYRISCVXSubtarget &ST)
     : MYRISCVXGenRegisterInfo(MYRISCVX::RA), Subtarget(ST) {}
 
+const TargetRegisterClass *
+MYRISCVXRegisterInfo::getPointerRegClass(const MachineFunction &MF,
+                                         unsigned Kind) const {
+  return &MYRISCVX::GPRRegClass;
+}
+
+
 //===----------------------------------------------------------------------===//
 // Callee Saved Registers methods
 //===----------------------------------------------------------------------===//
