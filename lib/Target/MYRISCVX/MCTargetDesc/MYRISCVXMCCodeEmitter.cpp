@@ -157,6 +157,9 @@ getExprOpValue(const MCExpr *Expr,SmallVectorImpl<MCFixup> &Fixups,
       case MYRISCVXMCExpr::CEK_GOT_CALL:
         FixupKind = MYRISCVX::fixup_MYRISCVX_CALL;
         break;
+      case MYRISCVXMCExpr::CEK_GOT:
+        FixupKind = MYRISCVX::fixup_MYRISCVX_GOT_HI20;
+        break;
       case MYRISCVXMCExpr::CEK_ABS_HI:
         FixupKind = MYRISCVX::fixup_MYRISCVX_HI20;
         break;
