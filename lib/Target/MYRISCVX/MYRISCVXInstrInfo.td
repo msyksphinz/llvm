@@ -400,9 +400,9 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 0,
 // Atomic instructions with 2 source operands (ATOMIC_SWAP & ATOMIC_LOAD_*).
 class Atomic2Ops<bits<7> opcode, bits<3> funct3, bits<7>funct7,
                  string instr_asm, PatFrag Op, RegisterClass RC> :
-  MYRISCVX_R<opcode, funct3, funct7, (outs RC:$rd), (ins PtrRC:$rs1, RC:$rs2),
-             !strconcat(instr_asm, "\t$rd, $rs1, (${rs2})"),
-             [(set RC:$rd, (Op iPTR:$rs1, RC:$rs2))], IILoad>;
+  MYRISCVX_R<opcode, funct3, funct7, (outs RC:$rd), (ins RC:$rs1, RC:$rs2),
+             !strconcat(instr_asm, "\t$rd, $rs2, (${rs1})"),
+             [(set RC:$rd, (Op RC:$rs1, RC:$rs2))], IILoad>;
 
 // // Atomic Compare & Swap.
 // class AtomicCmpSwap<PatFrag Op, RegisterClass RC> :
