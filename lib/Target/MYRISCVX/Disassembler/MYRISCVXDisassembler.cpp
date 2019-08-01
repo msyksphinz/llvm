@@ -74,14 +74,19 @@ class MYRISCVXDisassembler : public MYRISCVXDisassemblerBase {
 
 } // end anonymous namespace
 
-static DecodeStatus DecodeCPURegsRegisterClass(MCInst &Inst,
-                                               unsigned RegNo,
-                                               uint64_t Address,
-                                               const void *Decoder);
 static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst,
-                                              unsigned RegNo,
-                                              uint64_t Address,
-                                              const void *Decoder);
+                                           unsigned RegNo,
+                                           uint64_t Address,
+                                           const void *Decoder);
+static DecodeStatus DecodeFPR_SRegisterClass(MCInst &Inst,
+                                             unsigned RegNo,
+                                             uint64_t Address,
+                                             const void *Decoder);
+static DecodeStatus DecodeFPR_DRegisterClass(MCInst &Inst,
+                                             unsigned RegNo,
+                                             uint64_t Address,
+                                             const void *Decoder);
+
 static DecodeStatus DecodeBranch12Target(MCInst &Inst,
                                          unsigned Insn,
                                          uint64_t Address,
@@ -94,15 +99,6 @@ static DecodeStatus DecodeJumpTarget(MCInst &Inst,
                                      unsigned Insn,
                                      uint64_t Address,
                                      const void *Decoder);
-// static DecodeStatus DecodeJumpFR(MCInst &Inst,
-//                                  unsigned Insn,
-//                                  uint64_t Address,
-//                                  const void *Decoder);
-
-// static DecodeStatus DecodeMem(MCInst &Inst,
-//                               unsigned Insn,
-//                               uint64_t Address,
-//                               const void *Decoder);
 
 static DecodeStatus DecodeSimm12(MCInst &Inst,
                                  unsigned Insn,
@@ -204,11 +200,11 @@ MYRISCVXDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   return MCDisassembler::Fail;
 }
 
-static DecodeStatus DecodeCPURegsRegisterClass(MCInst &Inst,
-                                               unsigned RegNo,
-                                               uint64_t Address,
-                                               const void *Decoder) {
-  if (RegNo > 15)
+static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst,
+                                           unsigned RegNo,
+                                           uint64_t Address,
+                                           const void *Decoder) {
+  if (RegNo > 32)
     return MCDisassembler::Fail;
 
   RegNo = getReg(Decoder, MYRISCVX::GPRRegClassID, RegNo);
@@ -217,32 +213,34 @@ static DecodeStatus DecodeCPURegsRegisterClass(MCInst &Inst,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst,
-                                              unsigned RegNo,
-                                              uint64_t Address,
-                                              const void *Decoder) {
-  return DecodeCPURegsRegisterClass(Inst, RegNo, Address, Decoder);
+
+static DecodeStatus DecodeFPR_SRegisterClass(MCInst &Inst,
+                                             unsigned RegNo,
+                                             uint64_t Address,
+                                             const void *Decoder) {
+  if (RegNo > 32)
+    return MCDisassembler::Fail;
+
+  RegNo = getReg(Decoder, MYRISCVX::FPR_SRegClassID, RegNo);
+
+  Inst.addOperand(MCOperand::createReg(RegNo));
+  return MCDisassembler::Success;
 }
 
-//@DecodeMem {
-// static DecodeStatus DecodeMem(MCInst &Inst,
-//                               unsigned Insn,
-//                               uint64_t Address,
-//                               const void *Decoder) {
-//   //@DecodeMem body {
-//   int Offset = SignExtend32<16>(Insn & 0xffff);
-//   int Reg    = (int)fieldFromInstruction(Insn, 20, 4);
-//   int Base   = (int)fieldFromInstruction(Insn, 16, 4);
-//
-//   Reg  = getReg(Decoder, MYRISCVX::GPRRegClassID, Reg);
-//   Base = getReg(Decoder, MYRISCVX::GPRRegClassID, Base);
-//
-//   Inst.addOperand(MCOperand::createReg(Reg));
-//   Inst.addOperand(MCOperand::createReg(Base));
-//   Inst.addOperand(MCOperand::createImm(Offset));
-//
-//   return MCDisassembler::Success;
-// }
+
+static DecodeStatus DecodeFPR_DRegisterClass(MCInst &Inst,
+                                             unsigned RegNo,
+                                             uint64_t Address,
+                                             const void *Decoder) {
+  if (RegNo > 32)
+    return MCDisassembler::Fail;
+
+  RegNo = getReg(Decoder, MYRISCVX::FPR_DRegClassID, RegNo);
+
+  Inst.addOperand(MCOperand::createReg(RegNo));
+  return MCDisassembler::Success;
+}
+
 
 static DecodeStatus DecodeBranch12Target(MCInst &Inst,
                                          unsigned Insn,
