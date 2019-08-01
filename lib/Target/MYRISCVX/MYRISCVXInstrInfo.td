@@ -187,6 +187,9 @@ def store_a         : AlignedStore<store>;
 def truncstorei8_a  : AlignedStore<truncstorei8>;
 def truncstorei16_a : AlignedStore<truncstorei16>;
 
+def truncstoref32_a : AlignedStore<truncstoref32>;
+def truncstoref64_a : AlignedStore<truncstoref64>;
+
 //===----------------------------------------------------------------------===//
 // Instructions specific format
 //===----------------------------------------------------------------------===//
@@ -195,7 +198,7 @@ def truncstorei16_a : AlignedStore<truncstorei16>;
 let canFoldAsLoad = 1 in
 class LoadM<bits<7> opcode, bits<3> funct3, string instr_asm, PatFrag OpNode, RegisterClass RC,
             bit Pseudo>:
-  MYRISCVX_I<opcode, funct3, (outs RC:$rd), (ins RC:$rs1, simm12:$simm12),
+  MYRISCVX_I<opcode, funct3, (outs RC:$rd), (ins GPR:$rs1, simm12:$simm12),
      !strconcat(instr_asm, "\t$rd, ${simm12}(${rs1})"),
      [], IILoad> {
   let isPseudo = Pseudo;
@@ -203,7 +206,7 @@ class LoadM<bits<7> opcode, bits<3> funct3, string instr_asm, PatFrag OpNode, Re
 
 class StoreM<bits<7> opcode, bits<3> funct3, string instr_asm, PatFrag OpNode, RegisterClass RC,
              bit Pseudo>:
-  MYRISCVX_S<opcode, funct3, (outs), (ins RC:$rs2, RC:$rs1, simm12:$simm12),
+  MYRISCVX_S<opcode, funct3, (outs), (ins RC:$rs2, GPR:$rs1, simm12:$simm12),
      !strconcat(instr_asm, "\t$rs2, ${simm12}(${rs1})"),
      [], IIStore> {
   let isPseudo = Pseudo;
@@ -220,15 +223,17 @@ def LEA_ADDI : EffectiveAddress<"addi\t$rd, $addr", GPR, mem_ea> {
 }
 
 //@ 32-bit load.
-multiclass LoadM32<bits<7> opcode, bits<3> funct3, string instr_asm, PatFrag OpNode,
+multiclass LoadM32<bits<7> opcode, bits<3> funct3, string instr_asm,
+                   RegisterClass RC, PatFrag OpNode,
                    bit Pseudo = 0> {
-  def #NAME# : LoadM<opcode, funct3, instr_asm, OpNode, GPR, Pseudo>;
+  def #NAME# : LoadM<opcode, funct3, instr_asm, OpNode, RC, Pseudo>;
 }
 
 // 32-bit store.
-multiclass StoreM32<bits<7> opcode, bits<3> funct3, string instr_asm, PatFrag OpNode,
+multiclass StoreM32<bits<7> opcode, bits<3> funct3, string instr_asm,
+                    RegisterClass RC, PatFrag OpNode,
                     bit Pseudo = 0> {
-  def #NAME# : StoreM<opcode, funct3, instr_asm, OpNode, GPR, Pseudo>;
+  def #NAME# : StoreM<opcode, funct3, instr_asm, OpNode, RC, Pseudo>;
 }
 
 // Arithmetic and logical instructions with 2 register operands.
@@ -495,14 +500,14 @@ let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
 
 /// Load and Store Instructions
 ///  aligned
-defm LW     : LoadM32 <0b0000011, 0b010, "lw",  load_a>;
-defm SW     : StoreM32<0b0100011, 0b010, "sw",  store_a>;
-defm LB     : LoadM32 <0b0000011, 0b000, "lb",  sextloadi8_a>;
-defm LBU    : LoadM32 <0b0000011, 0b100, "lbu", zextloadi8_a>;
-defm SB     : StoreM32<0b0100011, 0b000, "sb",  truncstorei8_a>;
-defm LH     : LoadM32 <0b0000011, 0b001, "lh",  sextloadi16_a>;
-defm LHU    : LoadM32 <0b0000011, 0b101, "lhu", zextloadi16_a>;
-defm SH     : StoreM32<0b0100011, 0b001, "sh",  truncstorei16_a>;
+defm LW     : LoadM32 <0b0000011, 0b010, "lw",  GPR, load_a>;
+defm SW     : StoreM32<0b0100011, 0b010, "sw",  GPR, store_a>;
+defm LB     : LoadM32 <0b0000011, 0b000, "lb",  GPR, sextloadi8_a>;
+defm LBU    : LoadM32 <0b0000011, 0b100, "lbu", GPR, zextloadi8_a>;
+defm SB     : StoreM32<0b0100011, 0b000, "sb",  GPR, truncstorei8_a>;
+defm LH     : LoadM32 <0b0000011, 0b001, "lh",  GPR, sextloadi16_a>;
+defm LHU    : LoadM32 <0b0000011, 0b101, "lhu", GPR, zextloadi16_a>;
+defm SH     : StoreM32<0b0100011, 0b001, "sh",  GPR, truncstorei16_a>;
 
 def BEQ     : CondBranch12<0b1100011, 0b000, "beq" , seteq,  GPR>;
 def BNE     : CondBranch12<0b1100011, 0b001, "bne" , setne,  GPR>;
@@ -510,6 +515,13 @@ def BLT     : CondBranch12<0b1100011, 0b100, "blt" , setlt,  GPR>;
 def BGE     : CondBranch12<0b1100011, 0b101, "bge" , setge,  GPR>;
 def BLTU    : CondBranch12<0b1100011, 0b110, "bltu", setult, GPR>;
 def BGEU    : CondBranch12<0b1100011, 0b111, "bgeu", setuge, GPR>;
+
+// Floating Point Load Store
+defm FLW    : LoadM32 <0b0000111, 0b010, "flw", FPR_S, load_a >;
+defm FSW    : StoreM32<0b0100111, 0b010, "fsw", FPR_S, truncstoref32_a>;
+
+defm FLD    : LoadM32 <0b0000111, 0b011, "fld", FPR_D, load_a >;
+defm FSD    : StoreM32<0b0100111, 0b011, "fsd", FPR_D, truncstoref64_a>;
 
 let usesCustomInserter = 1 in
 class SelectCC_rrirr<RegisterClass RC, RegisterClass cmpty>
@@ -627,7 +639,6 @@ def : Pat<(store GPR:$rs2, addr_fi:$rs1)                      , (SW GPR:$rs2, ad
 def : Pat<(store GPR:$rs2, (add GPR:$rs1, simm12:$simm12))    , (SW GPR:$rs2, GPR:$rs1, simm12:$simm12)            >;
 def : Pat<(store GPR:$rs2, (add addr_fi:$rs1, simm12:$simm12)), (SW GPR:$rs2, addr_fi:$rs1, simm12:$simm12)        >;
 
-
 def : Pat<(i32 (sextloadi16 GPR:$rs1))                          , (LH GPR:$rs1, 0)           >;
 def : Pat<(i32 (sextloadi16 addr_fi:$rs1))                      , (LH addr_fi:$rs1, 0)       >;
 def : Pat<(i32 (sextloadi16 (add GPR:$rs1, simm12:$simm12)))    , (LH GPR:$rs1, $simm12)     >;
@@ -658,6 +669,26 @@ def : Pat<(truncstorei8 GPR:$rs2, addr_fi:$rs1)                      , (SB GPR:$
 def : Pat<(truncstorei8 GPR:$rs2, (add GPR:$rs1, simm12:$simm12))    , (SB GPR:$rs2, GPR:$rs1, simm12:$simm12)            >;
 def : Pat<(truncstorei8 GPR:$rs2, (add addr_fi:$rs1, simm12:$simm12)), (SB GPR:$rs2, addr_fi:$rs1, simm12:$simm12)        >;
 
+
+def : Pat<(f32 (load GPR:$rs1))                          , (FLW GPR:$rs1, 0)           >;
+def : Pat<(f32 (load addr_fi:$rs1))                      , (FLW addr_fi:$rs1, 0)       >;
+def : Pat<(f32 (load (add GPR:$rs1, simm12:$simm12)))    , (FLW GPR:$rs1, $simm12)     >;
+def : Pat<(f32 (load (add addr_fi:$rs1, simm12:$simm12))), (FLW addr_fi:$rs1, $simm12) >;
+
+def : Pat<(store FPR_S:$rs2, GPR:$rs1)                          , (FSW FPR_S:$rs2, GPR:$rs1, 0)                         >;
+def : Pat<(store FPR_S:$rs2, addr_fi:$rs1)                      , (FSW FPR_S:$rs2, addr_fi:$rs1, 0)                     >;
+def : Pat<(store FPR_S:$rs2, (add GPR:$rs1, simm12:$simm12))    , (FSW FPR_S:$rs2, GPR:$rs1, simm12:$simm12)            >;
+def : Pat<(store FPR_S:$rs2, (add addr_fi:$rs1, simm12:$simm12)), (FSW FPR_S:$rs2, addr_fi:$rs1, simm12:$simm12)        >;
+
+def : Pat<(f64 (load GPR:$rs1))                          , (FLD GPR:$rs1, 0)           >;
+def : Pat<(f64 (load addr_fi:$rs1))                      , (FLD addr_fi:$rs1, 0)       >;
+def : Pat<(f64 (load (add GPR:$rs1, simm12:$simm12)))    , (FLD GPR:$rs1, $simm12)     >;
+def : Pat<(f64 (load (add addr_fi:$rs1, simm12:$simm12))), (FLD addr_fi:$rs1, $simm12) >;
+
+def : Pat<(store FPR_D:$rs2, GPR:$rs1)                          , (FSD FPR_D:$rs2, GPR:$rs1, 0)                         >;
+def : Pat<(store FPR_D:$rs2, addr_fi:$rs1)                      , (FSD FPR_D:$rs2, addr_fi:$rs1, 0)                     >;
+def : Pat<(store FPR_D:$rs2, (add GPR:$rs1, simm12:$simm12))    , (FSD FPR_D:$rs2, GPR:$rs1, simm12:$simm12)            >;
+def : Pat<(store FPR_D:$rs2, (add addr_fi:$rs1, simm12:$simm12)), (FSD FPR_D:$rs2, addr_fi:$rs1, simm12:$simm12)        >;
 
 
 // Define pattern expansions for setcc operations that aren't directly
