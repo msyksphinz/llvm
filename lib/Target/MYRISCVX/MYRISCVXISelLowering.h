@@ -280,6 +280,26 @@ namespace llvm {
     SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
 
+    SDValue lowerATOMIC_FENCE(SDValue Op, SelectionDAG& DAG) const;
+
+    bool shouldInsertFencesForAtomic(const Instruction *I) const override {
+      return true;
+    }
+
+    /// Emit a sign-extension using shl/sra appropriately.
+    MachineBasicBlock *emitSignExtendToI32InReg(MachineInstr &MI,
+                                                MachineBasicBlock *BB,
+                                                unsigned Size, unsigned DstReg,
+                                                unsigned SrcRec) const;
+    MachineBasicBlock *emitAtomicBinary(MachineInstr &MI, MachineBasicBlock *BB,
+                                        unsigned Size, unsigned BinOpcode, bool Nand = false) const;
+    MachineBasicBlock *emitAtomicBinaryPartword(MachineInstr &MI,
+                                                MachineBasicBlock *BB, unsigned Size, unsigned BinOpcode,
+                                                bool Nand = false) const;
+    MachineBasicBlock *emitAtomicCmpSwap(MachineInstr &MI,
+                                         MachineBasicBlock *BB, unsigned Size) const;
+    MachineBasicBlock *emitAtomicCmpSwapPartword(MachineInstr &MI,
+                                                 MachineBasicBlock *BB, unsigned Size) const;
 
     SDValue
     LowerCall(TargetLowering::CallLoweringInfo &CLI,
