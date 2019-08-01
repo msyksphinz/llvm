@@ -45,6 +45,8 @@ def MYRISCVXCallSeqStart : SDNode<"ISD::CALLSEQ_START", SDT_MYRISCVXCallSeqStart
 def MYRISCVXCallSeqEnd : SDNode<"ISD::CALLSEQ_END", SDT_MYRISCVXCallSeqEnd,
                                 [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
+def SDT_Sync : SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction format superclass
 //===----------------------------------------------------------------------===//
@@ -240,6 +242,20 @@ class ArithLogicR<bits<7> opcode, bits<3> funct3, bits<7>funct7,
 }
 
 
+class LRBase<bits<7> opcode, bits<3> funct3, bits<7> funct7, string opstring, RegisterClass RC, Operand Mem> :
+  MYRISCVX_R<opcode, funct3, funct7, (outs RC:$rd), (ins RC:$rs1),
+     !strconcat(opstring, "\t$rd, (${rs1})"), [], IILoad> {
+  let mayLoad = 1;
+  let rs2 = 0;
+}
+
+class SCBase<bits<7> opcode, bits<3> funct3, bits<7> funct7, string opstring, RegisterClass RC, Operand Mem> :
+  MYRISCVX_R<opcode, funct3, funct7, (outs RC:$rd), (ins RC:$rs1, RC:$rs2),
+       !strconcat(opstring, "\t$rd, $rs2, (${rs1})"), [], IIStore> {
+  let mayStore = 1;
+}
+
+
 // Arithmetic and logical instructions with 2 register operands.
 class ArithLogicI<bits<7> opcode, bits<3> funct3,
                   string instr_asm, SDNode OpNode,
@@ -397,17 +413,24 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 0,
     PseudoInstExpansion<(JRInst ResRO:$rs)>;
 }
 
-// Atomic instructions with 2 source operands (ATOMIC_SWAP & ATOMIC_LOAD_*).
-class Atomic2Ops<bits<7> opcode, bits<3> funct3, bits<7>funct7,
-                 string instr_asm, PatFrag Op, RegisterClass RC> :
-  MYRISCVX_R<opcode, funct3, funct7, (outs RC:$rd), (ins RC:$rs1, RC:$rs2),
-             !strconcat(instr_asm, "\t$rd, $rs2, (${rs1})"),
-             [(set RC:$rd, (Op RC:$rs1, RC:$rs2))], IILoad>;
+// // Atomic instructions with 2 source operands (ATOMIC_SWAP & ATOMIC_LOAD_*).
+// class Atomic2Ops<bits<7> opcode, bits<3> funct3, bits<7>funct7,
+//                  string instr_asm, PatFrag Op, RegisterClass RC> :
+//   MYRISCVX_R<opcode, funct3, funct7, (outs RC:$rd), (ins RC:$rs1, RC:$rs2),
+//              !strconcat(instr_asm, "\t$rd, $rs2, (${rs1})"),
+//              [(set RC:$rd, (Op RC:$rs1, RC:$rs2))], IILoad>;
+//
 
-// // Atomic Compare & Swap.
-// class AtomicCmpSwap<PatFrag Op, RegisterClass RC> :
-//   MYRISCVXPseudo<(outs RC:$rd), (ins PtrRC:$ptr, RC:$cmp, RC:$swap), "",
-//                   [(set RC:$rd, (Op iPTR:$ptr, RC:$cmp, RC:$swap))]>;
+
+// Atomic instructions with 2 source operands (ATOMIC_SWAP & ATOMIC_LOAD_*).
+class Atomic2Ops<PatFrag Op, RegisterClass DRC> :
+  MYRISCVXPseudo<(outs DRC:$rd), (ins PtrRC:$ptr, DRC:$incr), "",
+                  [(set DRC:$rd, (Op iPTR:$ptr, DRC:$incr))]>;
+
+// Atomic Compare & Swap.
+class AtomicCmpSwap<PatFrag Op, RegisterClass RC> :
+  MYRISCVXPseudo<(outs RC:$rd), (ins PtrRC:$ptr, RC:$cmp, RC:$swap), "",
+                  [(set RC:$rd, (Op iPTR:$ptr, RC:$cmp, RC:$swap))]>;
 
 
 //===----------------------------------------------------------------------===//
@@ -524,6 +547,24 @@ def CPRESTORE : MYRISCVXPseudo<(outs), (ins simm12:$loc, GPR:$gp),
 def TAILCALL : TailCall<JAL>;
 def TAILCALL_R : TailCallReg<GPR, JALR>;
 
+
+def MYRISCVXSync : SDNode<"MYRISCVXISD::Sync", SDT_Sync, [SDNPHasChain]>;
+
+let hasSideEffects = 1 in
+def SYNC : MYRISCVXInst<(outs), (ins i32imm:$stype), "sync $stype",
+                        [(MYRISCVXSync imm:$stype)], NoItinerary, FrmS>
+{
+  bits<5> stype;
+  let Opcode = 0x60;
+  let Inst{25-11} = 0;
+  let Inst{10-6} = stype;
+  let Inst{5-0} = 0;
+}
+
+/// Load-linked, Store-conditional
+def LR_W : LRBase<0b0101111, 0b010, 0b0001000, "lr.w", GPR, mem>;
+def SC_W : SCBase<0b0101111, 0b010, 0b0001100, "sc.w", GPR, mem>;
+
 //===----------------------------------------------------------------------===//
 //  Arbitrary patterns that map to one or more instructions
 //===----------------------------------------------------------------------===//
@@ -587,6 +628,38 @@ def : Pat<(store GPR:$rs2, (add GPR:$rs1, simm12:$simm12))    , (SW GPR:$rs2, GP
 def : Pat<(store GPR:$rs2, (add addr_fi:$rs1, simm12:$simm12)), (SW GPR:$rs2, addr_fi:$rs1, simm12:$simm12)        >;
 
 
+def : Pat<(i32 (sextloadi16 GPR:$rs1))                          , (LH GPR:$rs1, 0)           >;
+def : Pat<(i32 (sextloadi16 addr_fi:$rs1))                      , (LH addr_fi:$rs1, 0)       >;
+def : Pat<(i32 (sextloadi16 (add GPR:$rs1, simm12:$simm12)))    , (LH GPR:$rs1, $simm12)     >;
+def : Pat<(i32 (sextloadi16 (add addr_fi:$rs1, simm12:$simm12))), (LH addr_fi:$rs1, $simm12) >;
+
+def : Pat<(i32 (zextloadi16 GPR:$rs1))                          , (LHU GPR:$rs1, 0)           >;
+def : Pat<(i32 (zextloadi16 addr_fi:$rs1))                      , (LHU addr_fi:$rs1, 0)       >;
+def : Pat<(i32 (zextloadi16 (add GPR:$rs1, simm12:$simm12)))    , (LHU GPR:$rs1, $simm12)     >;
+def : Pat<(i32 (zextloadi16 (add addr_fi:$rs1, simm12:$simm12))), (LHU addr_fi:$rs1, $simm12) >;
+
+def : Pat<(truncstorei16 GPR:$rs2, GPR:$rs1)                          , (SH GPR:$rs2, GPR:$rs1, 0)                         >;
+def : Pat<(truncstorei16 GPR:$rs2, addr_fi:$rs1)                      , (SH GPR:$rs2, addr_fi:$rs1, 0)                     >;
+def : Pat<(truncstorei16 GPR:$rs2, (add GPR:$rs1, simm12:$simm12))    , (SH GPR:$rs2, GPR:$rs1, simm12:$simm12)            >;
+def : Pat<(truncstorei16 GPR:$rs2, (add addr_fi:$rs1, simm12:$simm12)), (SH GPR:$rs2, addr_fi:$rs1, simm12:$simm12)        >;
+
+def : Pat<(i32 (sextloadi8 GPR:$rs1))                          , (LB GPR:$rs1, 0)           >;
+def : Pat<(i32 (sextloadi8 addr_fi:$rs1))                      , (LB addr_fi:$rs1, 0)       >;
+def : Pat<(i32 (sextloadi8 (add GPR:$rs1, simm12:$simm12)))    , (LB GPR:$rs1, $simm12)     >;
+def : Pat<(i32 (sextloadi8 (add addr_fi:$rs1, simm12:$simm12))), (LB addr_fi:$rs1, $simm12) >;
+
+def : Pat<(i32 (zextloadi8 GPR:$rs1))                          , (LBU GPR:$rs1, 0)           >;
+def : Pat<(i32 (zextloadi8 addr_fi:$rs1))                      , (LBU addr_fi:$rs1, 0)       >;
+def : Pat<(i32 (zextloadi8 (add GPR:$rs1, simm12:$simm12)))    , (LBU GPR:$rs1, $simm12)     >;
+def : Pat<(i32 (zextloadi8 (add addr_fi:$rs1, simm12:$simm12))), (LBU addr_fi:$rs1, $simm12) >;
+
+def : Pat<(truncstorei8 GPR:$rs2, GPR:$rs1)                          , (SB GPR:$rs2, GPR:$rs1, 0)                         >;
+def : Pat<(truncstorei8 GPR:$rs2, addr_fi:$rs1)                      , (SB GPR:$rs2, addr_fi:$rs1, 0)                     >;
+def : Pat<(truncstorei8 GPR:$rs2, (add GPR:$rs1, simm12:$simm12))    , (SB GPR:$rs2, GPR:$rs1, simm12:$simm12)            >;
+def : Pat<(truncstorei8 GPR:$rs2, (add addr_fi:$rs1, simm12:$simm12)), (SB GPR:$rs2, addr_fi:$rs1, simm12:$simm12)        >;
+
+
+
 // Define pattern expansions for setcc operations that aren't directly
 // handled by a RISC-V instruction.
 def : Pat<(seteq  GPR:$rs1, 0)       , (SLTIU GPR:$rs1, 1)>;
@@ -647,33 +720,63 @@ def : Pat<(MYRISCVXTailCall (iPTR tglobaladdr:$dst)),
 def : Pat<(MYRISCVXTailCall (iPTR texternalsym:$dst)),
                              (TAILCALL texternalsym:$dst)>;
 
-def ATOMIC_LOAD_ADD_I32  : Atomic2Ops<0b0101111, 0b010, 0b0000000, "amoadd.w" , atomic_load_add_32    , GPR>;
-def ATOMIC_LOAD_AND_I32  : Atomic2Ops<0b0101111, 0b010, 0b0110000, "amoand.w" , atomic_load_and_32    , GPR>;
-def ATOMIC_LOAD_OR_I32   : Atomic2Ops<0b0101111, 0b010, 0b0100000, "amoor.w"  , atomic_load_or_32     , GPR>;
-def ATOMIC_LOAD_XOR_I32  : Atomic2Ops<0b0101111, 0b010, 0b0010000, "amoxor.w" , atomic_load_xor_32    , GPR>;
+// def ATOMIC_LOAD_ADD_I32  : Atomic2Ops<0b0101111, 0b010, 0b0000000, "amoadd.w" , atomic_load_add_32    , GPR>;
+// def ATOMIC_LOAD_AND_I32  : Atomic2Ops<0b0101111, 0b010, 0b0110000, "amoand.w" , atomic_load_and_32    , GPR>;
+// def ATOMIC_LOAD_OR_I32   : Atomic2Ops<0b0101111, 0b010, 0b0100000, "amoor.w"  , atomic_load_or_32     , GPR>;
+// def ATOMIC_LOAD_XOR_I32  : Atomic2Ops<0b0101111, 0b010, 0b0010000, "amoxor.w" , atomic_load_xor_32    , GPR>;
+//
+// // def ATOMIC_LOAD_ADD_I8   : Atomic2Ops<atomic_load_add_8     , GPR>;
+// // def ATOMIC_LOAD_ADD_I16  : Atomic2Ops<atomic_load_add_16    , GPR>;
+// // def ATOMIC_LOAD_SUB_I8   : Atomic2Ops<atomic_load_sub_8     , GPR>;
+// // def ATOMIC_LOAD_SUB_I16  : Atomic2Ops<atomic_load_sub_16    , GPR>;
+// // def ATOMIC_LOAD_SUB_I32  : Atomic2Ops<atomic_load_sub_32    , GPR>;
+// // def ATOMIC_LOAD_AND_I8   : Atomic2Ops<atomic_load_and_8     , GPR>;
+// // def ATOMIC_LOAD_AND_I16  : Atomic2Ops<atomic_load_and_16    , GPR>;
+// // def ATOMIC_LOAD_OR_I8    : Atomic2Ops<atomic_load_or_8      , GPR>;
+// // def ATOMIC_LOAD_OR_I16   : Atomic2Ops<atomic_load_or_16     , GPR>;
+// // def ATOMIC_LOAD_XOR_I8   : Atomic2Ops<atomic_load_xor_8     , GPR>;
+// // def ATOMIC_LOAD_XOR_I16  : Atomic2Ops<atomic_load_xor_16    , GPR>;
+// // def ATOMIC_LOAD_NAND_I8  : Atomic2Ops<atomic_load_nand_8    , GPR>;
+// // def ATOMIC_LOAD_NAND_I16 : Atomic2Ops<atomic_load_nand_16   , GPR>;
+// // def ATOMIC_LOAD_NAND_I32 : Atomic2Ops<atomic_load_nand_32   , GPR>;
+//
+// // def ATOMIC_SWAP_I8       : Atomic2Ops<atomic_swap_8         , GPR>;
+// // def ATOMIC_SWAP_I16      : Atomic2Ops<atomic_swap_16        , GPR>;
+// def ATOMIC_SWAP_I32      : Atomic2Ops<0b0101111, 0b010, 0b0000100, "amoswap.w", atomic_swap_32        , GPR>;
+//
+// // def ATOMIC_CMP_SWAP_I8   : AtomicCmpSwap<atomic_cmp_swap_8  , GPR>;
+// // def ATOMIC_CMP_SWAP_I16  : AtomicCmpSwap<atomic_cmp_swap_16 , GPR>;
+// // def ATOMIC_CMP_SWAP_I32  : AtomicCmpSwap<atomic_cmp_swap_32 , GPR>;
 
-// def ATOMIC_LOAD_ADD_I8   : Atomic2Ops<atomic_load_add_8     , GPR>;
-// def ATOMIC_LOAD_ADD_I16  : Atomic2Ops<atomic_load_add_16    , GPR>;
-// def ATOMIC_LOAD_SUB_I8   : Atomic2Ops<atomic_load_sub_8     , GPR>;
-// def ATOMIC_LOAD_SUB_I16  : Atomic2Ops<atomic_load_sub_16    , GPR>;
-// def ATOMIC_LOAD_SUB_I32  : Atomic2Ops<atomic_load_sub_32    , GPR>;
-// def ATOMIC_LOAD_AND_I8   : Atomic2Ops<atomic_load_and_8     , GPR>;
-// def ATOMIC_LOAD_AND_I16  : Atomic2Ops<atomic_load_and_16    , GPR>;
-// def ATOMIC_LOAD_OR_I8    : Atomic2Ops<atomic_load_or_8      , GPR>;
-// def ATOMIC_LOAD_OR_I16   : Atomic2Ops<atomic_load_or_16     , GPR>;
-// def ATOMIC_LOAD_XOR_I8   : Atomic2Ops<atomic_load_xor_8     , GPR>;
-// def ATOMIC_LOAD_XOR_I16  : Atomic2Ops<atomic_load_xor_16    , GPR>;
-// def ATOMIC_LOAD_NAND_I8  : Atomic2Ops<atomic_load_nand_8    , GPR>;
-// def ATOMIC_LOAD_NAND_I16 : Atomic2Ops<atomic_load_nand_16   , GPR>;
-// def ATOMIC_LOAD_NAND_I32 : Atomic2Ops<atomic_load_nand_32   , GPR>;
 
-// def ATOMIC_SWAP_I8       : Atomic2Ops<atomic_swap_8         , GPR>;
-// def ATOMIC_SWAP_I16      : Atomic2Ops<atomic_swap_16        , GPR>;
-def ATOMIC_SWAP_I32      : Atomic2Ops<0b0101111, 0b010, 0b0000100, "amoswap.w", atomic_swap_32        , GPR>;
+let usesCustomInserter = 1 in {
+  def ATOMIC_LOAD_ADD_I8   : Atomic2Ops<atomic_load_add_8     , GPR>;
+  def ATOMIC_LOAD_ADD_I16  : Atomic2Ops<atomic_load_add_16    , GPR>;
+  def ATOMIC_LOAD_ADD_I32  : Atomic2Ops<atomic_load_add_32    , GPR>;
+  def ATOMIC_LOAD_SUB_I8   : Atomic2Ops<atomic_load_sub_8     , GPR>;
+  def ATOMIC_LOAD_SUB_I16  : Atomic2Ops<atomic_load_sub_16    , GPR>;
+  def ATOMIC_LOAD_SUB_I32  : Atomic2Ops<atomic_load_sub_32    , GPR>;
+  def ATOMIC_LOAD_AND_I8   : Atomic2Ops<atomic_load_and_8     , GPR>;
+  def ATOMIC_LOAD_AND_I16  : Atomic2Ops<atomic_load_and_16    , GPR>;
+  def ATOMIC_LOAD_AND_I32  : Atomic2Ops<atomic_load_and_32    , GPR>;
+  def ATOMIC_LOAD_OR_I8    : Atomic2Ops<atomic_load_or_8      , GPR>;
+  def ATOMIC_LOAD_OR_I16   : Atomic2Ops<atomic_load_or_16     , GPR>;
+  def ATOMIC_LOAD_OR_I32   : Atomic2Ops<atomic_load_or_32     , GPR>;
+  def ATOMIC_LOAD_XOR_I8   : Atomic2Ops<atomic_load_xor_8     , GPR>;
+  def ATOMIC_LOAD_XOR_I16  : Atomic2Ops<atomic_load_xor_16    , GPR>;
+  def ATOMIC_LOAD_XOR_I32  : Atomic2Ops<atomic_load_xor_32    , GPR>;
+  def ATOMIC_LOAD_NAND_I8  : Atomic2Ops<atomic_load_nand_8    , GPR>;
+  def ATOMIC_LOAD_NAND_I16 : Atomic2Ops<atomic_load_nand_16   , GPR>;
+  def ATOMIC_LOAD_NAND_I32 : Atomic2Ops<atomic_load_nand_32   , GPR>;
 
-// def ATOMIC_CMP_SWAP_I8   : AtomicCmpSwap<atomic_cmp_swap_8  , GPR>;
-// def ATOMIC_CMP_SWAP_I16  : AtomicCmpSwap<atomic_cmp_swap_16 , GPR>;
-// def ATOMIC_CMP_SWAP_I32  : AtomicCmpSwap<atomic_cmp_swap_32 , GPR>;
+  def ATOMIC_SWAP_I8       : Atomic2Ops<atomic_swap_8         , GPR>;
+  def ATOMIC_SWAP_I16      : Atomic2Ops<atomic_swap_16        , GPR>;
+  def ATOMIC_SWAP_I32      : Atomic2Ops<atomic_swap_32        , GPR>;
+
+  def ATOMIC_CMP_SWAP_I8   : AtomicCmpSwap<atomic_cmp_swap_8  , GPR>;
+  def ATOMIC_CMP_SWAP_I16  : AtomicCmpSwap<atomic_cmp_swap_16 , GPR>;
+  def ATOMIC_CMP_SWAP_I32  : AtomicCmpSwap<atomic_cmp_swap_32 , GPR>;
+}
 
 
 //===----------------------------------------------------------------------===//
