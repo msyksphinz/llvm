@@ -516,13 +516,6 @@ def BGE     : CondBranch12<0b1100011, 0b101, "bge" , setge,  GPR>;
 def BLTU    : CondBranch12<0b1100011, 0b110, "bltu", setult, GPR>;
 def BGEU    : CondBranch12<0b1100011, 0b111, "bgeu", setuge, GPR>;
 
-// Floating Point Load Store
-defm FLW    : LoadM32 <0b0000111, 0b010, "flw", FPR_S, load_a >;
-defm FSW    : StoreM32<0b0100111, 0b010, "fsw", FPR_S, truncstoref32_a>;
-
-defm FLD    : LoadM32 <0b0000111, 0b011, "fld", FPR_D, load_a >;
-defm FSD    : StoreM32<0b0100111, 0b011, "fsd", FPR_D, truncstoref64_a>;
-
 let usesCustomInserter = 1 in
 class SelectCC_rrirr<RegisterClass RC, RegisterClass cmpty>
     : MYRISCVXPseudo<(outs RC:$dst),
@@ -670,27 +663,6 @@ def : Pat<(truncstorei8 GPR:$rs2, (add GPR:$rs1, simm12:$simm12))    , (SB GPR:$
 def : Pat<(truncstorei8 GPR:$rs2, (add addr_fi:$rs1, simm12:$simm12)), (SB GPR:$rs2, addr_fi:$rs1, simm12:$simm12)        >;
 
 
-def : Pat<(f32 (load GPR:$rs1))                          , (FLW GPR:$rs1, 0)           >;
-def : Pat<(f32 (load addr_fi:$rs1))                      , (FLW addr_fi:$rs1, 0)       >;
-def : Pat<(f32 (load (add GPR:$rs1, simm12:$simm12)))    , (FLW GPR:$rs1, $simm12)     >;
-def : Pat<(f32 (load (add addr_fi:$rs1, simm12:$simm12))), (FLW addr_fi:$rs1, $simm12) >;
-
-def : Pat<(store FPR_S:$rs2, GPR:$rs1)                          , (FSW FPR_S:$rs2, GPR:$rs1, 0)                         >;
-def : Pat<(store FPR_S:$rs2, addr_fi:$rs1)                      , (FSW FPR_S:$rs2, addr_fi:$rs1, 0)                     >;
-def : Pat<(store FPR_S:$rs2, (add GPR:$rs1, simm12:$simm12))    , (FSW FPR_S:$rs2, GPR:$rs1, simm12:$simm12)            >;
-def : Pat<(store FPR_S:$rs2, (add addr_fi:$rs1, simm12:$simm12)), (FSW FPR_S:$rs2, addr_fi:$rs1, simm12:$simm12)        >;
-
-def : Pat<(f64 (load GPR:$rs1))                          , (FLD GPR:$rs1, 0)           >;
-def : Pat<(f64 (load addr_fi:$rs1))                      , (FLD addr_fi:$rs1, 0)       >;
-def : Pat<(f64 (load (add GPR:$rs1, simm12:$simm12)))    , (FLD GPR:$rs1, $simm12)     >;
-def : Pat<(f64 (load (add addr_fi:$rs1, simm12:$simm12))), (FLD addr_fi:$rs1, $simm12) >;
-
-def : Pat<(store FPR_D:$rs2, GPR:$rs1)                          , (FSD FPR_D:$rs2, GPR:$rs1, 0)                         >;
-def : Pat<(store FPR_D:$rs2, addr_fi:$rs1)                      , (FSD FPR_D:$rs2, addr_fi:$rs1, 0)                     >;
-def : Pat<(store FPR_D:$rs2, (add GPR:$rs1, simm12:$simm12))    , (FSD FPR_D:$rs2, GPR:$rs1, simm12:$simm12)            >;
-def : Pat<(store FPR_D:$rs2, (add addr_fi:$rs1, simm12:$simm12)), (FSD FPR_D:$rs2, addr_fi:$rs1, simm12:$simm12)        >;
-
-
 // Define pattern expansions for setcc operations that aren't directly
 // handled by a RISC-V instruction.
 def : Pat<(seteq  GPR:$rs1, 0)       , (SLTIU GPR:$rs1, 1)>;
@@ -828,3 +800,5 @@ class LoadAddressImm<string instr_asm, Operand Od, RegisterClass RC> :
   MYRISCVXAsmPseudoInst<(outs RC:$rd), (ins Od:$imm32),
                      !strconcat(instr_asm, "\t$rd, $imm32")> ;
 def LoadAddr32Imm : LoadAddressImm<"la", shamt, GPR>;
+
+include "MYRISCVXInstrInfoFD.td"
