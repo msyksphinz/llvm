@@ -26,7 +26,6 @@ def CC_MYRISCVX_ByVal : CallingConv<[
 //===----------------------------------------------------------------------===//
 // MYRISCVX LP32 Calling Convention
 //===----------------------------------------------------------------------===//
-
 def CC_LP32 : CallingConv<[
   CCIfByVal<CCDelegateTo<CC_MYRISCVX_ByVal>>,
 
@@ -51,7 +50,6 @@ def CC_LP32 : CallingConv<[
 //===----------------------------------------------------------------------===//
 // MYRISCVX STACK32 Calling Convention
 //===----------------------------------------------------------------------===//
-
 def CC_STACK32 : CallingConv<[
   CCIfByVal<CCDelegateTo<CC_MYRISCVX_ByVal>>,
 
