@@ -217,6 +217,29 @@ class MYRISCVX_ISHIFT<bits<7> opcode, bits<3> funct3, bit arithshift,
 }
 
 
+//===----------------------------------------------------------------------===//
+// FMA-Type instruction class in MYRISCVX : <|opcode|rd|rs1|rs2|rs3|>
+//===----------------------------------------------------------------------===//
+class MYRISCVX_FMA<bits<7> opcode, bits<2> fmt, bits<3> rm,
+                   dag outs, dag ins, string asmstr, list<dag> pattern,
+                   InstrItinClass itin>:
+  MYRISCVXInst<outs, ins, asmstr, pattern, itin, FrmR>
+{
+  bits<5> rs3;
+  bits<5> rs2;
+  bits<5> rs1;
+  bits<5> rd;
+
+  let Inst{31-27} = rs3;
+  let Inst{26-25} = fmt;
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = rm;
+  let Inst{11-7}  = rd;
+  let Inst{6-0}   = opcode;
+}
+
+
 //===-------------------------------===//
 // MYRISCVX Pseudo Instructions Format
 //===-------------------------------===//
