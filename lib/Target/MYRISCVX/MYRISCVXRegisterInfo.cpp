@@ -162,7 +162,7 @@ MYRISCVXRegisterInfo::trackLivenessAfterRegAlloc(const MachineFunction &MF) cons
 }
 
 // pure virtual method
-unsigned MYRISCVXRegisterInfo::
+Register MYRISCVXRegisterInfo::
 getFrameRegister(const MachineFunction &MF) const {
   return MYRISCVX::FP;
 }

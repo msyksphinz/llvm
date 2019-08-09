@@ -175,8 +175,8 @@ void MYRISCVXAsmPrinter::printHex32(unsigned Value, raw_ostream &O) {
 void MYRISCVXAsmPrinter::emitFrameDirective() {
   const TargetRegisterInfo &RI = *MF->getSubtarget().getRegisterInfo();
 
-  unsigned stackReg  = RI.getFrameRegister(*MF);
-  unsigned returnReg = RI.getRARegister();
+  Register stackReg  = RI.getFrameRegister(*MF);
+  Register returnReg = RI.getRARegister();
   unsigned stackSize = MF->getFrameInfo().getStackSize();
 
   if (OutStreamer->hasRawTextSupport())
@@ -285,8 +285,7 @@ void MYRISCVXAsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
 
 // Print out an operand for an inline asm expression.
 bool MYRISCVXAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
-                                         unsigned AsmVariant,const char *ExtraCode,
-                                         raw_ostream &O) {
+                                         const char *ExtraCode, raw_ostream &O) {
   // Does this asm operand have a single letter operand modifier?
   if (ExtraCode && ExtraCode[0]) {
     if (ExtraCode[1] != 0) return true; // Unknown modifier.
@@ -295,7 +294,7 @@ bool MYRISCVXAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
     switch (ExtraCode[0]) {
       default:
         // See if this is a generic print operand
-        return AsmPrinter::PrintAsmOperand(MI,OpNum,AsmVariant,ExtraCode,O);
+        return AsmPrinter::PrintAsmOperand(MI, OpNum, ExtraCode, O);
       case 'X': // hex const int
         if ((MO.getType()) != MachineOperand::MO_Immediate)
           return true;
@@ -335,10 +334,8 @@ bool MYRISCVXAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
 }
 
 
-bool MYRISCVXAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
-                                               unsigned OpNum, unsigned AsmVariant,
-                                               const char *ExtraCode,
-                                               raw_ostream &O) {
+bool MYRISCVXAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum,
+                                               const char *ExtraCode, raw_ostream &O) {
   int Offset = 0;
   // Currently we are expecting either no ExtraCode or 'D'
   if (ExtraCode) {
