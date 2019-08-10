@@ -26,6 +26,29 @@ class FPMultAdd<bits<7> opcode, bits<2> fmt, bits<3> rm,
 }
 
 
+// Floating-Point instructions with 1 register operands.
+class FPTwoOp<bits<7> opcode, bits<3> rm, bits<7> funct7,
+                string instr_asm,
+                RegisterClass RC> :
+  MYRISCVX_R<opcode, rm, funct7, (outs RC:$rd), (ins RC:$rs1, RC:$rs2),
+             !strconcat(instr_asm, "\t$rd, $rs1, $rs2"),
+             [], IIAlu> {
+    let isReMaterializable = 1;
+  }
+
+
+// Floating-Point instructions with 1 register operands.
+class FPSingleOp<bits<7> opcode, bits<3> rm, bits<7> funct7, bits<5> rs2_op,
+                string instr_asm,
+                RegisterClass DstRC, RegisterClass SrcRC> :
+  MYRISCVX_R<opcode, rm, funct7, (outs DstRC:$rd), (ins SrcRC:$rs1),
+             !strconcat(instr_asm, "\t$rd, $rs1"),
+             [], IIAlu> {
+    let isReMaterializable = 1;
+    let rs2 = rs2_op;
+  }
+
+
 // Arithmetic and logical instructions with 2 register operands.
 class FPCompDestR<bits<7> opcode, bits<3> funct3, bits<7>funct7,
                   string instr_asm, SDPatternOperator OpNode,
@@ -91,6 +114,30 @@ def : InstAlias<"fge.s $rd, $rs1, $rs2",
 def : InstAlias<"fgt.s $rd, $rs1, $rs2",
                 (FLE_S GPR:$rd, FPR_S:$rs2, FPR_S:$rs1), 0>;
 
+
+def FSQRT_S   : FPSingleOp<0b1010011, 0b000, 0b0101100, 0b00000, "fsqrt.s",  FPR_S, FPR_S>;
+def FSIGNJ_S  : FPTwoOp<0b1010011, 0b000, 0b0010000, "fsgnj.s" , FPR_S>;
+def FSIGNJN_S : FPTwoOp<0b1010011, 0b001, 0b0010000, "fsgnjn.s", FPR_S>;
+def FSIGNJX_S : FPTwoOp<0b1010011, 0b010, 0b0010000, "fsgnjx.s", FPR_S>;
+def FCVT_W_S  : FPSingleOp<0b1010011, 0b000, 0b1100000, 0b00000, "fcvt.w.s",  GPR, FPR_S>;
+def FCVT_WU_S : FPSingleOp<0b1010011, 0b000, 0b1100000, 0b00001, "fcvt.wu.s", GPR, FPR_S>;
+def FMV_X_W   : FPSingleOp<0b1010011, 0b000, 0b1110000, 0b00000, "fmv.x.w",   GPR, FPR_S>;
+def FCLASS_S  : FPSingleOp<0b1010011, 0b001, 0b1110000, 0b00000, "fclass.s",  FPR_S, FPR_S>;
+def FCVT_S_W  : FPSingleOp<0b1010011, 0b000, 0b1101000, 0b00000, "fcvt.s.w",  FPR_S, GPR>;
+def FCVT_S_WU : FPSingleOp<0b1010011, 0b000, 0b1101000, 0b00001, "fcvt.s.wu", FPR_S, GPR>;
+def FMV_W_X   : FPSingleOp<0b1010011, 0b000, 0b1111000, 0b00000, "fmv.w.x",   FPR_S, GPR>;
+
+def : Pat<(fsqrt FPR_S:$rs1), (FSQRT_S   $rs1)>;
+def : Pat<(fneg  FPR_S:$rs1), (FSIGNJN_S $rs1, $rs1)>;
+def : Pat<(fabs  FPR_S:$rs1), (FSIGNJX_S $rs1, $rs1)>;
+def : InstAlias<"fmv.s  $rd, $rs1", (FSIGNJ_S  FPR_S:$rd, FPR_S:$rs1, FPR_S:$rs1), 0>;
+def : InstAlias<"fneg.s $rd, $rs1", (FSIGNJN_S FPR_S:$rd, FPR_S:$rs1, FPR_S:$rs1), 0>;
+def : InstAlias<"fabs.s $rd, $rs1", (FSIGNJX_S FPR_S:$rd, FPR_S:$rs1, FPR_S:$rs1), 0>;
+def : Pat<(fp_to_sint FPR_S:$rs1), (FCVT_W_S  $rs1)>;
+def : Pat<(fp_to_uint FPR_S:$rs1), (FCVT_WU_S $rs1)>;
+def : Pat<(sint_to_fp GPR:$rs1), (FCVT_S_W  $rs1)>;
+def : Pat<(uint_to_fp GPR:$rs1), (FCVT_S_WU $rs1)>;
+
 //
 // Double Floating Point Operations
 //
@@ -130,6 +177,29 @@ def : InstAlias<"fge.d $rd, $rs1, $rs2",
                 (FLT_D GPR:$rd, FPR_D:$rs2, FPR_D:$rs1), 0>;
 def : InstAlias<"fgt.d $rd, $rs1, $rs2",
                 (FLE_D GPR:$rd, FPR_D:$rs2, FPR_D:$rs1), 0>;
+
+def FSQRT_D   : FPSingleOp<0b1010011, 0b000, 0b0101101, 0b00000, "fsqrt.d",  FPR_D, FPR_D>;
+def FSIGNJ_D  : FPTwoOp<0b1010011, 0b000, 0b0010001, "fsgnj.d" , FPR_D>;
+def FSIGNJN_D : FPTwoOp<0b1010011, 0b001, 0b0010001, "fsgnjn.d", FPR_D>;
+def FSIGNJX_D : FPTwoOp<0b1010011, 0b010, 0b0010001, "fsgnjx.d", FPR_D>;
+def FCVT_W_D  : FPSingleOp<0b1010011, 0b000, 0b1100001, 0b00000, "fcvt.w.d",  GPR, FPR_D>;
+def FCVT_WU_D : FPSingleOp<0b1010011, 0b000, 0b1100001, 0b00001, "fcvt.wu.d", GPR, FPR_D>;
+// def FMV_X_W   : FPSingleOp<0b1010011, 0b000, 0b1110001, 0b00000, "fmv.x.w",   GPR, FPR_D>;
+def FCLASS_D  : FPSingleOp<0b1010011, 0b001, 0b1110001, 0b00000, "fclass.d",  FPR_D, FPR_D>;
+def FCVT_D_W  : FPSingleOp<0b1010011, 0b000, 0b1101001, 0b00000, "fcvt.d.w",  FPR_D, GPR>;
+def FCVT_D_WU : FPSingleOp<0b1010011, 0b000, 0b1101001, 0b00001, "fcvt.d.wu", FPR_D, GPR>;
+// def FMV_W_X   : FPSingleOp<0b1010011, 0b000, 0b1111001, 0b00000, "fmv.w.x",   FPR_D, GPR>;
+
+def : Pat<(fsqrt FPR_D:$rs1), (FSQRT_D $rs1)>;
+def : Pat<(fneg  FPR_D:$rs1), (FSIGNJN_D $rs1, $rs1)>;
+def : Pat<(fabs  FPR_D:$rs1), (FSIGNJX_D $rs1, $rs1)>;
+def : InstAlias<"fmv.d  $rd, $rs1", (FSIGNJ_D  FPR_D:$rd, FPR_D:$rs1, FPR_D:$rs1), 0>;
+def : InstAlias<"fneg.d $rd, $rs1", (FSIGNJN_D FPR_D:$rd, FPR_D:$rs1, FPR_D:$rs1), 0>;
+def : InstAlias<"fabs.d $rd, $rs1", (FSIGNJX_D FPR_D:$rd, FPR_D:$rs1, FPR_D:$rs1), 0>;
+def : Pat<(fp_to_sint FPR_D:$rs1), (FCVT_W_D  $rs1)>;
+def : Pat<(fp_to_uint FPR_D:$rs1), (FCVT_WU_D $rs1)>;
+def : Pat<(sint_to_fp GPR:$rs1), (FCVT_D_W  $rs1)>;
+def : Pat<(uint_to_fp GPR:$rs1), (FCVT_D_WU $rs1)>;
 
 
 //===----------------------------------------------------------------------===//
