@@ -500,6 +500,8 @@ let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
 
 /// Load and Store Instructions
 ///  aligned
+defm LD     : LoadM32 <0b0000011, 0b011, "ld",  GPR, load_a>;
+defm SD     : StoreM32<0b0100011, 0b011, "sd",  GPR, store_a>;
 defm LW     : LoadM32 <0b0000011, 0b010, "lw",  GPR, load_a>;
 defm SW     : StoreM32<0b0100011, 0b010, "sw",  GPR, store_a>;
 defm LB     : LoadM32 <0b0000011, 0b000, "lb",  GPR, sextloadi8_a>;
@@ -621,6 +623,16 @@ def : Pat<(sext_inreg GPR:$rd, i8),  (SRAI (SLLI GPR:$rd, 24), 24)>;
 def : Pat<(sext_inreg GPR:$rd, i16), (SRAI (SLLI GPR:$rd, 16), 16)>;
 
 def : Pat<(br bb:$simm20), (JAL bb:$simm20)>;
+
+def : Pat<(i64 (load GPR:$rs1))                          , (LD GPR:$rs1, 0)           >;
+def : Pat<(i64 (load addr_fi:$rs1))                      , (LD addr_fi:$rs1, 0)       >;
+def : Pat<(i64 (load (add GPR:$rs1, simm12:$simm12)))    , (LD GPR:$rs1, $simm12)     >;
+def : Pat<(i64 (load (add addr_fi:$rs1, simm12:$simm12))), (LD addr_fi:$rs1, $simm12) >;
+
+def : Pat<(store GPR:$rs2, GPR:$rs1)                          , (SD GPR:$rs2, GPR:$rs1, 0)                         >;
+def : Pat<(store GPR:$rs2, addr_fi:$rs1)                      , (SD GPR:$rs2, addr_fi:$rs1, 0)                     >;
+def : Pat<(store GPR:$rs2, (add GPR:$rs1, simm12:$simm12))    , (SD GPR:$rs2, GPR:$rs1, simm12:$simm12)            >;
+def : Pat<(store GPR:$rs2, (add addr_fi:$rs1, simm12:$simm12)), (SD GPR:$rs2, addr_fi:$rs1, simm12:$simm12)        >;
 
 def : Pat<(i32 (load GPR:$rs1))                          , (LW GPR:$rs1, 0)           >;
 def : Pat<(i32 (load addr_fi:$rs1))                      , (LW addr_fi:$rs1, 0)       >;
