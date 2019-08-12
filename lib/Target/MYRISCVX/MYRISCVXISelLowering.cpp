@@ -119,6 +119,14 @@ MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
   setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i64, Expand);
   setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i32, Expand);
   setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i64, Expand);
+
+  setCondCodeAction (ISD::SETO,  MVT::f32, Expand);
+  setCondCodeAction (ISD::SETUO, MVT::f32, Expand);
+  setOperationAction(ISD::BR_CC, MVT::f32, Expand);
+  setCondCodeAction (ISD::SETO,  MVT::f64, Expand);
+  setCondCodeAction (ISD::SETUO, MVT::f64, Expand);
+  setOperationAction(ISD::BR_CC, MVT::f64, Expand);
+
 }
 
 
