@@ -150,7 +150,10 @@ let Namespace = "MYRISCVX" in {
 //@Register Classes
 //===----------------------------------------------------------------------===//
 
-def GPR : RegisterClass<"MYRISCVX", [i32], 32, (add
+def XLenVT : ValueTypeByHwMode<[RV32, RV64, DefaultMode],
+                               [i32,  i64,  i32]>;
+
+def GPR : RegisterClass<"MYRISCVX", [XLenVT], 32, (add
   // Reserved
   ZERO,
   // Return Values and Arguments
@@ -161,7 +164,11 @@ def GPR : RegisterClass<"MYRISCVX", [i32], 32, (add
   FP, S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, S11,
   // Reserved
   RA, SP, GP, TP
-  )>;
+  )> {
+    let RegInfos = RegInfoByHwMode<
+      [RV32,              RV64,              DefaultMode],
+      [RegInfo<32,32,32>, RegInfo<64,64,64>, RegInfo<32,32,32>]>;
+}
 
 
 // Single Floating Point Register Class

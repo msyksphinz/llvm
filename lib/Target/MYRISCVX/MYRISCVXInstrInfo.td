@@ -22,8 +22,8 @@ def SDT_MYRISCVXSelectCC   : SDTypeProfile<1, 5, [SDTCisSameAs<1, 2>,
 
 def SDT_MYRISCVXRet : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 
-def SDT_MYRISCVXCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>]>;
-def SDT_MYRISCVXCallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
+def SDT_MYRISCVXCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
+def SDT_MYRISCVXCallSeqEnd   : SDCallSeqEnd  <[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
 
 // Tail call
 def MYRISCVXTailCall : SDNode<"MYRISCVXISD::TailCall", SDT_MYRISCVXCall,

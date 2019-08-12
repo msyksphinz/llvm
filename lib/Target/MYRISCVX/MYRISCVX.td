@@ -32,6 +32,9 @@ def FeatureCExt : SubtargetFeature<"c", "is_enable_C", "true",
 
 def FeatureRV64 : SubtargetFeature<"64bit", "HasRV64", "true", "RV64 support">;
 
+def RV64 : HwMode<"+64bit">;
+def RV32 : HwMode<"-64bit">;
+
 def : ProcessorModel<"simple32", NoSchedModel, []>;
 def : ProcessorModel<"rocket64", NoSchedModel, [FeatureRV64,
                                                 FeatureMExt,
