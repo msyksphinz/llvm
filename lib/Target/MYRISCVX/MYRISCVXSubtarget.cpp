@@ -62,7 +62,6 @@ MYRISCVXSubtarget::MYRISCVXSubtarget(const Triple &TT, const std::string &CPU,
         MYRISCVXInstrInfo::create(initializeSubtargetDependencies(CPU, FS, TM))),
     FrameLowering(MYRISCVXFrameLowering::create(*this)),
     TLInfo(MYRISCVXTargetLowering::create(TM, *this)) {
-
 }
 
 bool MYRISCVXSubtarget::isPositionIndependent() const {
@@ -96,6 +95,11 @@ MYRISCVXSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
   ParseSubtargetFeatures(CPU, FS);
   // Initialize scheduling itinerary for the specified CPU.
   InstrItins = getInstrItineraryForCPU(CPU);
+
+  if (TargetTriple.isArch64Bit()) {
+    XLenVT = MVT::i64;
+    XLen = 64;
+  }
 
   return *this;
 }

@@ -37,6 +37,9 @@ class StringRef;
   class MYRISCVXSubtarget : public MYRISCVXGenSubtargetInfo {
     virtual void anchor();
 
+    unsigned XLen = 32;
+    MVT XLenVT = MVT::i32;
+
    public:
 
    protected:
@@ -108,7 +111,11 @@ class StringRef;
     const InstrItineraryData *getInstrItineraryData() const override {
       return &InstrItins;
     }
-    unsigned getGPRSizeInBytes() const { return 4; }
+    unsigned getGPRSizeInBytes() const { return XLen / 4; }
+
+    MVT getXLenVT() const { return XLenVT; }
+    unsigned getXLen() const { return XLen; }
+
   };
 } // End llvm namespace
 

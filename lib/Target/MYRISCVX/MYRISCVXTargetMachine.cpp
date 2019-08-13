@@ -38,16 +38,15 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
                                      const TargetOptions &Options,
                                      bool isLittle) {
   std::string Ret = "";
-  // There are both little and big endian MYRISCVX.
-  if (isLittle)
-    Ret += "e";
-  else
-    Ret += "E";
-
+  Ret += "e";
   Ret += "-m:m";
 
   // Pointers are 32 bit on some ABIs.
-  Ret += "-p:32:32";
+  if (TT.isArch64Bit()) {
+    Ret += "-p:64:64";
+  } else {
+    Ret += "-p:32:32";
+  }
 
   // 8 and 16 bit integers only need to have natural alignment, but try to
   // align them to 32 bits. 64 bit integers have natural alignment.
@@ -55,7 +54,11 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
 
   // 32 bit registers are always available and the stack is at least 64 bit
   // aligned.
-  Ret += "-n32-S64";
+  if (TT.isArch64Bit()) {
+    Ret += "-n64-S128";
+  } else {
+    Ret += "-n32-S64";
+  }
 
   return Ret;
 }
