@@ -18,8 +18,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "MYRISCVX-reg-info"
 
-MYRISCVXSERegisterInfo::MYRISCVXSERegisterInfo(const MYRISCVXSubtarget &ST)
-  : MYRISCVXRegisterInfo(ST) {}
+MYRISCVXSERegisterInfo::MYRISCVXSERegisterInfo(const MYRISCVXSubtarget &ST, unsigned HwMode)
+  : MYRISCVXRegisterInfo(ST, HwMode) {}
 
 const TargetRegisterClass *
 MYRISCVXSERegisterInfo::intRegClass(unsigned Size) const {

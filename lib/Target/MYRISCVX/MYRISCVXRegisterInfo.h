@@ -30,7 +30,7 @@ namespace llvm {
     const MYRISCVXSubtarget &Subtarget;
 
  public:
-    MYRISCVXRegisterInfo(const MYRISCVXSubtarget &Subtarget);
+    MYRISCVXRegisterInfo(const MYRISCVXSubtarget &Subtarget, unsigned HwMode);
 
     /// Code Generation virtual methods...
     const TargetRegisterClass *getPointerRegClass(const MachineFunction &MF,

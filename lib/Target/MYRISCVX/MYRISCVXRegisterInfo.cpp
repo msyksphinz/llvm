@@ -30,8 +30,8 @@ using namespace llvm;
 #include "MYRISCVXGenRegisterInfo.inc"
 
 
-MYRISCVXRegisterInfo::MYRISCVXRegisterInfo(const MYRISCVXSubtarget &ST)
-    : MYRISCVXGenRegisterInfo(MYRISCVX::RA), Subtarget(ST) {}
+MYRISCVXRegisterInfo::MYRISCVXRegisterInfo(const MYRISCVXSubtarget &ST, unsigned HwMode)
+    : MYRISCVXGenRegisterInfo(MYRISCVX::RA, 0, 0, 0, HwMode), Subtarget(ST) {}
 
 const TargetRegisterClass *
 MYRISCVXRegisterInfo::getPointerRegClass(const MachineFunction &MF,
