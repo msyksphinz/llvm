@@ -36,9 +36,12 @@ EnableMYRISCVXTailCalls("enable-MYRISCVX-tail-calls", cl::Hidden,
 MYRISCVXSETargetLowering::MYRISCVXSETargetLowering(const MYRISCVXTargetMachine &TM,
                                                    const MYRISCVXSubtarget &STI)
     : MYRISCVXTargetLowering(TM, STI) {
+
+  MVT XLenVT = Subtarget.getXLenVT();
+
   //@MYRISCVXSETargetLowering body {
   // Set up the register classes
-  addRegisterClass(MVT::i32, &MYRISCVX::GPRRegClass);
+  addRegisterClass(XLenVT,   &MYRISCVX::GPRRegClass);
   addRegisterClass(MVT::f32, &MYRISCVX::FPR_SRegClass);
   addRegisterClass(MVT::f64, &MYRISCVX::FPR_DRegClass);
 

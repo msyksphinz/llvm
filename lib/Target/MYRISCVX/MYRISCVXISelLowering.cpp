@@ -175,12 +175,7 @@ MYRISCVXTargetLowering::LowerReturn(SDValue Chain,
   // CCState - Info about the registers and stack slot.
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs,
                  *DAG.getContext());
-  MYRISCVXCC MYRISCVXCCInfo(CallConv, ABI.IsLP32(), CCInfo);
-
-
-  // Analyze return values.
-  MYRISCVXCCInfo.analyzeReturn(Outs, Subtarget.abiUsesSoftFloat(),
-                               MF.getFunction().getReturnType());
+  CCInfo.AnalyzeReturn(Outs, RetCC_MYRISCVX);
 
   SDValue Flag;
   SmallVector<SDValue, 4> RetOps(1, Chain);

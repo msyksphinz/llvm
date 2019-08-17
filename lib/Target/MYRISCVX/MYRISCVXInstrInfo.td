@@ -22,8 +22,8 @@ def SDT_MYRISCVXSelectCC   : SDTypeProfile<1, 5, [SDTCisSameAs<1, 2>,
 
 def SDT_MYRISCVXRet : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 
-def SDT_MYRISCVXCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
-def SDT_MYRISCVXCallSeqEnd   : SDCallSeqEnd  <[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
+def SDT_MYRISCVXCallSeqStart : SDCallSeqStart<[SDTCisVT<0, XLenVT>, SDTCisVT<1, XLenVT>]>;
+def SDT_MYRISCVXCallSeqEnd   : SDCallSeqEnd  <[SDTCisVT<0, XLenVT>, SDTCisVT<1, XLenVT>]>;
 
 // Tail call
 def MYRISCVXTailCall : SDNode<"MYRISCVXISD::TailCall", SDT_MYRISCVXCall,
@@ -45,7 +45,7 @@ def MYRISCVXCallSeqStart : SDNode<"ISD::CALLSEQ_START", SDT_MYRISCVXCallSeqStart
 def MYRISCVXCallSeqEnd : SDNode<"ISD::CALLSEQ_END", SDT_MYRISCVXCallSeqEnd,
                                 [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
-def SDT_Sync : SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>;
+def SDT_Sync : SDTypeProfile<0, 1, [SDTCisVT<0, XLenVT>]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction format superclass
@@ -75,14 +75,14 @@ def MYRISCVXLo    : SDNode<"MYRISCVXISD::Lo", SDTIntUnaryOp>;
 def MYRISCVXGPRel : SDNode<"MYRISCVXISD::GPRel", SDTIntUnaryOp>;
 
 // Signed Operand
-def simm12 : Operand<i32>, ImmLeaf<i32, [{return isInt<12>(Imm);}]> {
+def simm12 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<12>(Imm);}]> {
   let DecoderMethod= "DecodeSimm12";
 }
-def simm20 : Operand<i32> {
+def simm20 : Operand<XLenVT> {
   let DecoderMethod= "DecodeSimm20";
 }
 // Unsigned Operand
-def uimm12 : Operand<i32> {
+def uimm12 : Operand<XLenVT> {
   let PrintMethod = "printUnsignedImm";
 }
 
@@ -102,9 +102,9 @@ def immLow12Zero : PatLeaf<(imm), [{
 }]>;
 
 // shamt field must fit in 5 bits.
-def immZExt5 : ImmLeaf<i32, [{return Imm == (Imm & 0x1f);}]>;
+def immZExt5 : ImmLeaf<XLenVT, [{return Imm == (Imm & 0x1f);}]>;
 
-def shamt : Operand<i32>;
+def shamt : Operand<XLenVT>;
 
 def calltarget : Operand<iPTR> {
   let EncoderMethod = "getJumpTargetOpValue";
@@ -182,10 +182,14 @@ def zextloadi8_a    : AlignedLoad<zextloadi8>;
 def sextloadi16_a   : AlignedLoad<sextloadi16>;
 def zextloadi16_a   : AlignedLoad<zextloadi16>;
 def extloadi16_a    : AlignedLoad<extloadi16>;
+def sextloadi32_a   : AlignedLoad<sextloadi32>;
+def zextloadi32_a   : AlignedLoad<zextloadi32>;
+def extloadi32_a    : AlignedLoad<extloadi32>;
 
 def store_a         : AlignedStore<store>;
 def truncstorei8_a  : AlignedStore<truncstorei8>;
 def truncstorei16_a : AlignedStore<truncstorei16>;
+def truncstorei32_a : AlignedStore<truncstorei32>;
 
 def truncstoref32_a : AlignedStore<truncstoref32>;
 def truncstoref64_a : AlignedStore<truncstoref64>;
@@ -489,10 +493,10 @@ def JR   : JumpRegisterX0<0b1100111, 0b000, "jr">;
 // def JR  : ArithLogicI<0b1100111, 0b000, "jr", add, simm12, immSExt12, GPR>;
 def RET  : InstAlias<"ret",   (JR RA)>;
 
-def : Pat<(MYRISCVXCall (i32 tglobaladdr:$dst)),  (JAL tglobaladdr:$dst)>;
-def : Pat<(MYRISCVXCall (i32 texternalsym:$dst)), (JAL texternalsym:$dst)>;
-def : Pat<(MYRISCVXCall (i32 tglobaladdr:$dst)),  (JALR tglobaladdr:$dst)>;
-def : Pat<(MYRISCVXCall (i32 texternalsym:$dst)), (JALR texternalsym:$dst)>;
+def : Pat<(MYRISCVXCall (XLenVT tglobaladdr:$dst)),  (JAL tglobaladdr:$dst)>;
+def : Pat<(MYRISCVXCall (XLenVT texternalsym:$dst)), (JAL texternalsym:$dst)>;
+def : Pat<(MYRISCVXCall (XLenVT tglobaladdr:$dst)),  (JALR tglobaladdr:$dst)>;
+def : Pat<(MYRISCVXCall (XLenVT texternalsym:$dst)), (JALR texternalsym:$dst)>;
 
 let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
   def RetRA : MYRISCVXPseudo<(outs), (ins), "", [(MYRISCVXRet)]>;
@@ -502,8 +506,8 @@ let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
 ///  aligned
 defm LD     : LoadM32 <0b0000011, 0b011, "ld",  GPR, load_a>;
 defm SD     : StoreM32<0b0100011, 0b011, "sd",  GPR, store_a>;
-defm LW     : LoadM32 <0b0000011, 0b010, "lw",  GPR, load_a>;
-defm SW     : StoreM32<0b0100011, 0b010, "sw",  GPR, store_a>;
+defm LW     : LoadM32 <0b0000011, 0b010, "lw",  GPR, sextloadi32_a>;
+defm SW     : StoreM32<0b0100011, 0b010, "sw",  GPR, sextloadi32_a>;
 defm LB     : LoadM32 <0b0000011, 0b000, "lb",  GPR, sextloadi8_a>;
 defm LBU    : LoadM32 <0b0000011, 0b100, "lbu", GPR, zextloadi8_a>;
 defm SB     : StoreM32<0b0100011, 0b000, "sb",  GPR, truncstorei8_a>;
@@ -527,7 +531,7 @@ class SelectCC_rrirr<RegisterClass RC, RegisterClass cmpty>
              [(set RC:$dst,
                (SelectCC cmpty:$lhs,
                          cmpty:$rhs,
-                         (i32 imm:$imm),
+                         (XLenVT imm:$imm),
                          RC:$truev,
                          RC:$falsev
                          ))]>;
@@ -577,18 +581,18 @@ def SC_W : SCBase<0b0101111, 0b010, 0b0001100, "sc.w", GPR, mem>;
 //===----------------------------------------------------------------------===//
 
 // Small immediates
-def : Pat<(i32 immSExt12:$in),
+def : Pat<(XLenVT immSExt12:$in),
           (ADDI ZERO, imm:$in)>;
-def : Pat<(i32 immZExt12:$in),
+def : Pat<(XLenVT immZExt12:$in),
           (ORI ZERO, imm:$in)>;
 
-def : Pat<(i32 immLow12Zero:$in),
+def : Pat<(XLenVT immLow12Zero:$in),
           (LUI (HI20 imm:$in))>;
 
-def : Pat<(i32 imm:$imm),
+def : Pat<(XLenVT imm:$imm),
           (ORI (LUI (HI20 imm:$imm)), (LO12 imm:$imm))>;
 
-def : Pat<(i32 addr_fi:$simm12),
+def : Pat<(XLenVT addr_fi:$simm12),
           (ADDI ZERO, imm:$simm12)>;
 
 // hi/lo relocs
@@ -607,67 +611,67 @@ class WrapperPat<SDNode node, Instruction ORiOp, RegisterClass RC>:
 
 def : WrapperPat<tglobaladdr, ORI, GPR>;
 def : WrapperPat<texternalsym, ORI, GPR>;
-def : Pat<(i32 (zextloadi1  (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
-def : Pat<(i32 (zextloadi8  (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
-def : Pat<(i32 (zextloadi16 (add GPR:$rs1, simm12:$simm12))), (LHU $rs1, $simm12)>;
+def : Pat<(XLenVT (zextloadi1  (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
+def : Pat<(XLenVT (zextloadi8  (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
+def : Pat<(XLenVT (zextloadi16 (add GPR:$rs1, simm12:$simm12))), (LHU $rs1, $simm12)>;
 
-def : Pat<(i32 (sextloadi1  (add GPR:$rs1, simm12:$simm12))), (LB  $rs1, $simm12)>;
-def : Pat<(i32 (sextloadi8  (add GPR:$rs1, simm12:$simm12))), (LB  $rs1, $simm12)>;
-def : Pat<(i32 (sextloadi16 (add GPR:$rs1, simm12:$simm12))), (LH  $rs1, $simm12)>;
+def : Pat<(XLenVT (sextloadi1  (add GPR:$rs1, simm12:$simm12))), (LB  $rs1, $simm12)>;
+def : Pat<(XLenVT (sextloadi8  (add GPR:$rs1, simm12:$simm12))), (LB  $rs1, $simm12)>;
+def : Pat<(XLenVT (sextloadi16 (add GPR:$rs1, simm12:$simm12))), (LH  $rs1, $simm12)>;
 
-def : Pat<(i32 (extloadi1   (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
-def : Pat<(i32 (extloadi8   (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
-def : Pat<(i32 (extloadi16  (add GPR:$rs1, simm12:$simm12))), (LHU $rs1, $simm12)>;
+def : Pat<(XLenVT (extloadi1   (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
+def : Pat<(XLenVT (extloadi8   (add GPR:$rs1, simm12:$simm12))), (LBU $rs1, $simm12)>;
+def : Pat<(XLenVT (extloadi16  (add GPR:$rs1, simm12:$simm12))), (LHU $rs1, $simm12)>;
 
 def : Pat<(sext_inreg GPR:$rd, i8),  (SRAI (SLLI GPR:$rd, 24), 24)>;
 def : Pat<(sext_inreg GPR:$rd, i16), (SRAI (SLLI GPR:$rd, 16), 16)>;
 
 def : Pat<(br bb:$simm20), (JAL bb:$simm20)>;
 
-def : Pat<(i64 (load GPR:$rs1))                          , (LD GPR:$rs1, 0)           >;
-def : Pat<(i64 (load addr_fi:$rs1))                      , (LD addr_fi:$rs1, 0)       >;
-def : Pat<(i64 (load (add GPR:$rs1, simm12:$simm12)))    , (LD GPR:$rs1, $simm12)     >;
-def : Pat<(i64 (load (add addr_fi:$rs1, simm12:$simm12))), (LD addr_fi:$rs1, $simm12) >;
+def : Pat<(XLenVT (load GPR:$rs1))                          , (LD GPR:$rs1, 0)           >;
+def : Pat<(XLenVT (load addr_fi:$rs1))                      , (LD addr_fi:$rs1, 0)       >;
+def : Pat<(XLenVT (load (add GPR:$rs1, simm12:$simm12)))    , (LD GPR:$rs1, $simm12)     >;
+def : Pat<(XLenVT (load (add addr_fi:$rs1, simm12:$simm12))), (LD addr_fi:$rs1, $simm12) >;
 
 def : Pat<(store GPR:$rs2, GPR:$rs1)                          , (SD GPR:$rs2, GPR:$rs1, 0)                         >;
 def : Pat<(store GPR:$rs2, addr_fi:$rs1)                      , (SD GPR:$rs2, addr_fi:$rs1, 0)                     >;
 def : Pat<(store GPR:$rs2, (add GPR:$rs1, simm12:$simm12))    , (SD GPR:$rs2, GPR:$rs1, simm12:$simm12)            >;
 def : Pat<(store GPR:$rs2, (add addr_fi:$rs1, simm12:$simm12)), (SD GPR:$rs2, addr_fi:$rs1, simm12:$simm12)        >;
 
-def : Pat<(i32 (load GPR:$rs1))                          , (LW GPR:$rs1, 0)           >;
-def : Pat<(i32 (load addr_fi:$rs1))                      , (LW addr_fi:$rs1, 0)       >;
-def : Pat<(i32 (load (add GPR:$rs1, simm12:$simm12)))    , (LW GPR:$rs1, $simm12)     >;
-def : Pat<(i32 (load (add addr_fi:$rs1, simm12:$simm12))), (LW addr_fi:$rs1, $simm12) >;
+def : Pat<(XLenVT (load GPR:$rs1))                          , (LW GPR:$rs1, 0)           >;
+def : Pat<(XLenVT (load addr_fi:$rs1))                      , (LW addr_fi:$rs1, 0)       >;
+def : Pat<(XLenVT (load (add GPR:$rs1, simm12:$simm12)))    , (LW GPR:$rs1, $simm12)     >;
+def : Pat<(XLenVT (load (add addr_fi:$rs1, simm12:$simm12))), (LW addr_fi:$rs1, $simm12) >;
 
 def : Pat<(store GPR:$rs2, GPR:$rs1)                          , (SW GPR:$rs2, GPR:$rs1, 0)                         >;
 def : Pat<(store GPR:$rs2, addr_fi:$rs1)                      , (SW GPR:$rs2, addr_fi:$rs1, 0)                     >;
 def : Pat<(store GPR:$rs2, (add GPR:$rs1, simm12:$simm12))    , (SW GPR:$rs2, GPR:$rs1, simm12:$simm12)            >;
 def : Pat<(store GPR:$rs2, (add addr_fi:$rs1, simm12:$simm12)), (SW GPR:$rs2, addr_fi:$rs1, simm12:$simm12)        >;
 
-def : Pat<(i32 (sextloadi16 GPR:$rs1))                          , (LH GPR:$rs1, 0)           >;
-def : Pat<(i32 (sextloadi16 addr_fi:$rs1))                      , (LH addr_fi:$rs1, 0)       >;
-def : Pat<(i32 (sextloadi16 (add GPR:$rs1, simm12:$simm12)))    , (LH GPR:$rs1, $simm12)     >;
-def : Pat<(i32 (sextloadi16 (add addr_fi:$rs1, simm12:$simm12))), (LH addr_fi:$rs1, $simm12) >;
+def : Pat<(XLenVT (sextloadi16 GPR:$rs1))                          , (LH GPR:$rs1, 0)           >;
+def : Pat<(XLenVT (sextloadi16 addr_fi:$rs1))                      , (LH addr_fi:$rs1, 0)       >;
+def : Pat<(XLenVT (sextloadi16 (add GPR:$rs1, simm12:$simm12)))    , (LH GPR:$rs1, $simm12)     >;
+def : Pat<(XLenVT (sextloadi16 (add addr_fi:$rs1, simm12:$simm12))), (LH addr_fi:$rs1, $simm12) >;
 
-def : Pat<(i32 (zextloadi16 GPR:$rs1))                          , (LHU GPR:$rs1, 0)           >;
-def : Pat<(i32 (zextloadi16 addr_fi:$rs1))                      , (LHU addr_fi:$rs1, 0)       >;
-def : Pat<(i32 (zextloadi16 (add GPR:$rs1, simm12:$simm12)))    , (LHU GPR:$rs1, $simm12)     >;
-def : Pat<(i32 (zextloadi16 (add addr_fi:$rs1, simm12:$simm12))), (LHU addr_fi:$rs1, $simm12) >;
+def : Pat<(XLenVT (zextloadi16 GPR:$rs1))                          , (LHU GPR:$rs1, 0)           >;
+def : Pat<(XLenVT (zextloadi16 addr_fi:$rs1))                      , (LHU addr_fi:$rs1, 0)       >;
+def : Pat<(XLenVT (zextloadi16 (add GPR:$rs1, simm12:$simm12)))    , (LHU GPR:$rs1, $simm12)     >;
+def : Pat<(XLenVT (zextloadi16 (add addr_fi:$rs1, simm12:$simm12))), (LHU addr_fi:$rs1, $simm12) >;
 
 def : Pat<(truncstorei16 GPR:$rs2, GPR:$rs1)                          , (SH GPR:$rs2, GPR:$rs1, 0)                         >;
 def : Pat<(truncstorei16 GPR:$rs2, addr_fi:$rs1)                      , (SH GPR:$rs2, addr_fi:$rs1, 0)                     >;
 def : Pat<(truncstorei16 GPR:$rs2, (add GPR:$rs1, simm12:$simm12))    , (SH GPR:$rs2, GPR:$rs1, simm12:$simm12)            >;
 def : Pat<(truncstorei16 GPR:$rs2, (add addr_fi:$rs1, simm12:$simm12)), (SH GPR:$rs2, addr_fi:$rs1, simm12:$simm12)        >;
 
-def : Pat<(i32 (sextloadi8 GPR:$rs1))                          , (LB GPR:$rs1, 0)           >;
-def : Pat<(i32 (sextloadi8 addr_fi:$rs1))                      , (LB addr_fi:$rs1, 0)       >;
-def : Pat<(i32 (sextloadi8 (add GPR:$rs1, simm12:$simm12)))    , (LB GPR:$rs1, $simm12)     >;
-def : Pat<(i32 (sextloadi8 (add addr_fi:$rs1, simm12:$simm12))), (LB addr_fi:$rs1, $simm12) >;
+def : Pat<(XLenVT (sextloadi8 GPR:$rs1))                          , (LB GPR:$rs1, 0)           >;
+def : Pat<(XLenVT (sextloadi8 addr_fi:$rs1))                      , (LB addr_fi:$rs1, 0)       >;
+def : Pat<(XLenVT (sextloadi8 (add GPR:$rs1, simm12:$simm12)))    , (LB GPR:$rs1, $simm12)     >;
+def : Pat<(XLenVT (sextloadi8 (add addr_fi:$rs1, simm12:$simm12))), (LB addr_fi:$rs1, $simm12) >;
 
-def : Pat<(i32 (zextloadi8 GPR:$rs1))                          , (LBU GPR:$rs1, 0)           >;
-def : Pat<(i32 (zextloadi8 addr_fi:$rs1))                      , (LBU addr_fi:$rs1, 0)       >;
-def : Pat<(i32 (zextloadi8 (add GPR:$rs1, simm12:$simm12)))    , (LBU GPR:$rs1, $simm12)     >;
-def : Pat<(i32 (zextloadi8 (add addr_fi:$rs1, simm12:$simm12))), (LBU addr_fi:$rs1, $simm12) >;
+def : Pat<(XLenVT (zextloadi8 GPR:$rs1))                          , (LBU GPR:$rs1, 0)           >;
+def : Pat<(XLenVT (zextloadi8 addr_fi:$rs1))                      , (LBU addr_fi:$rs1, 0)       >;
+def : Pat<(XLenVT (zextloadi8 (add GPR:$rs1, simm12:$simm12)))    , (LBU GPR:$rs1, $simm12)     >;
+def : Pat<(XLenVT (zextloadi8 (add addr_fi:$rs1, simm12:$simm12))), (LBU addr_fi:$rs1, $simm12) >;
 
 def : Pat<(truncstorei8 GPR:$rs2, GPR:$rs1)                          , (SB GPR:$rs2, GPR:$rs1, 0)                         >;
 def : Pat<(truncstorei8 GPR:$rs2, addr_fi:$rs1)                      , (SB GPR:$rs2, addr_fi:$rs1, 0)                     >;
@@ -692,34 +696,34 @@ def : Pat<(setle  GPR:$rs1, GPR:$rs2), (XORI (SLT GPR:$rs2, GPR:$rs1), 1)>;
 multiclass BrcondPatsSlt<RegisterClass RC, Instruction BEQOp, Instruction BNEOp,
                       Instruction SLTOp, Instruction SLTuOp, Instruction SLTiOp,
                       Instruction SLTiuOp, Register ZEROReg> {
-def : Pat<(brcond (i32 (setne RC:$lhs, 0)), bb:$dst),
+def : Pat<(brcond (XLenVT (setne RC:$lhs, 0)), bb:$dst),
               (BNEOp RC:$lhs, ZEROReg, bb:$dst)>;
-def : Pat<(brcond (i32 (seteq RC:$lhs, 0)), bb:$dst),
+def : Pat<(brcond (XLenVT (seteq RC:$lhs, 0)), bb:$dst),
               (BEQOp RC:$lhs, ZEROReg, bb:$dst)>;
 
-def : Pat<(brcond (i32 (seteq RC:$lhs, RC:$rhs)), bb:$dst),
+def : Pat<(brcond (XLenVT (seteq RC:$lhs, RC:$rhs)), bb:$dst),
               (BEQOp RC:$lhs, RC:$rhs, bb:$dst)>;
-def : Pat<(brcond (i32 (setueq RC:$lhs, RC:$rhs)), bb:$dst),
+def : Pat<(brcond (XLenVT (setueq RC:$lhs, RC:$rhs)), bb:$dst),
               (BEQOp RC:$lhs, RC:$rhs, bb:$dst)>;
-def : Pat<(brcond (i32 (setne RC:$lhs, RC:$rhs)), bb:$dst),
+def : Pat<(brcond (XLenVT (setne RC:$lhs, RC:$rhs)), bb:$dst),
               (BNEOp RC:$lhs, RC:$rhs, bb:$dst)>;
-def : Pat<(brcond (i32 (setune RC:$lhs, RC:$rhs)), bb:$dst),
+def : Pat<(brcond (XLenVT (setune RC:$lhs, RC:$rhs)), bb:$dst),
               (BNEOp RC:$lhs, RC:$rhs, bb:$dst)>;
-def : Pat<(brcond (i32 (setlt RC:$lhs, RC:$rhs)), bb:$dst),
+def : Pat<(brcond (XLenVT (setlt RC:$lhs, RC:$rhs)), bb:$dst),
               (BNE (SLTOp RC:$lhs, RC:$rhs), ZERO, bb:$dst)>;
-def : Pat<(brcond (i32 (setult RC:$lhs, RC:$rhs)), bb:$dst),
+def : Pat<(brcond (XLenVT (setult RC:$lhs, RC:$rhs)), bb:$dst),
               (BNE (SLTuOp RC:$lhs, RC:$rhs), ZERO, bb:$dst)>;
-def : Pat<(brcond (i32 (setgt RC:$lhs, RC:$rhs)), bb:$dst),
+def : Pat<(brcond (XLenVT (setgt RC:$lhs, RC:$rhs)), bb:$dst),
               (BNE (SLTOp RC:$rhs, RC:$lhs), ZERO, bb:$dst)>;
-def : Pat<(brcond (i32 (setugt RC:$lhs, RC:$rhs)), bb:$dst),
+def : Pat<(brcond (XLenVT (setugt RC:$lhs, RC:$rhs)), bb:$dst),
               (BNE (SLTuOp RC:$rhs, RC:$lhs), ZERO, bb:$dst)>;
-def : Pat<(brcond (i32 (setle RC:$lhs, RC:$rhs)), bb:$dst),
+def : Pat<(brcond (XLenVT (setle RC:$lhs, RC:$rhs)), bb:$dst),
               (BEQ (SLTOp RC:$rhs, RC:$lhs), ZERO, bb:$dst)>;
-def : Pat<(brcond (i32 (setule RC:$lhs, RC:$rhs)), bb:$dst),
+def : Pat<(brcond (XLenVT (setule RC:$lhs, RC:$rhs)), bb:$dst),
               (BEQ (SLTuOp RC:$rhs, RC:$lhs), ZERO, bb:$dst)>;
-def : Pat<(brcond (i32 (setge RC:$lhs, RC:$rhs)), bb:$dst),
+def : Pat<(brcond (XLenVT (setge RC:$lhs, RC:$rhs)), bb:$dst),
               (BEQ (SLTOp RC:$lhs, RC:$rhs), ZERO, bb:$dst)>;
-def : Pat<(brcond (i32 (setuge RC:$lhs, RC:$rhs)), bb:$dst),
+def : Pat<(brcond (XLenVT (setuge RC:$lhs, RC:$rhs)), bb:$dst),
               (BEQ (SLTuOp RC:$lhs, RC:$rhs), ZERO, bb:$dst)>;
 def : Pat<(brcond RC:$cond, bb:$dst),
               (BNEOp RC:$cond, ZEROReg, bb:$dst)>;
