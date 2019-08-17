@@ -26,7 +26,7 @@ using namespace llvm;
 
 MYRISCVXSEInstrInfo::MYRISCVXSEInstrInfo(const MYRISCVXSubtarget &STI)
     : MYRISCVXInstrInfo(STI),
-      RI(STI) {}
+      RI(STI, STI.getHwMode()) {}
 
 const MYRISCVXRegisterInfo &MYRISCVXSEInstrInfo::getRegisterInfo() const {
   return RI;

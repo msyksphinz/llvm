@@ -22,7 +22,7 @@ class MYRISCVXSEInstrInfo;
 
 class MYRISCVXSERegisterInfo : public MYRISCVXRegisterInfo {
  public:
-  MYRISCVXSERegisterInfo(const MYRISCVXSubtarget &Subtarget);
+  MYRISCVXSERegisterInfo(const MYRISCVXSubtarget &Subtarget, unsigned HwMode);
 
   const TargetRegisterClass *intRegClass(unsigned Size) const override;
 };
