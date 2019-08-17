@@ -814,3 +814,4 @@ class LoadAddressImm<string instr_asm, Operand Od, RegisterClass RC> :
 def LoadAddr32Imm : LoadAddressImm<"la", shamt, GPR>;
 
 include "MYRISCVXInstrInfoFD.td"
+include "MYRISCVXInstrInfoC.td"

@@ -240,6 +240,46 @@ class MYRISCVX_FMA<bits<7> opcode, bits<2> fmt, bits<3> rm,
 }
 
 
+// MYRISCVX Compressed Format
+class MYRISCVXCInst<dag outs, dag ins, string asmstr, list<dag> pattern,
+                    InstrItinClass itin, Format f>: Instruction
+{
+  // Inst and Size: for tablegen(... -gen-emitter) and
+  // tablegen(... -gen-disassembler) in CMakeLists.txt
+  field bits<16> Inst;
+  Format Form = f;
+
+  let Namespace = "MYRISCVX";
+
+  let Size = 2;
+
+  bits<2> Opcode = 0;
+
+  // Bottom 2 bits are the 'opcode' field
+  let Inst{1-0} = Opcode;
+
+  let OutOperandList = outs;
+  let InOperandList  = ins;
+
+  let AsmString   = asmstr;
+  let Pattern     = pattern;
+  let Itinerary   = itin;
+
+  //
+  // Attributes specific to MYRISCVX instructions...
+  //
+  bits<3> FormBits = Form.Value;
+
+  // TSFlags layout should be kept in sync with MYRISCVXInstrInfo.h.
+  let TSFlags{2-0}   = FormBits;
+
+  let DecoderNamespace = "MYRISCVX";
+
+  field bits<32> SoftFail = 0;
+}
+
+
+
 //===-------------------------------===//
 // MYRISCVX Pseudo Instructions Format
 //===-------------------------------===//
