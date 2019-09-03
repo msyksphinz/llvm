@@ -42,6 +42,8 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case amdgcn:         return "amdgcn";
   case riscv32:        return "riscv32";
   case riscv64:        return "riscv64";
+  case myriscvx32:     return "myriscvx32";
+  case myriscvx64:     return "myriscvx64";
   case sparc:          return "sparc";
   case sparcv9:        return "sparcv9";
   case sparcel:        return "sparcel";
@@ -143,6 +145,9 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
 
   case riscv32:
   case riscv64:     return "riscv";
+
+  case myriscvx32:
+  case myriscvx64:  return "myriscvx";
   }
 }
 
@@ -279,6 +284,8 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
     .Case("amdgcn", amdgcn)
     .Case("riscv32", riscv32)
     .Case("riscv64", riscv64)
+    .Case("myriscvx32", myriscvx32)
+    .Case("myriscvx64", myriscvx64)
     .Case("hexagon", hexagon)
     .Case("sparc", sparc)
     .Case("sparcel", sparcel)
@@ -409,6 +416,8 @@ static Triple::ArchType parseArch(StringRef ArchName) {
     .Case("amdgcn", Triple::amdgcn)
     .Case("riscv32", Triple::riscv32)
     .Case("riscv64", Triple::riscv64)
+    .Case("myriscvx32", Triple::myriscvx32)
+    .Case("myriscvx64", Triple::myriscvx64)
     .Case("hexagon", Triple::hexagon)
     .Cases("s390x", "systemz", Triple::systemz)
     .Case("sparc", Triple::sparc)
@@ -670,6 +679,8 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::renderscript64:
   case Triple::riscv32:
   case Triple::riscv64:
+  case Triple::myriscvx32:
+  case Triple::myriscvx64:
   case Triple::shave:
   case Triple::sparc:
   case Triple::sparcel:
@@ -1223,6 +1234,7 @@ static unsigned getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::ppc:
   case llvm::Triple::r600:
   case llvm::Triple::riscv32:
+  case llvm::Triple::myriscvx32:
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
   case llvm::Triple::tce:
@@ -1253,6 +1265,7 @@ static unsigned getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
   case llvm::Triple::riscv64:
+  case llvm::Triple::myriscvx64:
   case llvm::Triple::sparcv9:
   case llvm::Triple::systemz:
   case llvm::Triple::x86_64:
@@ -1307,6 +1320,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::ppc:
   case Triple::r600:
   case Triple::riscv32:
+  case Triple::myriscvx32:
   case Triple::sparc:
   case Triple::sparcel:
   case Triple::tce:
@@ -1337,6 +1351,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::spir64:         T.setArch(Triple::spir);    break;
   case Triple::wasm64:         T.setArch(Triple::wasm32);  break;
   case Triple::renderscript64: T.setArch(Triple::renderscript32); break;
+  case Triple::myriscvx64:     T.setArch(Triple::myriscvx32); break;
   }
   return T;
 }
@@ -1375,6 +1390,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::ppc64:
   case Triple::ppc64le:
   case Triple::riscv64:
+  case Triple::myriscvx64:
   case Triple::sparcv9:
   case Triple::systemz:
   case Triple::x86_64:
@@ -1392,6 +1408,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::ppc:             T.setArch(Triple::ppc64);      break;
   case Triple::sparc:           T.setArch(Triple::sparcv9);    break;
   case Triple::riscv32:         T.setArch(Triple::riscv64);    break;
+  case Triple::myriscvx32:      T.setArch(Triple::myriscvx64); break;
   case Triple::x86:             T.setArch(Triple::x86_64);     break;
   case Triple::amdil:           T.setArch(Triple::amdil64);    break;
   case Triple::hsail:           T.setArch(Triple::hsail64);    break;
