@@ -15,6 +15,9 @@ include "llvm/Target/Target.td"
 // Target-dependent interfaces
 //===----------------------------------------------------------------------===//
 
+def RV64 : HwMode<"+64bit">;
+def RV32 : HwMode<"-64bit">;
+
 include "MYRISCVXRegisterInfo.td"
 include "MYRISCVXInstrInfo.td"
 
