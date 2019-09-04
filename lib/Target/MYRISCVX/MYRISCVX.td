@@ -19,6 +19,7 @@ def RV64 : HwMode<"+64bit">;
 def RV32 : HwMode<"-64bit">;
 
 include "MYRISCVXRegisterInfo.td"
+include "MYRISCVXSchedule.td"
 include "MYRISCVXInstrInfo.td"
 
 def MYRISCVXInstrInfo : InstrInfo;
