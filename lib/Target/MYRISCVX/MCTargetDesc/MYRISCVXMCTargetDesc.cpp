@@ -28,14 +28,66 @@
 
 using namespace llvm;
 
-// #define GET_INSTRINFO_MC_DESC
-// #include "MYRISCVXGenInstrInfo.inc"
+#define GET_INSTRINFO_MC_DESC
+#include "MYRISCVXGenInstrInfo.inc"
 
-// #define GET_SUBTARGETINFO_MC_DESC
-// #include "MYRISCVXGenSubtargetInfo.inc"
+#define GET_SUBTARGETINFO_MC_DESC
+#include "MYRISCVXGenSubtargetInfo.inc"
 
-// #define GET_REGINFO_MC_DESC
-// #include "MYRISCVXGenRegisterInfo.inc"
+#define GET_REGINFO_MC_DESC
+#include "MYRISCVXGenRegisterInfo.inc"
+
+#include "InstPrinter/MYRISCVXInstPrinter.h"
+#include "MYRISCVXMCAsmInfo.h"
+
+static MCInstrInfo *createMYRISCVXMCInstrInfo() {
+  MCInstrInfo *X = new MCInstrInfo();
+  InitMYRISCVXMCInstrInfo(X); // defined in MYRISCVXGenInstrInfo.inc
+  return X;
+}
+
+static MCRegisterInfo *createMYRISCVXMCRegisterInfo(const Triple &TT) {
+  MCRegisterInfo *X = new MCRegisterInfo();
+  InitMYRISCVXMCRegisterInfo(X, MYRISCVX::RA); // defined in MYRISCVXGenRegisterInfo.inc
+  return X;
+}
+
+static MCSubtargetInfo *createMYRISCVXMCSubtargetInfo(const Triple &TT,
+                                                      StringRef CPU, StringRef FS) {
+  return createMYRISCVXMCSubtargetInfoImpl(TT, CPU, FS);
+  // createMYRISCVXMCSubtargetInfoImpl defined in MYRISCVXGenSubtargetInfo.inc
+}
+
+static MCAsmInfo *createMYRISCVXMCAsmInfo(const MCRegisterInfo &MRI,
+                                          const Triple &TT) {
+  MCAsmInfo *MAI = new MYRISCVXMCAsmInfo(TT);
+
+  unsigned SP = MRI.getDwarfRegNum(MYRISCVX::SP, true);
+  MCCFIInstruction Inst = MCCFIInstruction::createDefCfa(nullptr, SP, 0);
+  MAI->addInitialFrameState(Inst);
+
+  return MAI;
+}
+
+static MCInstPrinter *createMYRISCVXMCInstPrinter(const Triple &T,
+                                                  unsigned SyntaxVariant,
+                                                  const MCAsmInfo &MAI,
+                                                  const MCInstrInfo &MII,
+                                                  const MCRegisterInfo &MRI) {
+  return new MYRISCVXInstPrinter(MAI, MII, MRI);
+}
+
+namespace {
+
+class MYRISCVXMCInstrAnalysis : public MCInstrAnalysis {
+ public:
+  MYRISCVXMCInstrAnalysis(const MCInstrInfo *Info) : MCInstrAnalysis(Info) {}
+};
+}
+
+static MCInstrAnalysis *createMYRISCVXMCInstrAnalysis(const MCInstrInfo *Info) {
+  return new MYRISCVXMCInstrAnalysis(Info);
+}
 
 //@2 {
 extern "C" void LLVMInitializeMYRISCVXTargetMC() {
