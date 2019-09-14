@@ -17,8 +17,19 @@
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
+class MCAsmBackend;
+class MCCodeEmitter;
+class MCContext;
+class MCInstrInfo;
+class MCObjectTargetWriter;
+class MCRegisterInfo;
+class MCSubtargetInfo;
+class MCTargetOptions;
+class StringRef;
 class Target;
 class Triple;
+class raw_ostream;
+class raw_pwrite_stream;
 
 Target &getTheMYRISCVX32Target();
 Target &getTheMYRISCVX64Target();
