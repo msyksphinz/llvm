@@ -29,3 +29,4 @@ add_llvm_target(MYRISCVXCodeGen
 # Should match with "subdirectories =  MCTargetDesc TargetInfo" in LLVMBuild.txt
 add_subdirectory(TargetInfo)
 add_subdirectory(MCTargetDesc)
+add_subdirectory(InstPrinter)
