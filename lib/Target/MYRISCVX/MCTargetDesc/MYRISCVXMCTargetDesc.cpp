@@ -1,4 +1,4 @@
-//===-- MYRISCVXMCTargetDesc.cpp - MYRISCVX Target Descriptions -------------------===//
+//===-- MYRISCVXMCTargetDesc.cpp - MYRISCVX Target Descriptions ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -54,8 +54,8 @@ static MCRegisterInfo *createMYRISCVXMCRegisterInfo(const Triple &TT) {
 
 static MCSubtargetInfo *createMYRISCVXMCSubtargetInfo(const Triple &TT,
                                                       StringRef CPU, StringRef FS) {
-  return createMYRISCVXMCSubtargetInfoImpl(TT, CPU, FS);
   // createMYRISCVXMCSubtargetInfoImpl defined in MYRISCVXGenSubtargetInfo.inc
+  return createMYRISCVXMCSubtargetInfoImpl(TT, CPU, FS);
 }
 
 static MCAsmInfo *createMYRISCVXMCAsmInfo(const MCRegisterInfo &MRI,
@@ -91,6 +91,25 @@ static MCInstrAnalysis *createMYRISCVXMCInstrAnalysis(const MCInstrInfo *Info) {
 
 //@2 {
 extern "C" void LLVMInitializeMYRISCVXTargetMC() {
+  for (Target *T : {&getTheMYRISCVX32Target(), &getTheMYRISCVX64Target()}) {
+    // Register the MC asm info.
+    RegisterMCAsmInfoFn X(*T, createMYRISCVXMCAsmInfo);
+
+    // Register the MC instruction info.
+    TargetRegistry::RegisterMCInstrInfo(*T, createMYRISCVXMCInstrInfo);
+
+    // Register the MC register info.
+    TargetRegistry::RegisterMCRegInfo(*T, createMYRISCVXMCRegisterInfo);
+
+    // Register the MC subtarget info.
+    TargetRegistry::RegisterMCSubtargetInfo(*T,
+	                                        createMYRISCVXMCSubtargetInfo);
+    // Register the MC instruction analyzer.
+    TargetRegistry::RegisterMCInstrAnalysis(*T, createMYRISCVXMCInstrAnalysis);
+    // Register the MCInstPrinter.
+    TargetRegistry::RegisterMCInstPrinter(*T,
+	                                      createMYRISCVXMCInstPrinter);
+  }
 
 }
 //@2 }
