@@ -21,5 +21,6 @@ name = MYRISCVXDesc
 parent = MYRISCVX
 required_libraries = MC
                      MYRISCVXInfo
+                     MYRISCVXAsmPrinter
                      Support
 add_to_library_groups = MYRISCVX

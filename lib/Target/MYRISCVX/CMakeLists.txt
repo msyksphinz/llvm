@@ -4,12 +4,17 @@ set(LLVM_TARGET_DEFINITIONS MYRISCVX.td)
 #  your hand code C++ files.
 # MYRISCVXGenRegisterInfo.inc came from MYRISCVXRegisterInfo.td, MYRISCVXGenInstrInfo.inc
 #  came from MYRISCVXInstrInfo.td.
-tablegen(LLVM MYRISCVXGenRegisterInfo.inc -gen-register-info)
-tablegen(LLVM MYRISCVXGenInstrInfo.inc -gen-instr-info)
-tablegen(LLVM MYRISCVXGenSubtargetInfo.inc -gen-subtarget)
+tablegen(LLVM MYRISCVXGenRegisterInfo.inc     -gen-register-info)
+tablegen(LLVM MYRISCVXGenInstrInfo.inc        -gen-instr-info)
+tablegen(LLVM MYRISCVXGenSubtargetInfo.inc    -gen-subtarget)
 tablegen(LLVM MYRISCVXGenMCPseudoLowering.inc -gen-pseudo-lowering)
-tablegen(LLVM MYRISCVXGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM MYRISCVXGenCallingConv.inc -gen-callingconv)
+tablegen(LLVM MYRISCVXGenDAGISel.inc          -gen-dag-isel)
+tablegen(LLVM MYRISCVXGenCallingConv.inc      -gen-callingconv)
+
+tablegen(LLVM MYRISCVXGenCodeEmitter.inc   -gen-emitter)
+tablegen(LLVM MYRISCVXGenMCCodeEmitter.inc -gen-emitter)
+
+tablegen(LLVM MYRISCVXGenAsmWriter.inc -gen-asm-writer)
 
 # MYRISCVXCommonTableGen must be defined
 add_public_tablegen_target(MYRISCVXCommonTableGen)
@@ -24,6 +29,8 @@ add_llvm_target(MYRISCVXCodeGen
   MYRISCVXISelLowering.cpp
   MYRISCVXSubtarget.cpp
   MYRISCVXTargetObjectFile.cpp
+  MYRISCVXAsmPrinter.cpp
+  MYRISCVXMCInstLower.cpp
 )
 
 # Should match with "subdirectories =  MCTargetDesc TargetInfo" in LLVMBuild.txt
