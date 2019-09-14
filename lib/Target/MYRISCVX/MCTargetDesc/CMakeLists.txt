@@ -2,4 +2,5 @@
 add_llvm_library(LLVMMYRISCVXDesc
   MYRISCVXMCTargetDesc.cpp
   MYRISCVXABIInfo.cpp
+  MYRISCVXMCAsmInfo.cpp
 )
