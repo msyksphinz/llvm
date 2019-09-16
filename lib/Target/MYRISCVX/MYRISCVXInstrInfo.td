@@ -15,6 +15,12 @@
 // MYRISCVX profiles and nodes
 //===----------------------------------------------------------------------===//
 
+def SDT_MYRISCVXRet : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
+
+// Return
+def MYRISCVXRet : SDNode<"MYRISCVXISD::Ret", SDTNone,
+                         [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction format superclass
 //===----------------------------------------------------------------------===//
@@ -119,6 +125,12 @@ def ADDI : ArithLogicI<0b0010011, 0b000, "addi", add, simm12, immSExt12, GPR>;
 def LUI  : ArithLogicU<0b0110111, "lui", GPR, simm20, immSExt20>;
 def ADD  : ArithLogicR<0b0110011, 0b000, 0b0000000, "add", add, GPR>;
 def SUB  : ArithLogicR<0b0110011, 0b000, 0b0100000, "sub", sub, GPR>;
+
+def JALR : ArithLogicI<0b1100111, 0b000, "jalr", add, simm12, immSExt12, GPR>;
+def: InstAlias<"jr $rs",      (JALR ZERO, GPR:$rs, 0)>;
+def: InstAlias<"jalr $rs",    (JALR RA,   GPR:$rs, 0)>;
+def: InstAlias<"ret",         (JALR ZERO,      RA, 0), 2>;
+
 
 //===----------------------------------------------------------------------===//
 //  Arbitrary patterns that map to one or more instructions
