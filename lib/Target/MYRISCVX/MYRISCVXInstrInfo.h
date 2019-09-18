@@ -26,7 +26,10 @@ namespace llvm {
 
   class MYRISCVXInstrInfo : public MYRISCVXGenInstrInfo {
     virtual void anchor();
- public:
+
+    void expandRetRA(MachineBasicBlock &MBB, MachineBasicBlock::iterator I) const;
+
+   public:
     explicit MYRISCVXInstrInfo();
 
     static const MYRISCVXInstrInfo *create(MYRISCVXSubtarget &STI);
@@ -34,6 +37,8 @@ namespace llvm {
     /// Return the number of bytes of code the specified instruction may be.
     unsigned GetInstSizeInBytes(const MachineInstr &MI) const;
 
+    //@expandPostRAPseudo
+    bool expandPostRAPseudo(MachineInstr &MI) const override;
  protected:
   };
 }
