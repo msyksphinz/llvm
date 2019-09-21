@@ -28,6 +28,8 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "MYRISCVX-frame"
+
 //- emitPrologue() and emitEpilogue must exist for main().
 
 //===----------------------------------------------------------------------===//
@@ -85,12 +87,81 @@ using namespace llvm;
 //@emitPrologue {
 void MYRISCVXFrameLowering::emitPrologue(MachineFunction &MF,
                                          MachineBasicBlock &MBB) const {
+  assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
+  MachineFrameInfo MFI    = MF.getFrameInfo();
+
+  const MYRISCVXInstrInfo &TII =
+      *static_cast<const MYRISCVXInstrInfo*>(STI.getInstrInfo());
+
+  MachineBasicBlock::iterator MBBI = MBB.begin();
+  DebugLoc dl = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
+  unsigned SP = MYRISCVX::SP;
+
+  // First, compute final stack size.
+  uint64_t StackSize = MFI.getStackSize();
+
+  // No need to allocate space on the stack.
+  if (StackSize == 0 && !MFI.adjustsStack()) return;
+
+  MachineModuleInfo &MMI = MF.getMMI();
+  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+
+  // Adjust stack.
+  TII.adjustStackPtr(SP, -StackSize, MBB, MBBI);
+
+  // emit ".cfi_def_cfa_offset StackSize"
+  unsigned CFIIndex = MF.addFrameInst(
+      MCCFIInstruction::createDefCfaOffset(nullptr, -StackSize));
+  BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
+      .addCFIIndex(CFIIndex);
+
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+
+  if (CSI.size()) {
+    // Find the instruction past the last instruction that saves a callee-saved
+    // register to the stack.
+    for (unsigned i = 0; i < CSI.size(); ++i)
+      ++MBBI;
+
+    // Iterate over list of callee-saved registers and emit .cfi_offset
+    // directives.
+    for (std::vector<CalleeSavedInfo>::const_iterator I = CSI.begin(),
+             E = CSI.end(); I != E; ++I) {
+      int64_t Offset = MFI.getObjectOffset(I->getFrameIdx());
+      unsigned Reg = I->getReg();
+      {
+        // Reg is in CPURegs.
+        unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
+            nullptr, MRI->getDwarfRegNum(Reg, 1), Offset));
+        BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
+            .addCFIIndex(CFIIndex);
+      }
+    }
+  }
 }
 //}
 
 //@emitEpilogue {
 void MYRISCVXFrameLowering::emitEpilogue(MachineFunction &MF,
                                          MachineBasicBlock &MBB) const {
+  MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
+  MachineFrameInfo MFI             = MF.getFrameInfo();
+  // MYRISCVXFunctionInfo *MYRISCVXFI = MF.getInfo<MYRISCVXFunctionInfo>();
+
+  const MYRISCVXInstrInfo &TII =
+      *static_cast<const MYRISCVXInstrInfo *>(STI.getInstrInfo());
+
+  DebugLoc dl = MBBI->getDebugLoc();
+  unsigned SP = MYRISCVX::SP;
+
+  // Get the number of bytes from FrameInfo
+  uint64_t StackSize = MFI.getStackSize();
+
+  if (!StackSize)
+    return;
+
+  // Adjust stack.
+  TII.adjustStackPtr(SP, StackSize, MBB, MBBI);
 }
 //}
 
