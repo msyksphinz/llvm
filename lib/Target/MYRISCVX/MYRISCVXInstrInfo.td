@@ -31,16 +31,45 @@ include "MYRISCVXInstrFormats.td"
 // MYRISCVX Operand, Complex Patterns and Transformations Definitions.
 //===----------------------------------------------------------------------===//
 
+// Transformation Function - get the lower 12 bits.
+def LO12 : SDNodeXForm<imm, [{
+  return getImm(N, N->getZExtValue() & 0xfff);
+}]>;
+
+// Transformation Function - get the higher 20 bits.
+def HI20 : SDNodeXForm<imm, [{
+  return getImm(N, (N->getZExtValue() >> 12) & 0xfffff);
+}]>;
+
 // Signed Operand
-def simm12 : Operand<XLenVT> {
+def simm12 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]> {
   let DecoderMethod= "DecodeSimm12";
 }
-def simm20 : Operand<XLenVT> {
+def simm20 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]> {
   let DecoderMethod= "DecodeSimm20";
+}
+// Unsigned Operand
+def uimm12 : Operand<XLenVT> {
+  let PrintMethod = "printUnsignedImm";
 }
 
 def immSExt12 : PatLeaf<(imm), [{ return isInt<12>(N->getSExtValue()); }]>;
 def immSExt20 : PatLeaf<(imm), [{ return isInt<20>(N->getSExtValue()); }]>;
+def immZExt12 : PatLeaf<(imm), [{
+  if (N->getValueType(0) == MVT::i32)
+    return (uint32_t)N->getZExtValue() == (unsigned short)N->getZExtValue();
+  else
+    return (uint64_t)N->getZExtValue() == (unsigned short)N->getZExtValue();
+}], LO12>;
+
+// Immediate can be loaded with LUi (32-bit int with lower 16-bit cleared).
+def immLow12Zero : PatLeaf<(imm), [{
+  int64_t Val = N->getSExtValue();
+  return isInt<32>(Val) && !(Val & 0x0fff);
+}]>;
+
+// shamt field must fit in 5 bits.
+def immZExt5 : ImmLeaf<XLenVT, [{return Imm == (Imm & 0x1f);}]>;
 
 //===----------------------------------------------------------------------===//
 // Instructions specific format
@@ -85,6 +114,9 @@ class ArithLogicU<bits<7> opcode,
 
 
 def ADDI : ArithLogicI<0b0010011, 0b000, "addi", add, simm12, immSExt12, GPR>;
+def XORI : ArithLogicI<0b0010011, 0b100, "xori", xor, uimm12, immZExt12, GPR>;
+def ORI  : ArithLogicI<0b0010011, 0b110, "ori",  or,  uimm12, immZExt12, GPR>;
+def ANDI : ArithLogicI<0b0010011, 0b111, "andi", and, uimm12, immZExt12, GPR>;
 
 def LUI  : ArithLogicU<0b0110111, "lui", GPR, simm20, immSExt20>;
 def ADD  : ArithLogicR<0b0110011, 0b000, 0b0000000, "add", add, GPR>;
@@ -102,3 +134,15 @@ def: InstAlias<"ret",         (JALR ZERO,      RA, 0), 2>;
 
 let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
   def RetRA : MYRISCVXPseudo<(outs), (ins), "", [(MYRISCVXRet)]>;
+
+// Small immediates
+def : Pat<(XLenVT immSExt12:$in),
+          (ADDI ZERO, imm:$in)>;
+def : Pat<(XLenVT immZExt12:$in),
+          (ORI ZERO, imm:$in)>;
+
+def : Pat<(XLenVT immLow12Zero:$in),
+          (LUI (HI20 imm:$in))>;
+
+def : Pat<(XLenVT imm:$imm),
+          (ORI (LUI (HI20 imm:$imm)), (LO12 imm:$imm))>;
