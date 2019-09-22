@@ -31,6 +31,16 @@ include "MYRISCVXInstrFormats.td"
 // MYRISCVX Operand, Complex Patterns and Transformations Definitions.
 //===----------------------------------------------------------------------===//
 
+// Transformation Function - get the lower 12 bits.
+def LO12 : SDNodeXForm<imm, [{
+  return getImm(N, N->getZExtValue() & 0xfff);
+}]>;
+
+// Transformation Function - get the higher 20 bits.
+def HI20 : SDNodeXForm<imm, [{
+  return getImm(N, (N->getZExtValue() >> 12) & 0xfffff);
+}]>;
+
 // Signed Operand
 def simm12 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<12>(Imm);}]>;
 def simm20 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<20>(Imm);}]>;
@@ -121,6 +131,9 @@ class ArithLogicU<bits<7> opcode,
 
 
 def ADDI : ArithLogicI<0b0010011, 0b000, "addi", add, simm12, immSExt12, GPR>;
+def XORI : ArithLogicI<0b0010011, 0b100, "xori", xor, uimm12, immZExt12, GPR>;
+def ORI  : ArithLogicI<0b0010011, 0b110, "ori",  or,  uimm12, immZExt12, GPR>;
+def ANDI : ArithLogicI<0b0010011, 0b111, "andi", and, uimm12, immZExt12, GPR>;
 
 def LUI  : ArithLogicU<0b0110111, "lui", GPR, simm20, immSExt20>;
 def ADD  : ArithLogicR<0b0110011, 0b000, 0b0000000, "add", add, GPR>;
@@ -138,3 +151,15 @@ def: InstAlias<"ret",         (JALR ZERO,      RA, 0), 2>;
 
 let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
   def RetRA : MYRISCVXPseudo<(outs), (ins), "", [(MYRISCVXRet)]>;
+
+// Small immediates
+def : Pat<(XLenVT immSExt12:$in),
+          (ADDI ZERO, imm:$in)>;
+def : Pat<(XLenVT immZExt12:$in),
+          (ORI ZERO, imm:$in)>;
+
+def : Pat<(XLenVT immLow12Zero:$in),
+          (LUI (HI20 imm:$in))>;
+
+def : Pat<(XLenVT imm:$imm),
+          (ORI (LUI (HI20 imm:$imm)), (LO12 imm:$imm))>;
