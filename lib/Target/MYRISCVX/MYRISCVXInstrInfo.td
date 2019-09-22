@@ -71,6 +71,10 @@ def immLow12Zero : PatLeaf<(imm), [{
 // shamt field must fit in 5 bits.
 def immZExt5 : ImmLeaf<XLenVT, [{return Imm == (Imm & 0x1f);}]>;
 
+// MYRISCVX Address Mode! SDNode frameindex could possibily be a match
+// since load and store instructions from stack used it.
+def addr_fi : ComplexPattern<iPTR, 1, "SelectAddrFI", [frameindex], []>;
+
 //===----------------------------------------------------------------------===//
 // Instructions specific format
 //===----------------------------------------------------------------------===//
