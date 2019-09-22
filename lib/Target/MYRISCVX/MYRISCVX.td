@@ -26,6 +26,10 @@ def : ProcessorModel<"cpu-rv64", NoSchedModel, [FeatureRV64]>;
 
 def RV64 : HwMode<"+64bit">;
 def RV32 : HwMode<"-64bit">;
+def IsRV64 : Predicate<"Subtarget->is64Bit()">,
+                       AssemblerPredicate<"FeatureRV64">;
+def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
+                       AssemblerPredicate<"!FeatureRV64">;
 
 include "MYRISCVXRegisterInfo.td"
 include "MYRISCVXSchedule.td"
