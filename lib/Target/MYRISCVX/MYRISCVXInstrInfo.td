@@ -121,6 +121,59 @@ class ArithLogicU<bits<7> opcode,
       let isReMaterializable = 1;
 }
 
+// Memory Load/Store
+let canFoldAsLoad = 1 in
+class LoadMemory<bits<7> opcode, bits<3> funct3, string instr_asm, RegisterClass RC, PatFrag OpNode,
+                 bit Pseudo>:
+  MYRISCVX_I<opcode, funct3, (outs RC:$rd), (ins GPR:$rs1, simm12:$simm12),
+     !strconcat(instr_asm, "\t$rd, ${simm12}(${rs1})"),
+     [], IILoad> {
+  let isPseudo = Pseudo;
+}
+
+class StoreMemory<bits<7> opcode, bits<3> funct3, string instr_asm, RegisterClass RC, PatFrag OpNode,
+                  bit Pseudo>:
+  MYRISCVX_S<opcode, funct3, (outs), (ins RC:$rs2, GPR:$rs1, simm12:$simm12),
+     !strconcat(instr_asm, "\t$rs2, ${simm12}(${rs1})"),
+     [], IIStore> {
+  let isPseudo = Pseudo;
+}
+
+//===----------------------------------------------------------------------===//
+// Pattern fragment for load/store
+//===----------------------------------------------------------------------===//
+
+class AlignedLoad<PatFrag Node> :
+  PatFrag<(ops node:$ptr), (Node node:$ptr), [{
+  LoadSDNode *LD = cast<LoadSDNode>(N);
+  return LD->getMemoryVT().getSizeInBits()/8 <= LD->getAlignment();
+}]>;
+
+class AlignedStore<PatFrag Node> :
+  PatFrag<(ops node:$val, node:$ptr), (Node node:$val, node:$ptr), [{
+  StoreSDNode *SD = cast<StoreSDNode>(N);
+  return SD->getMemoryVT().getSizeInBits()/8 <= SD->getAlignment();
+}]>;
+
+// Load/Store PatFrags.
+def load_a          : AlignedLoad<load>;
+def sextloadi8_a    : AlignedLoad<sextloadi8>;
+def zextloadi8_a    : AlignedLoad<zextloadi8>;
+def sextloadi16_a   : AlignedLoad<sextloadi16>;
+def zextloadi16_a   : AlignedLoad<zextloadi16>;
+def extloadi16_a    : AlignedLoad<extloadi16>;
+def sextloadi32_a   : AlignedLoad<sextloadi32>;
+def zextloadi32_a   : AlignedLoad<zextloadi32>;
+def extloadi32_a    : AlignedLoad<extloadi32>;
+
+def store_a         : AlignedStore<store>;
+def truncstorei8_a  : AlignedStore<truncstorei8>;
+def truncstorei16_a : AlignedStore<truncstorei16>;
+def truncstorei32_a : AlignedStore<truncstorei32>;
+
+def truncstoref32_a : AlignedStore<truncstoref32>;
+def truncstoref64_a : AlignedStore<truncstoref64>;
+
 
 //===----------------------------------------------------------------------===//
 // Instruction definition
@@ -144,6 +197,16 @@ def: InstAlias<"jr $rs",      (JALR ZERO, GPR:$rs, 0)>;
 def: InstAlias<"jalr $rs",    (JALR RA,   GPR:$rs, 0)>;
 def: InstAlias<"ret",         (JALR ZERO,      RA, 0), 2>;
 
+/// Load and Store Instructions
+///  aligned
+def LW  : LoadMemory <0b0000011, 0b010, "lw",  GPR, sextloadi32_a  , 0>;
+def SW  : StoreMemory<0b0100011, 0b010, "sw",  GPR, truncstorei32_a, 0>;
+def LB  : LoadMemory <0b0000011, 0b000, "lb",  GPR, sextloadi8_a   , 0>;
+def LBU : LoadMemory <0b0000011, 0b100, "lbu", GPR, zextloadi8_a   , 0>;
+def SB  : StoreMemory<0b0100011, 0b000, "sb",  GPR, truncstorei8_a , 0>;
+def LH  : LoadMemory <0b0000011, 0b001, "lh",  GPR, sextloadi16_a  , 0>;
+def LHU : LoadMemory <0b0000011, 0b101, "lhu", GPR, zextloadi16_a  , 0>;
+def SH  : StoreMemory<0b0100011, 0b001, "sh",  GPR, truncstorei16_a, 0>;
 
 //===----------------------------------------------------------------------===//
 //  Arbitrary patterns that map to one or more instructions
@@ -153,13 +216,56 @@ let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
   def RetRA : MYRISCVXPseudo<(outs), (ins), "", [(MYRISCVXRet)]>;
 
 // Small immediates
-def : Pat<(XLenVT immSExt12:$in),
-          (ADDI ZERO, imm:$in)>;
-def : Pat<(XLenVT immZExt12:$in),
-          (ORI ZERO, imm:$in)>;
+def : Pat<(immSExt12:$in), (ADDI ZERO, imm:$in)>;
+def : Pat<(immZExt12:$in), (ORI ZERO, imm:$in)>;
 
-def : Pat<(XLenVT immLow12Zero:$in),
-          (LUI (HI20 imm:$in))>;
+def : Pat<(immLow12Zero:$in), (LUI (HI20 imm:$in))>;
+def : Pat<(imm:$imm), (ORI (LUI (HI20 imm:$imm)), (LO12 imm:$imm))>;
 
-def : Pat<(XLenVT imm:$imm),
-          (ORI (LUI (HI20 imm:$imm)), (LO12 imm:$imm))>;
+// Addr for Frame
+def : Pat<(add (XLenVT addr_fi:$rs1), simm12:$simm12),
+          (ADDI (XLenVT addr_fi:$rs1), simm12:$simm12)>;
+
+// Memory Acccess
+multiclass LoadPattern<PatFrag LoadOp, MYRISCVXInst Inst> {
+  def : Pat<(LoadOp GPR:$rs1)                          , (Inst GPR:$rs1, 0)                  >;
+  def : Pat<(LoadOp addr_fi:$rs1)                      , (Inst addr_fi:$rs1, 0)              >;
+  def : Pat<(LoadOp (add GPR:$rs1, simm12:$simm12))    , (Inst GPR:$rs1, simm12:$simm12)     >;
+  def : Pat<(LoadOp (add addr_fi:$rs1, simm12:$simm12)), (Inst addr_fi:$rs1, simm12:$simm12) >;
+}
+
+multiclass StorePattern<PatFrag StoreOp, MYRISCVXInst Inst> {
+  def : Pat<(StoreOp GPR:$rs2, GPR:$rs1)                          , (Inst GPR:$rs2, GPR:$rs1, 0)                 >;
+  def : Pat<(StoreOp GPR:$rs2, addr_fi:$rs1)                      , (Inst GPR:$rs2, addr_fi:$rs1, 0)             >;
+  def : Pat<(StoreOp GPR:$rs2, (add GPR:$rs1, simm12:$simm12))    , (Inst GPR:$rs2, GPR:$rs1, simm12:$simm12)    >;
+  def : Pat<(StoreOp GPR:$rs2, (add addr_fi:$rs1, simm12:$simm12)), (Inst GPR:$rs2, addr_fi:$rs1, simm12:$simm12)>;
+}
+
+defm : LoadPattern<sextloadi8  , LB>;
+defm : LoadPattern<extloadi8   , LB>;
+defm : LoadPattern<sextloadi16 , LH>;
+defm : LoadPattern<extloadi16  , LH>;
+defm : LoadPattern<load        , LW>, Requires<[IsRV32]>;
+defm : LoadPattern<zextloadi8  , LBU>;
+defm : LoadPattern<zextloadi16 , LHU>;
+
+defm : StorePattern<truncstorei8  , SB>;
+defm : StorePattern<truncstorei16 , SH>;
+defm : StorePattern<store         , SW>, Requires<[IsRV32]>;
+
+
+let Predicates = [IsRV64] in {
+  def LD  : LoadMemory <0b0000011, 0b011, "ld",  GPR, load_a         , 0>;
+  def SD  : StoreMemory<0b0100011, 0b011, "sd",  GPR, store_a        , 0>;
+  def LWU : LoadMemory <0b0000011, 0b110, "lwu",  GPR, sextloadi32_a  , 0>;
+
+  /// Loads
+  defm : LoadPattern<sextloadi32 , LW>;
+  defm : LoadPattern<extloadi32  , LW>;
+  defm : LoadPattern<zextloadi32 , LWU>;
+  defm : LoadPattern<load        , LD>;
+
+  /// Stores
+  defm : StorePattern<truncstorei32 , SW>;
+  defm : StorePattern<store         , SD>;
+} // Predicates = [IsRV64]
