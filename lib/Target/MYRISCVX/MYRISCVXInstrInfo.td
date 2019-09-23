@@ -121,6 +121,31 @@ class ArithLogicU<bits<7> opcode,
       let isReMaterializable = 1;
 }
 
+// Shifts
+class ShiftRotateI<bits<7> opcode, bits<3> funct3, bit arithshift, string instr_asm,
+                   SDNode OpNode, PatFrag PF, Operand ImmOpnd,
+                   RegisterClass RC>:
+  MYRISCVX_ISHIFT<opcode, funct3, arithshift, (outs RC:$rd), (ins RC:$rs1, ImmOpnd:$shamt),
+                  !strconcat(instr_asm, "\t$rd, $rs1, $shamt"),
+                  [(set GPR:$rd, (OpNode RC:$rs1, PF:$shamt))], IIAlu> {
+}
+
+
+// 32-bit shift instructions.
+class ShiftRotateI32<bits<7> opcode, bits<3> funct3, bit arithshift, string instr_asm,
+                     SDNode OpNode>:
+  ShiftRotateI<opcode, funct3, arithshift, instr_asm, OpNode, immZExt5, shamt, GPR>;
+
+
+class ShiftRotateR<bits<7> opcode, bits<7> funct7, bits<3> funct3,
+                   bits<4> isRotate, string instr_asm,
+                   SDNode OpNode, RegisterClass RC>:
+  MYRISCVX_R<opcode, funct3, funct7, (outs RC:$rd), (ins RC:$rs1, RC:$rs2),
+          !strconcat(instr_asm, "\t$rd, $rs1, $rs2"),
+          [(set GPR:$rd, (OpNode RC:$rs1, RC:$rs2))], IIAlu> {
+}
+
+
 // Memory Load/Store
 let canFoldAsLoad = 1 in
 class LoadMemory<bits<7> opcode, bits<3> funct3, string instr_asm, RegisterClass RC, PatFrag OpNode,
@@ -191,6 +216,27 @@ def ANDI : ArithLogicI<0b0010011, 0b111, "andi", and, uimm12, immZExt12, GPR>;
 def LUI  : ArithLogicU<0b0110111, "lui", GPR, simm20, immSExt20>;
 def ADD  : ArithLogicR<0b0110011, 0b000, 0b0000000, "add", add, GPR>;
 def SUB  : ArithLogicR<0b0110011, 0b000, 0b0100000, "sub", sub, GPR>;
+
+def SLL  : ShiftRotateR<0b0110011, 0b0000000, 0b001, 0x0, "sll", shl, GPR>;
+def AND  : ArithLogicR     <0b0110011, 0b111, 0b0000000, "and", and, GPR>;
+def SRL  : ShiftRotateR<0b0110011, 0b0000000, 0b101, 0x0, "srl", srl, GPR>;
+def SRA  : ShiftRotateR<0b0110011, 0b0100000, 0b101, 0x0, "sra", sra, GPR>;
+def OR   : ArithLogicR     <0b0110011, 0b110, 0b0000000, "or",  or,  GPR>;
+def XOR  : ArithLogicR     <0b0110011, 0b100, 0b0000000, "xor", xor, GPR>;
+
+def SRLI : ShiftRotateI32 <0b0010011, 0b101, 0, "srli", srl>;
+def SLLI : ShiftRotateI32 <0b0010011, 0b001, 0, "slli", shl>;
+def SRAI : ShiftRotateI32 <0b0010011, 0b101, 1, "srai", sra>;
+
+def MUL   : ArithLogicR<0b0110011, 0b000, 0b0000001, "mul",    mul,   GPR>;
+def MULH  : ArithLogicR<0b0110011, 0b001, 0b0000001, "mulh",   mulhs, GPR>;
+def MULHSU: ArithLogicR<0b0110011, 0b010, 0b0000001, "mulhsu", mulhs, GPR>;
+def MULHU : ArithLogicR<0b0110011, 0b011, 0b0000001, "mulhu",  mulhu, GPR>;
+def DIV   : ArithLogicR<0b0110011, 0b100, 0b0000001, "div",    sdiv,  GPR>;
+def DIVU  : ArithLogicR<0b0110011, 0b101, 0b0000001, "divu",   udiv,  GPR>;
+def REM   : ArithLogicR<0b0110011, 0b110, 0b0000001, "rem",    srem,  GPR>;
+def REMU  : ArithLogicR<0b0110011, 0b111, 0b0000001, "remu",   urem,  GPR>;
+
 
 def JALR : ArithLogicI<0b1100111, 0b000, "jalr", add, simm12, immSExt12, GPR>;
 def: InstAlias<"jr $rs",      (JALR ZERO, GPR:$rs, 0)>;
