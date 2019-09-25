@@ -12,6 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "MYRISCVXMCTargetDesc.h"
+#include "MYRISCVXTargetStreamer.h"
+#include "InstPrinter/MYRISCVXInstPrinter.h"
+#include "MYRISCVXMCAsmInfo.h"
 
 #include "llvm/MC/MachineLocation.h"
 #include "llvm/MC/MCELFStreamer.h"
@@ -25,6 +28,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/TargetRegistry.h"
+
+using namespace llvm;
 
 using namespace llvm;
 
@@ -89,6 +94,25 @@ static MCInstrAnalysis *createMYRISCVXMCInstrAnalysis(const MCInstrInfo *Info) {
   return new MYRISCVXMCInstrAnalysis(Info);
 }
 
+
+static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
+                                    std::unique_ptr<MCAsmBackend> &&MAB,
+                                    std::unique_ptr<MCObjectWriter> &&OW,
+                                    std::unique_ptr<MCCodeEmitter> &&Emitter,
+                                    bool RelaxAll) {
+  return createELFStreamer(Context, std::move(MAB), std::move(OW),
+                           std::move(Emitter), RelaxAll);
+}
+
+
+static MCTargetStreamer *createMYRISCVXAsmTargetStreamer(MCStreamer &S,
+                                                         formatted_raw_ostream &OS,
+                                                         MCInstPrinter *InstPrint,
+                                                         bool isVerboseAsm) {
+  return new MYRISCVXTargetAsmStreamer(S, OS);
+}
+
+
 //@2 {
 extern "C" void LLVMInitializeMYRISCVXTargetMC() {
   for (Target *T : {&getTheMYRISCVX32Target(), &getTheMYRISCVX64Target()}) {
@@ -109,6 +133,12 @@ extern "C" void LLVMInitializeMYRISCVXTargetMC() {
     // Register the MCInstPrinter.
     TargetRegistry::RegisterMCInstPrinter(*T,
 	                                      createMYRISCVXMCInstPrinter);
+    // Register the elf streamer.
+    TargetRegistry::RegisterELFStreamer(*T, createMCStreamer);
+
+    // Register the asm target streamer.
+    TargetRegistry::RegisterAsmTargetStreamer(*T, createMYRISCVXAsmTargetStreamer);
+
   }
 
 }
