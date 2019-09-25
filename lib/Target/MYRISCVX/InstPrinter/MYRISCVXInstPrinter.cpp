@@ -12,6 +12,7 @@
 //===------------------------------------------------------------------------------===//
 
 #include "MYRISCVXInstPrinter.h"
+#include "MCTargetDesc/MYRISCVXMCExpr.h"
 
 #include "MYRISCVXInstrInfo.h"
 #include "llvm/ADT/StringExtras.h"
