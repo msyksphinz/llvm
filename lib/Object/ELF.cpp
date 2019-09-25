@@ -146,6 +146,13 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
       break;
     }
     break;
+  case ELF::EM_MYRISCVX:
+    switch (Type) {
+#include "llvm/BinaryFormat/ELFRelocs/MYRISCVX.def"
+    default:
+      break;
+    }
+    break;
   default:
     break;
   }
