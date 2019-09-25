@@ -5,5 +5,7 @@ add_llvm_library(LLVMMYRISCVXDesc
   MYRISCVXMCAsmInfo.cpp
   MYRISCVXMCCodeEmitter.cpp
   MYRISCVXMCExpr.cpp
+  MYRISCVXAsmBackend.cpp
+  MYRISCVXELFObjectWriter.cpp
   MYRISCVXTargetStreamer.cpp
 )
