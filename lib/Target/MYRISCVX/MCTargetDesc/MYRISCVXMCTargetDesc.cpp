@@ -139,6 +139,9 @@ extern "C" void LLVMInitializeMYRISCVXTargetMC() {
     // Register the asm target streamer.
     TargetRegistry::RegisterAsmTargetStreamer(*T, createMYRISCVXAsmTargetStreamer);
 
+    // Register the MC Code Emitter
+    TargetRegistry::RegisterMCCodeEmitter(*T, createMYRISCVXMCCodeEmitter);
+
   }
 
 }

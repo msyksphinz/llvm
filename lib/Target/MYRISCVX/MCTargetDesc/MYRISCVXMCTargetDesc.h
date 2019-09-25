@@ -16,9 +16,12 @@
 
 #include "llvm/Support/DataTypes.h"
 
+#include <memory>
+
 namespace llvm {
 class MCAsmBackend;
 class MCCodeEmitter;
+class MCObjectWriter;
 class MCContext;
 class MCInstrInfo;
 class MCObjectTargetWriter;
@@ -33,6 +36,13 @@ class raw_pwrite_stream;
 
 Target &getTheMYRISCVX32Target();
 Target &getTheMYRISCVX64Target();
+
+MCCodeEmitter *createMYRISCVXMCCodeEmitter(const MCInstrInfo &MCII,
+                                           const MCRegisterInfo &MRI,
+                                           MCContext &Ctx);
+
+std::unique_ptr<MCObjectTargetWriter>
+createMYRISCVXELFObjectWriter(const Triple &TT);
 
 } // End llvm namespace
 
