@@ -41,6 +41,15 @@ MCCodeEmitter *createMYRISCVXMCCodeEmitter(const MCInstrInfo &MCII,
                                            const MCRegisterInfo &MRI,
                                            MCContext &Ctx);
 
+MCAsmBackend *createMYRISCVXAsmBackend(const Target &T,
+                                       const MCSubtargetInfo &STI,
+                                       const MCRegisterInfo &MRI,
+                                       const MCTargetOptions &Options);
+
+MCObjectWriter *createMYRISCVXELFObjectWriter(raw_pwrite_stream &OS,
+                                              uint8_t OSABI,
+                                              bool IsLittleEndian);
+
 std::unique_ptr<MCObjectTargetWriter>
 createMYRISCVXELFObjectWriter(const Triple &TT);
 

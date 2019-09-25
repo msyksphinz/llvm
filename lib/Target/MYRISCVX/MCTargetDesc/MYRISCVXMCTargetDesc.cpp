@@ -142,6 +142,8 @@ extern "C" void LLVMInitializeMYRISCVXTargetMC() {
     // Register the MC Code Emitter
     TargetRegistry::RegisterMCCodeEmitter(*T, createMYRISCVXMCCodeEmitter);
 
+    // Register the asm backend.
+    TargetRegistry::RegisterMCAsmBackend(*T, createMYRISCVXAsmBackend);
   }
 
 }
