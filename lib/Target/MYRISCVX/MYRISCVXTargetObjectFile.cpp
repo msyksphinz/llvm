@@ -30,3 +30,10 @@ void MYRISCVXTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &T
   this->TM = &static_cast<const MYRISCVXTargetMachine &>(TM);
 
 }
+
+
+MCSection *
+MYRISCVXTargetObjectFile::SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
+                                                 const TargetMachine &TM) const {
+  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, Kind, TM);
+}

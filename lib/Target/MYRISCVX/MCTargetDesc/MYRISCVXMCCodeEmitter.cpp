@@ -135,6 +135,24 @@ getExprOpValue(const MCExpr *Expr,SmallVectorImpl<MCFixup> &Fixups,
     MYRISCVX::Fixups FixupKind = MYRISCVX::Fixups(0);
     switch (MYRISCVXExpr->getKind()) {
       default: llvm_unreachable("Unsupported fixup kind for target expression!");
+      case MYRISCVXMCExpr::CEK_GPREL:
+        FixupKind = MYRISCVX::fixup_MYRISCVX_RELAX;
+        break;
+      case MYRISCVXMCExpr::CEK_GOT_CALL:
+        FixupKind = MYRISCVX::fixup_MYRISCVX_CALL;
+        break;
+      case MYRISCVXMCExpr::CEK_GOT:
+        FixupKind = MYRISCVX::fixup_MYRISCVX_GOT_HI20;
+        break;
+      case MYRISCVXMCExpr::CEK_ABS_HI:
+        FixupKind = MYRISCVX::fixup_MYRISCVX_HI20;
+        break;
+      case MYRISCVXMCExpr::CEK_ABS_LO:
+        FixupKind = MYRISCVX::fixup_MYRISCVX_LO12_I;
+        break;
+      case MYRISCVXMCExpr::CEK_GOT_HI20:
+        FixupKind = MYRISCVX::fixup_MYRISCVX_GOT_HI20;
+        break;
     } // switch
     Fixups.push_back(MCFixup::create(0, Expr, MCFixupKind(FixupKind)));
     return 0;

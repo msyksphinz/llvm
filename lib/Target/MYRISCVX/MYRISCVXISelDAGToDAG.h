@@ -43,6 +43,8 @@ namespace llvm {
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
+    SDNode *getGlobalBaseReg();
+
  protected:
 
     /// Keep a pointer to the MYRISCVXSubtarget around so that we can make the right
