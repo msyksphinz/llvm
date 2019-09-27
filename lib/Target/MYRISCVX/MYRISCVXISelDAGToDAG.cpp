@@ -91,8 +91,11 @@ void MYRISCVXDAGToDAGISel::Select(SDNode *Node) {
   }
 
   switch(Opcode) {
+    // Get target GOT address.
+    case ISD::GLOBAL_OFFSET_TABLE:
+      ReplaceNode(Node, getGlobalBaseReg());
+      return;
     default: break;
-
   }
 
   // Select the default instruction

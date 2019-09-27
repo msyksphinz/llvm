@@ -73,6 +73,8 @@ MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
 
   setOperationAction(ISD::ROTL, XLenVT, Expand);
   setOperationAction(ISD::ROTR, XLenVT, Expand);
+
+  setOperationAction(ISD::GlobalAddress, XLenVT, Custom);
 }
 
 //===----------------------------------------------------------------------===//
@@ -117,4 +119,56 @@ MYRISCVXTargetLowering::LowerReturn(SDValue Chain,
                                     const SDLoc &DL, SelectionDAG &DAG) const {
   return DAG.getNode(MYRISCVXISD::Ret, DL, MVT::Other,
                      Chain, DAG.getRegister(MYRISCVX::RA, Subtarget.getXLenVT()));
+}
+
+
+SDValue MYRISCVXTargetLowering::
+LowerOperation(SDValue Op, SelectionDAG &DAG) const
+{
+  switch (Op.getOpcode())
+  {
+    case ISD::GlobalAddress: return lowerGlobalAddress(Op, DAG);
+  }
+  return SDValue();
+}
+
+
+SDValue MYRISCVXTargetLowering::lowerGlobalAddress(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  EVT Ty = Op.getValueType();
+  GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
+  const GlobalValue *GV = N->getGlobal();
+
+  if (!isPositionIndependent()) {
+    //@ %hi/%lo relocation
+    return getAddrNonPIC(N, Ty, DAG);
+  }
+
+  if (GV->hasInternalLinkage() || (GV->hasLocalLinkage() && !isa<Function>(GV)))
+    return getAddrLocal(N, Ty, DAG);
+
+  return getAddrGlobalGOT(
+      N, Ty, DAG, MYRISCVXII::MO_GOT_HI20, MYRISCVXII::MO_GOT_LO12,
+      DAG.getEntryNode(),
+      MachinePointerInfo::getGOT(DAG.getMachineFunction()));
+}
+
+
+SDValue MYRISCVXTargetLowering::getGlobalReg(SelectionDAG &DAG, EVT Ty) const {
+  MYRISCVXFunctionInfo *FI = DAG.getMachineFunction().getInfo<MYRISCVXFunctionInfo>();
+  return DAG.getRegister(FI->getGlobalBaseReg(), Ty);
+}
+
+//@getTargetNode(GlobalAddressSDNode
+SDValue MYRISCVXTargetLowering::getTargetNode(GlobalAddressSDNode *N, EVT Ty,
+                                              SelectionDAG &DAG,
+                                              unsigned Flag) const {
+  return DAG.getTargetGlobalAddress(N->getGlobal(), SDLoc(N), Ty, 0, Flag);
+}
+
+//@getTargetNode(ExternalSymbolSDNode
+SDValue MYRISCVXTargetLowering::getTargetNode(ExternalSymbolSDNode *N, EVT Ty,
+                                              SelectionDAG &DAG,
+                                              unsigned Flag) const {
+  return DAG.getTargetExternalSymbol(N->getSymbol(), Ty, Flag);
 }

@@ -102,6 +102,12 @@ class ArithLogicR<bits<7> opcode, bits<3> funct3, bits<7>funct7,
     let isReMaterializable = 1;
 }
 
+// Hi and Lo nodes are used to handle global addresses. Used on
+// MYRISCVXISelLowering to lower stuff like GlobalAddress, ExternalSymbol
+// static model. (nothing to do with MYRISCVX Registers Hi and Lo)
+def MYRISCVXHi    : SDNode<"MYRISCVXISD::Hi", SDTIntUnaryOp>;
+def MYRISCVXLo    : SDNode<"MYRISCVXISD::Lo", SDTIntUnaryOp>;
+def MYRISCVXGPRel : SDNode<"MYRISCVXISD::GPRel", SDTIntUnaryOp>;
 
 // Arithmetic and logical instructions with 2 register operands.
 class ArithLogicI<bits<7> opcode, bits<3> funct3,
@@ -163,6 +169,10 @@ class StoreMemory<bits<7> opcode, bits<3> funct3, string instr_asm, RegisterClas
      [], IIStore> {
   let isPseudo = Pseudo;
 }
+
+def MYRISCVXWrapper    : SDNode<"MYRISCVXISD::Wrapper", SDTIntBinOp>;
+
+def RelocPIC : Predicate<"TM.getRelocationModel() == Reloc::PIC_">;
 
 //===----------------------------------------------------------------------===//
 // Pattern fragment for load/store
@@ -296,6 +306,24 @@ def : Pat<(imm:$imm), (ORI (LUI (HI20 imm:$imm)), (LO12 imm:$imm))>;
 // Addr for Frame
 def : Pat<(add (XLenVT addr_fi:$rs1), simm12:$simm12),
           (ADDI (XLenVT addr_fi:$rs1), simm12:$simm12)>;
+
+// hi/lo relocs
+def : Pat<(MYRISCVXHi tglobaladdr:$in), (LUI tglobaladdr:$in)>;
+def : Pat<(MYRISCVXLo tglobaladdr:$in), (ORI ZERO, tglobaladdr:$in)>;
+def : Pat<(add GPR:$hi, (MYRISCVXLo tglobaladdr:$lo)),
+          (ORI GPR:$hi, tglobaladdr:$lo)>;
+// gp_rel relocs
+def : Pat<(add GPR:$gp, (MYRISCVXGPRel tglobaladdr:$in)),
+          (ORI GPR:$gp, tglobaladdr:$in)>;
+
+//@ wrapper_pic
+class WrapperPat<SDNode node, Instruction ORiOp, RegisterClass RC>:
+      Pat<(MYRISCVXWrapper RC:$gp, node:$in),
+          (ORiOp RC:$gp, node:$in)>;
+
+def : WrapperPat<tglobaladdr, ORI, GPR>;
+def : WrapperPat<texternalsym, ORI, GPR>;
+
 
 // Memory Acccess
 multiclass LoadPattern<PatFrag LoadOp, MYRISCVXInst Inst> {
