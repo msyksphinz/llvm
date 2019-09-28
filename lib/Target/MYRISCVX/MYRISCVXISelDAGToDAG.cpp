@@ -63,6 +63,42 @@ SDNode *MYRISCVXDAGToDAGISel::getGlobalBaseReg() {
 }
 
 
+//@SelectAddr {
+/// ComplexPattern used on MYRISCVXInstrInfo
+/// Used on MYRISCVX Load/Store instructions
+bool MYRISCVXDAGToDAGISel::
+SelectAddr(SDValue Addr, SDValue &Base, SDValue &Offset) {
+  //@SelectAddr }
+  EVT ValTy = Addr.getValueType();
+  SDLoc DL(Addr);
+
+  // if Address is FI, get the TargetFrameIndex.
+  if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
+    Base   = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
+    Offset = CurDAG->getTargetConstant(0, DL, ValTy);
+    return true;
+  }
+
+  // on PIC code Load GA
+  if (Addr.getOpcode() == MYRISCVXISD::Wrapper) {
+    Base   = Addr.getOperand(0);
+    Offset = Addr.getOperand(1);
+    return true;
+  }
+
+  //@static
+  if (TM.getRelocationModel() != Reloc::PIC_) {
+    if ((Addr.getOpcode() == ISD::TargetExternalSymbol ||
+        Addr.getOpcode() == ISD::TargetGlobalAddress))
+      return false;
+  }
+
+  Base   = Addr;
+  Offset = CurDAG->getTargetConstant(0, DL, ValTy);
+  return true;
+}
+
+
 bool MYRISCVXDAGToDAGISel::SelectAddrFI(SDValue Addr, SDValue &Base) {
   if (auto FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
     Base = CurDAG->getTargetFrameIndex(FIN->getIndex(),

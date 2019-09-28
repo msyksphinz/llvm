@@ -72,9 +72,16 @@ def immLow12Zero : PatLeaf<(imm), [{
 def immZExt5 : ImmLeaf<XLenVT, [{return Imm == (Imm & 0x1f);}]>;
 def shamt : Operand<i32>;
 
+def mem_ea : Operand<iPTR> {
+  let PrintMethod = "printMemOperandEA";
+  let MIOperandInfo = (ops GPR, simm12);
+  let EncoderMethod = "getMemEncoding";
+}
+
 // MYRISCVX Address Mode! SDNode frameindex could possibily be a match
 // since load and store instructions from stack used it.
 def addr_fi : ComplexPattern<iPTR, 1, "SelectAddrFI", [frameindex], []>;
+def addr    : ComplexPattern<iPTR, 2, "SelectAddr"  , [frameindex]>;
 
 //===----------------------------------------------------------------------===//
 // Instructions specific format
@@ -157,6 +164,19 @@ class StoreMemory<bits<7> opcode, bits<3> funct3, string instr_asm, RegisterClas
      [], IIStore> {
   let isPseudo = Pseudo;
 }
+
+class EffectiveAddress<string instr_asm, RegisterClass RC, Operand Mem> :
+  MYRISCVX_I<0b0010011, 0b000, (outs RC:$ra), (ins Mem:$addr),
+     instr_asm, [(set RC:$ra, addr:$addr)], IIAlu>;
+
+// FrameIndexes are legalized when they are operands from load/store
+// instructions. The same not happens for stack address copies, so an
+// add op with mem ComplexPattern is used and the stack address copy
+// can be matched. It's similar to Sparc LEA_ADDRi
+def LEA_ADDI : EffectiveAddress<"addi\t$ra, $addr", GPR, mem_ea> {
+  let isCodeGenOnly = 1;
+}
+
 
 def MYRISCVXWrapper    : SDNode<"MYRISCVXISD::Wrapper", SDTIntBinOp>;
 
