@@ -47,9 +47,22 @@ bool MYRISCVXAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
+bool MYRISCVXAsmPrinter::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
+  MCOp = MCInstLowering.LowerOperand(MO);
+  return MCOp.isValid();
+}
+
+// Simple pseudo-instructions have their lowering (with expansion to real
+// instructions) auto-generated.
+#include "MYRISCVXGenMCPseudoLowering.inc"
+
 //@EmitInstruction {
 //- EmitInstruction() must exists or will have run time error.
 void MYRISCVXAsmPrinter::EmitInstruction(const MachineInstr *MI) {
+  // Do any auto-generated pseudo lowerings.
+  if (emitPseudoExpansionLowering(*OutStreamer, MI))
+    return;
+
   //@EmitInstruction body {
   if (MI->isDebugValue()) {
     SmallString<128> Str;

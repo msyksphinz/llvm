@@ -175,19 +175,21 @@ class MYRISCVX_B<bits<7> opcode, bits<3> funct3,
 
 
 //===----------------------------------------------------------------------===//
-// J-Type instruction class in MYRISCVX : <|opcode|imm20|>
+// J-Type instruction class in MYRISCVX : <|opcode|rd|imm20|>
 //===----------------------------------------------------------------------===//
 class MYRISCVX_J<bits<7> opcode,
                  dag outs, dag ins, string asmstr, list<dag> pattern,
                  InstrItinClass itin>:
   MYRISCVXInst<outs, ins, asmstr, pattern, itin, FrmJ>
 {
+  bits<5>  rd;
   bits<20> imm20;
 
   let Inst{31}    = imm20{19};
   let Inst{30-21} = imm20{9-0};
   let Inst{20}    = imm20{10};
   let Inst{19-12} = imm20{18-11};
+  let Inst{11-7}  = rd;
   let Inst{6-0}   = opcode;
 }
 

@@ -57,6 +57,18 @@ class MYRISCVXMCCodeEmitter : public MCCodeEmitter {
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const;
 
+  // getBranch12TargetOpValue - Return binary encoding of the branch
+  // target operand, such as BEQ, BNE. If the machine operand
+  // requires relocation, record the relocation and return zero.
+  unsigned getBranch12TargetOpValue(const MCInst &MI, unsigned OpNo,
+                                    SmallVectorImpl<MCFixup> &Fixups,
+                                    const MCSubtargetInfo &STI) const;
+  // getBranch20TargetOpValue - Return binary encoding of the branch
+  // target operand, such as JMP #BB01, JEQ, JSUB. If the machine operand
+  // requires relocation, record the relocation and return zero.
+  unsigned getBranch20TargetOpValue(const MCInst &MI, unsigned OpNo,
+                                    SmallVectorImpl<MCFixup> &Fixups,
+                                    const MCSubtargetInfo &STI) const;
   // getBranch16TargetOpValue - Return binary encoding of the branch
   // target operand, such as BEQ, BNE. If the machine operand
   // requires relocation, record the relocation and return zero.
