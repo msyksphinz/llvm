@@ -65,10 +65,6 @@ def shamt : Operand<i32>;
 //   let EncoderMethod = "getJumpTargetOpValue";
 // }
 
-def calltarget : Operand<iPTR> {
-  let EncoderMethod = "getJumpTargetOpValue";
-}
-
 // JAL
 def brtarget20    : Operand<OtherVT> {
   let EncoderMethod = "getBranch20TargetOpValue";
@@ -88,11 +84,6 @@ def brtarget12    : Operand<OtherVT> {
 // since load and store instructions from stack used it.
 def addr_fi : ComplexPattern<iPTR, 1, "SelectAddrFI", [frameindex], []>;
 
-def mem_ea : Operand<iPTR> {
-  let PrintMethod = "printMemOperandEA";
-  let MIOperandInfo = (ops GPR, simm12);
-  let EncoderMethod = "getMemEncoding";
-}
 
 //===----------------------------------------------------------------------===//
 // Instructions specific format
@@ -176,16 +167,24 @@ class StoreMemory<bits<7> opcode, bits<3> funct3, string instr_asm, RegisterClas
   let isPseudo = Pseudo;
 }
 
-class EffectiveAddress<string instr_asm, RegisterClass RC, Operand Mem> :
-  MYRISCVX_I<0b0010011, 0b000, (outs RC:$ra), (ins Mem:$addr),
-     instr_asm, [(set RC:$ra, addr:$addr)], IIAlu>;
+// Branch instructions with 2 register operands.
+class CBranch12<bits<7> opcode, bits<3> funct3,
+                string instr_asm,
+                PatFrag cond_op, RegisterClass RC> :
+  MYRISCVX_B<opcode, funct3, (outs), (ins RC:$rs1, RC:$rs2, brtarget12:$imm12),
+  !strconcat(instr_asm, "\t$rs1, $rs2, $imm12"),
+  [], IIAlu> {
+    let isBranch = 1;
+    let isTerminator = 1;
+}
 
-// FrameIndexes are legalized when they are operands from load/store
-// instructions. The same not happens for stack address copies, so an
-// add op with mem ComplexPattern is used and the stack address copy
-// can be matched. It's similar to Sparc LEA_ADDRi
-def LEA_ADDI : EffectiveAddress<"addi\t$ra, $addr", GPR, mem_ea> {
-  let isCodeGenOnly = 1;
+
+// Jump and Link (Call)
+let isCall = 1 in
+class JumpLink<bits<7> opcode, string opstr, DAGOperand opnd> :
+  MYRISCVX_J<opcode, (outs GPR:$rd), (ins opnd:$imm20), !strconcat(opstr, "\t$rd, $imm20"),
+                 [], IIAlu> {
+  let DecoderMethod = "DecodeJumpTarget";
 }
 
 
@@ -293,9 +292,13 @@ def SLT   : SetCC_R<0b0110011, 0b010, 0b0000000, "slt",  setlt,  GPR>;
 def SLTU  : SetCC_R<0b0110011, 0b011, 0b0000000, "sltu", setult, GPR>;
 
 def JALR : ArithLogicI<0b1100111, 0b000, "jalr", add, simm12, immSExt12, GPR>;
-def: InstAlias<"jr $rs",      (JALR ZERO, GPR:$rs, 0)>;
-def: InstAlias<"jalr $rs",    (JALR RA,   GPR:$rs, 0)>;
-def: InstAlias<"ret",         (JALR ZERO,      RA, 0), 2>;
+def : InstAlias<"ret",         (JALR ZERO, RA, 0)>;
+def : InstAlias<"jr $rs",      (JALR ZERO, GPR:$rs, 0)>;
+def : InstAlias<"jalr $rs",    (JALR RA,   GPR:$rs, 0)>;
+
+def JAL : JumpLink<0b1101111, "jal", brtarget20>;
+def : InstAlias<"j $offset",   (JAL  ZERO, brtarget20:$offset)>;
+def : InstAlias<"jal $offset", (JAL  RA,   brtarget20:$offset)>;
 
 /// Load and Store Instructions
 ///  aligned
@@ -307,6 +310,13 @@ def SB  : StoreMemory<0b0100011, 0b000, "sb",  GPR, truncstorei8_a , 0>;
 def LH  : LoadMemory <0b0000011, 0b001, "lh",  GPR, sextloadi16_a  , 0>;
 def LHU : LoadMemory <0b0000011, 0b101, "lhu", GPR, zextloadi16_a  , 0>;
 def SH  : StoreMemory<0b0100011, 0b001, "sh",  GPR, truncstorei16_a, 0>;
+
+def BEQ     : CBranch12<0b1100011, 0b000, "beq" , seteq,  GPR>;
+def BNE     : CBranch12<0b1100011, 0b001, "bne" , setne,  GPR>;
+def BLT     : CBranch12<0b1100011, 0b100, "blt" , setlt,  GPR>;
+def BGE     : CBranch12<0b1100011, 0b101, "bge" , setge,  GPR>;
+def BLTU    : CBranch12<0b1100011, 0b110, "bltu", setult, GPR>;
+def BGEU    : CBranch12<0b1100011, 0b111, "bgeu", setuge, GPR>;
 
 //===----------------------------------------------------------------------===//
 //  Arbitrary patterns that map to one or more instructions
@@ -388,6 +398,10 @@ let Predicates = [IsRV64] in {
   defm : StorePattern<store         , SD>;
 } // Predicates = [IsRV64]
 
+let isBarrier = 1, isBranch = 1, isTerminator = 1 in
+  def PseudoBR : MYRISCVXPseudo<(outs), (ins brtarget20:$simm20), "", [(br bb:$simm20)]>,
+                 PseudoInstExpansion<(JAL ZERO, brtarget20:$simm20)>;
+
 // Define pattern expansions for setcc operations that aren't directly
 // handled by a RISC-V instruction.
 def : Pat<(seteq  GPR:$rs1, GPR:$rs2), (SLTIU (XOR GPR:$rs1, GPR:$rs2), 1)>;
@@ -398,3 +412,42 @@ def : Pat<(setule GPR:$rs1, GPR:$rs2), (XORI (SLTU GPR:$rs2, GPR:$rs1), 1)>;
 def : Pat<(setgt  GPR:$rs1, GPR:$rs2), (SLT GPR:$rs2, GPR:$rs1)>;
 def : Pat<(setge  GPR:$rs1, GPR:$rs2), (XORI (SLT GPR:$rs1, GPR:$rs2), 1)>;
 def : Pat<(setle  GPR:$rs1, GPR:$rs2), (XORI (SLT GPR:$rs2, GPR:$rs1), 1)>;
+
+// brcond for slt instruction
+multiclass BrcondPatsSlt<RegisterClass RC, Instruction BEQOp, Instruction BNEOp,
+                      Instruction SLTOp, Instruction SLTuOp, Instruction SLTiOp,
+                      Instruction SLTiuOp, Register ZEROReg> {
+  def : Pat<(brcond (XLenVT (setne RC:$lhs, 0)), bb:$dst),
+                (BNEOp RC:$lhs, ZEROReg, bb:$dst)>;
+  def : Pat<(brcond (XLenVT (seteq RC:$lhs, 0)), bb:$dst),
+                (BEQOp RC:$lhs, ZEROReg, bb:$dst)>;
+
+  def : Pat<(brcond (XLenVT (seteq RC:$lhs, RC:$rhs)), bb:$dst),
+                (BEQOp RC:$lhs, RC:$rhs, bb:$dst)>;
+  def : Pat<(brcond (XLenVT (setueq RC:$lhs, RC:$rhs)), bb:$dst),
+                (BEQOp RC:$lhs, RC:$rhs, bb:$dst)>;
+  def : Pat<(brcond (XLenVT (setne RC:$lhs, RC:$rhs)), bb:$dst),
+                (BNEOp RC:$lhs, RC:$rhs, bb:$dst)>;
+  def : Pat<(brcond (XLenVT (setune RC:$lhs, RC:$rhs)), bb:$dst),
+                (BNEOp RC:$lhs, RC:$rhs, bb:$dst)>;
+  def : Pat<(brcond (XLenVT (setlt RC:$lhs, RC:$rhs)), bb:$dst),
+                (BNE (SLTOp RC:$lhs, RC:$rhs), ZERO, bb:$dst)>;
+  def : Pat<(brcond (XLenVT (setult RC:$lhs, RC:$rhs)), bb:$dst),
+                (BNE (SLTuOp RC:$lhs, RC:$rhs), ZERO, bb:$dst)>;
+  def : Pat<(brcond (XLenVT (setgt RC:$lhs, RC:$rhs)), bb:$dst),
+                (BNE (SLTOp RC:$rhs, RC:$lhs), ZERO, bb:$dst)>;
+  def : Pat<(brcond (XLenVT (setugt RC:$lhs, RC:$rhs)), bb:$dst),
+                (BNE (SLTuOp RC:$rhs, RC:$lhs), ZERO, bb:$dst)>;
+  def : Pat<(brcond (XLenVT (setle RC:$lhs, RC:$rhs)), bb:$dst),
+                (BEQ (SLTOp RC:$rhs, RC:$lhs), ZERO, bb:$dst)>;
+  def : Pat<(brcond (XLenVT (setule RC:$lhs, RC:$rhs)), bb:$dst),
+                (BEQ (SLTuOp RC:$rhs, RC:$lhs), ZERO, bb:$dst)>;
+  def : Pat<(brcond (XLenVT (setge RC:$lhs, RC:$rhs)), bb:$dst),
+                (BEQ (SLTOp RC:$lhs, RC:$rhs), ZERO, bb:$dst)>;
+  def : Pat<(brcond (XLenVT (setuge RC:$lhs, RC:$rhs)), bb:$dst),
+                (BEQ (SLTuOp RC:$lhs, RC:$rhs), ZERO, bb:$dst)>;
+  def : Pat<(brcond RC:$cond, bb:$dst),
+                (BNEOp RC:$cond, ZEROReg, bb:$dst)>;
+}
+
+defm : BrcondPatsSlt<GPR, BEQ, BNE, SLT, SLTU, SLTI, SLTIU, ZERO>;
