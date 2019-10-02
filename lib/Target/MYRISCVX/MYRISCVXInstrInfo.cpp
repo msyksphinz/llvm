@@ -41,6 +41,18 @@ unsigned MYRISCVXInstrInfo::GetInstSizeInBytes(const MachineInstr &MI) const {
   }
 }
 
+void MYRISCVXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator MBBI,
+                                    const DebugLoc &DL, unsigned DstReg,
+                                    unsigned SrcReg, bool KillSrc) const {
+  if (MYRISCVX::GPRRegClass.contains(DstReg, SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(MYRISCVX::ADDI), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc))
+        .addImm(0);
+    return;
+  }
+}
+
 
 //@expandPostRAPseudo
 /// Expand Pseudo instructions into real backend instructions
