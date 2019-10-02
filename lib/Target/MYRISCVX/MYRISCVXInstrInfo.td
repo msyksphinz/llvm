@@ -402,6 +402,14 @@ let isBarrier = 1, isBranch = 1, isTerminator = 1 in
   def PseudoBR : MYRISCVXPseudo<(outs), (ins brtarget20:$simm20), "", [(br bb:$simm20)]>,
                  PseudoInstExpansion<(JAL ZERO, brtarget20:$simm20)>;
 
+let isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in
+def PseudoBRIND : MYRISCVXPseudo<(outs), (ins GPR:$rs1, simm12:$simm12), "", []>,
+                  PseudoInstExpansion<(JALR ZERO, GPR:$rs1, simm12:$simm12)>;
+
+def : Pat<(brind GPR:$rs1), (PseudoBRIND GPR:$rs1, 0)>;
+def : Pat<(brind (add GPR:$rs1, simm12:$simm12)),
+          (PseudoBRIND GPR:$rs1, simm12:$simm12)>;
+
 // Define pattern expansions for setcc operations that aren't directly
 // handled by a RISC-V instruction.
 def : Pat<(seteq  GPR:$rs1, GPR:$rs2), (SLTIU (XOR GPR:$rs1, GPR:$rs2), 1)>;

@@ -83,6 +83,8 @@ MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
   setOperationAction(ISD::SELECT,    XLenVT,     Custom);
   setOperationAction(ISD::SELECT_CC, XLenVT,     Expand);
 
+  // Effectively disable jump table generation.
+  setMinimumJumpTableEntries(INT_MAX);
 }
 
 //===----------------------------------------------------------------------===//
