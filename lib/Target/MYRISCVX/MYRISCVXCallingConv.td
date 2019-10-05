@@ -80,3 +80,25 @@ def CC_MYRISCVX : CallingConv<[
   CCIfSubtarget<"isABI_STACK32()", CCDelegateTo<CC_STACK32>>,
   CCDelegateTo<CC_LP32>
 ]>;
+
+
+//===----------------------------------------------------------------------===//
+// MYRISCVX LP32/STACK32 Return Convention
+//===----------------------------------------------------------------------===//
+
+def RetCC_LP32 : CallingConv<[
+  CCIfType<[i32], CCAssignToReg<[A0, A1]>>
+]>;
+
+//===----------------------------------------------------------------------===//
+// MYRISCVX LP64/STACK64 Return Convention
+//===----------------------------------------------------------------------===//
+
+def RetCC_LP64 : CallingConv<[
+  CCIfType<[i32, i64], CCAssignToReg<[A0, A1]>>
+]>;
+
+def RetCC_MYRISCVX : CallingConv<[
+  CCIfSubtarget<"is64Bit()", CCDelegateTo<RetCC_LP64>>,
+  CCDelegateTo<RetCC_LP32>
+]>;

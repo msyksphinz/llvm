@@ -418,6 +418,12 @@ let Predicates = [IsRV64] in {
   /// Stores
   defm : StorePattern<truncstorei32 , SW>;
   defm : StorePattern<store         , SD>;
+
+  def ADDIW : ArithLogicI<0b0011011, 0b000, "addiw", add, simm12, immSExt12, GPR>;
+
+  /// sext
+  def : Pat<(sext_inreg GPR:$rs1, i32), (ADDIW GPR:$rs1, 0)>;
+
 } // Predicates = [IsRV64]
 
 let isBarrier = 1, isBranch = 1, isTerminator = 1 in
