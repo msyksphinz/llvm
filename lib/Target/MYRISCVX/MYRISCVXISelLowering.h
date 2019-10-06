@@ -31,7 +31,7 @@ namespace llvm {
       FIRST_NUMBER = ISD::BUILTIN_OP_END,
 
       // Jump and link (call)
-      JmpLink,
+      CALL,
 
       // Tail call
       TailCall,
