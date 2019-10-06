@@ -29,7 +29,9 @@ using namespace llvm;
 void MYRISCVXInstrInfo::anchor() {}
 
 //@MYRISCVXInstrInfo {
-MYRISCVXInstrInfo::MYRISCVXInstrInfo() {}
+MYRISCVXInstrInfo::MYRISCVXInstrInfo()
+    : MYRISCVXGenInstrInfo(MYRISCVX::ADJCALLSTACKDOWN, MYRISCVX::ADJCALLSTACKUP)
+{}
 
 //@GetInstSizeInBytes {
 /// Return the number of bytes of code the specified instruction may be.
@@ -114,4 +116,49 @@ void MYRISCVXInstrInfo::expandRetRA(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator I) const {
   BuildMI(MBB, I, I->getDebugLoc(), get(MYRISCVX::JALR))
       .addReg(MYRISCVX::ZERO).addReg(MYRISCVX::RA).addImm(0);
+}
+
+
+MachineMemOperand *
+MYRISCVXInstrInfo::GetMemOperand(MachineBasicBlock &MBB, int FI,
+                                 MachineMemOperand::Flags Flags) const {
+
+  MachineFunction &MF = *MBB.getParent();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  unsigned Align = MFI.getObjectAlignment(FI);
+
+  return MF.getMachineMemOperand(MachinePointerInfo::getFixedStack(MF, FI),
+                                 Flags, MFI.getObjectSize(FI), Align);
+}
+
+
+void MYRISCVXInstrInfo::
+storeRegToStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
+                unsigned SrcReg, bool isKill, int FI,
+                const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+                int64_t Offset) const {
+  DebugLoc DL;
+  MachineMemOperand *MMO = GetMemOperand(MBB, FI, MachineMemOperand::MOStore);
+
+  unsigned Opc = 0;
+
+  Opc = MYRISCVX::SW;
+  assert(Opc && "Register class not handled!");
+  BuildMI(MBB, I, DL, get(Opc)).addReg(SrcReg, getKillRegState(isKill))
+      .addFrameIndex(FI).addImm(Offset).addMemOperand(MMO);
+}
+
+void MYRISCVXInstrInfo::
+loadRegFromStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
+                 unsigned DestReg, int FI, const TargetRegisterClass *RC,
+                 const TargetRegisterInfo *TRI, int64_t Offset) const {
+  DebugLoc DL;
+  if (I != MBB.end()) DL = I->getDebugLoc();
+  MachineMemOperand *MMO = GetMemOperand(MBB, FI, MachineMemOperand::MOLoad);
+  unsigned Opc = 0;
+
+  Opc = MYRISCVX::LW;
+  assert(Opc && "Register class not handled!");
+  BuildMI(MBB, I, DL, get(Opc), DestReg).addFrameIndex(FI).addImm(Offset)
+      .addMemOperand(MMO);
 }

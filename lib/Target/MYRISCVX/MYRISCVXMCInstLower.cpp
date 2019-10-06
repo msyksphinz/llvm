@@ -79,6 +79,9 @@ MCOperand MYRISCVXMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   case MYRISCVXII::MO_GOT_LO12:
     TargetKind = MYRISCVXMCExpr::CEK_GOT_LO12;
     break;
+  case MYRISCVXII::MO_GOT_CALL:
+    TargetKind = MYRISCVXMCExpr::CEK_GOT_CALL;
+    break;
   }
 
   switch (MOTy) {
