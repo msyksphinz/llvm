@@ -96,6 +96,10 @@ def shamt : Operand<i32>;
 //   let EncoderMethod = "getJumpTargetOpValue";
 // }
 
+def calltarget : Operand<iPTR> {
+  let EncoderMethod = "getJumpTargetOpValue";
+}
+
 // JAL
 def brtarget20    : Operand<OtherVT> {
   let EncoderMethod = "getBranch20TargetOpValue";
@@ -365,6 +369,25 @@ class SelectCC_rrirr<RegisterClass RC, RegisterClass cmpty>
 
 def Select_GPR_Using_CC_GPR : SelectCC_rrirr<GPR, GPR>;
 
+let Defs = [SP], Uses = [SP], hasSideEffects = 1 in {
+  // As stack alignment is always done with addi, we need a 16-bit immediate
+  def ADJCALLSTACKDOWN : MYRISCVXPseudo<(outs), (ins simm12:$amt1, simm12:$amt2), "",
+                                        [(MYRISCVXCallSeqStart timm:$amt1, timm:$amt2)]>;
+  def ADJCALLSTACKUP   : MYRISCVXPseudo<(outs), (ins simm12:$amt1, simm12:$amt2), "",
+                                        [(MYRISCVXCallSeqEnd timm:$amt1, timm:$amt2)]>;
+}
+
+
+//}
+//@def CPRESTORE {
+// When handling PIC code the assembler needs .cpload and .cprestore
+// directives. If the real instructions corresponding these directives
+// are used, we have the same behavior, but get also a bunch of warnings
+// from the assembler.
+let hasSideEffects = 0 in
+def CPRESTORE : MYRISCVXPseudo<(outs), (ins simm12:$loc, GPR:$gp),
+                            ".cprestore\t$loc", []>;
+
 //===----------------------------------------------------------------------===//
 //  Arbitrary patterns that map to one or more instructions
 //===----------------------------------------------------------------------===//
@@ -517,3 +540,13 @@ multiclass BrcondPatsSlt<RegisterClass RC, Instruction BEQOp, Instruction BNEOp,
 }
 
 defm : BrcondPatsSlt<GPR, BEQ, BNE, SLT, SLTU, SLTI, SLTIU, ZERO>;
+
+let isCall = 1, Defs = [RA], isCodeGenOnly = 0 in
+def PseudoCALL : MYRISCVXPseudo<(outs), (ins GPR:$rs1), "", [(MYRISCVXCall GPR:$rs1)]>,
+                 PseudoInstExpansion<(JALR RA, GPR:$rs1, 0)>;
+
+
+// def : Pat<(MYRISCVXCall (i32 tglobaladdr:$dst)),  (JAL tglobaladdr:$dst)>;
+def : Pat<(MYRISCVXCall texternalsym:$func), (PseudoCALL texternalsym:$func)>;
+// def : Pat<(MYRISCVXCall (XLenVT tglobaladdr:$dst)),  (JALR RA, tglobaladdr:$dst)>;
+// def : Pat<(MYRISCVXCall (XLenVT texternalsym:$dst)), (JALR RA, texternalsym:$dst)>;
