@@ -100,11 +100,16 @@ SelectAddr(SDValue Addr, SDValue &Base, SDValue &Offset) {
 
 
 bool MYRISCVXDAGToDAGISel::SelectAddrFI(SDValue Addr, SDValue &Base) {
+  LLVM_DEBUG(dbgs() << "MYRISCVXDAGToDAGISel::SelectAddrFI is called :");
+
   if (auto FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
     Base = CurDAG->getTargetFrameIndex(FIN->getIndex(),
                                        Subtarget->getXLenVT());
+    LLVM_DEBUG(dbgs() << "True\n");
     return true;
   }
+
+  LLVM_DEBUG(dbgs() << "False\n");
   return false;
 }
 
@@ -115,9 +120,6 @@ bool MYRISCVXDAGToDAGISel::SelectAddrFI(SDValue Addr, SDValue &Base) {
 void MYRISCVXDAGToDAGISel::Select(SDNode *Node) {
   //@Select }
   unsigned Opcode = Node->getOpcode();
-
-  // Dump information about the Node being selected
-  LLVM_DEBUG(errs() << "Selecting: "; Node->dump(CurDAG); errs() << "\n");
 
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
@@ -130,11 +132,24 @@ void MYRISCVXDAGToDAGISel::Select(SDNode *Node) {
   if (trySelect(Node))
     return;
 
+  MVT XLenVT = Subtarget->getXLenVT();
+  SDLoc DL(Node);
+  EVT VT = Node->getValueType(0);
+
   switch(Opcode) {
     // Get target GOT address.
     case ISD::GLOBAL_OFFSET_TABLE:
       ReplaceNode(Node, getGlobalBaseReg());
       return;
+    case ISD::FrameIndex: {
+      LLVM_DEBUG(dbgs() << "MYRISCVXDAGToDAGISel::Select:FrameIndex is called :");
+
+      SDValue Imm = CurDAG->getTargetConstant(0, DL, XLenVT);
+      int FI = cast<FrameIndexSDNode>(Node)->getIndex();
+      SDValue TFI = CurDAG->getTargetFrameIndex(FI, VT);
+      ReplaceNode(Node, CurDAG->getMachineNode(MYRISCVX::ADDI, DL, VT, TFI, Imm));
+      return;
+    }
     default: break;
   }
 

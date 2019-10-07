@@ -128,6 +128,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     break;
   }
   case ISD::FrameIndex: {
+    LLVM_DEBUG(dbgs() << "RISCVDAGToDAGISel::Select:FrameIndex is called :");
+
     SDValue Imm = CurDAG->getTargetConstant(0, DL, XLenVT);
     int FI = cast<FrameIndexSDNode>(Node)->getIndex();
     SDValue TFI = CurDAG->getTargetFrameIndex(FI, VT);
@@ -180,10 +182,15 @@ bool RISCVDAGToDAGISel::SelectInlineAsmMemoryOperand(
 }
 
 bool RISCVDAGToDAGISel::SelectAddrFI(SDValue Addr, SDValue &Base) {
+  LLVM_DEBUG(dbgs() << "RISCVDAGToDAGISel::SelectAddrFI is called :");
+
   if (auto FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
     Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), Subtarget->getXLenVT());
+
+    LLVM_DEBUG(dbgs() << "True\n");
     return true;
   }
+  LLVM_DEBUG(dbgs() << "False\n");
   return false;
 }
 

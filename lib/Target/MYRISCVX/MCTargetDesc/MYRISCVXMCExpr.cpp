@@ -119,6 +119,8 @@ void MYRISCVXMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
 
 void MYRISCVXMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
   switch (getKind()) {
+    default:
+      llvm_unreachable("Invalid ELF Symbol in TLS kind");
     case CEK_None:
     case CEK_Special:
       llvm_unreachable("CEK_None and CEK_Special are invalid");

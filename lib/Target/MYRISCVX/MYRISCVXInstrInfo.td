@@ -53,40 +53,37 @@ include "MYRISCVXInstrFormats.td"
 
 // Transformation Function - get the lower 12 bits.
 def LO12 : SDNodeXForm<imm, [{
-  return getImm(N, N->getZExtValue() & 0xfff);
+  return CurDAG->getTargetConstant(SignExtend64<12>(N->getZExtValue()),
+                                   SDLoc(N), N->getValueType(0));
 }]>;
 
 // Transformation Function - get the higher 20 bits.
 def HI20 : SDNodeXForm<imm, [{
-  return getImm(N, (N->getZExtValue() >> 12) & 0xfffff);
+  return CurDAG->getTargetConstant(((N->getZExtValue()+0x800) >> 12) & 0xfffff,
+                                   SDLoc(N), N->getValueType(0));
 }]>;
 
 // Signed Operand
-def simm12 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]> {
+def simm12 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<12>(Imm);}]> {
+  // let ParserMatchClass = SImmAsmOperand<12>;
+  //   let EncoderMethod = "getImmOpValue";
   let DecoderMethod= "DecodeSimm12";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isInt<12>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
 }
-def simm20 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]> {
+def simm20 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<20>(Imm);}]> {
   let DecoderMethod= "DecodeSimm20";
 }
-// Unsigned Operand
-def uimm12 : Operand<XLenVT> {
-  let PrintMethod = "printUnsignedImm";
-}
+def simm32 : ImmLeaf<XLenVT, [{return isInt<32>(Imm);}]>;
 
 def immSExt12 : PatLeaf<(imm), [{ return isInt<12>(N->getSExtValue()); }]>;
 def immSExt20 : PatLeaf<(imm), [{ return isInt<20>(N->getSExtValue()); }]>;
-def immZExt12 : PatLeaf<(imm), [{
-  if (N->getValueType(0) == MVT::i32)
-    return (uint32_t)N->getZExtValue() == (unsigned short)N->getZExtValue();
-  else
-    return (uint64_t)N->getZExtValue() == (unsigned short)N->getZExtValue();
-}], LO12>;
-
 // Immediate can be loaded with LUi (32-bit int with lower 16-bit cleared).
-def immLow12Zero : PatLeaf<(imm), [{
-  int64_t Val = N->getSExtValue();
-  return isInt<32>(Val) && !(Val & 0x0fff);
-}]>;
+def immLow12Zero : ImmLeaf<XLenVT, [{return isShiftedInt<20, 12>(Imm);}]>;
 
 // shamt field must fit in 5 bits.
 def immZExt5 : ImmLeaf<XLenVT, [{return Imm == (Imm & 0x1f);}]>;
@@ -120,6 +117,11 @@ def brtarget12    : Operand<OtherVT> {
 // since load and store instructions from stack used it.
 def addr_fi : ComplexPattern<iPTR, 1, "SelectAddrFI", [frameindex], []>;
 def addr    : ComplexPattern<iPTR, 2, "SelectAddr"  , [frameindex]>;
+
+def IsOrAdd: PatFrag<(ops node:$A, node:$B), (or node:$A, node:$B), [{
+  return isOrEquivalentToAdd(N);
+}]>;
+
 
 //===----------------------------------------------------------------------===//
 // Instructions specific format
@@ -294,9 +296,9 @@ class SetCC_I<bits<7> opcode, bits<3> funct3,
 
 
 def ADDI : ArithLogicI<0b0010011, 0b000, "addi", add, simm12, immSExt12, GPR>;
-def XORI : ArithLogicI<0b0010011, 0b100, "xori", xor, uimm12, immZExt12, GPR>;
-def ORI  : ArithLogicI<0b0010011, 0b110, "ori",  or,  uimm12, immZExt12, GPR>;
-def ANDI : ArithLogicI<0b0010011, 0b111, "andi", and, uimm12, immZExt12, GPR>;
+def XORI : ArithLogicI<0b0010011, 0b100, "xori", xor, simm12, immSExt12, GPR>;
+def ORI  : ArithLogicI<0b0010011, 0b110, "ori",  or,  simm12, immSExt12, GPR>;
+def ANDI : ArithLogicI<0b0010011, 0b111, "andi", and, simm12, immSExt12, GPR>;
 
 def LUI  : ArithLogicU<0b0110111, "lui", GPR, simm20, immSExt20>;
 def ADD  : ArithLogicR<0b0110011, 0b000, 0b0000000, "add", add, GPR>;
@@ -396,20 +398,16 @@ let isReturn=1, isTerminator=1, hasDelaySlot=0, isBarrier=1, hasCtrlDep=1 in
   def RetRA : MYRISCVXPseudo<(outs), (ins), "", [(MYRISCVXRet)]>;
 
 // Small immediates
-def : Pat<(XLenVT immSExt12:$in),
-          (ADDI ZERO, imm:$in)>;
-def : Pat<(XLenVT immZExt12:$in),
-          (ORI ZERO, imm:$in)>;
-
-def : Pat<(XLenVT immLow12Zero:$in),
-          (LUI (HI20 imm:$in))>;
-
-def : Pat<(XLenVT imm:$imm),
-          (ORI (LUI (HI20 imm:$imm)), (LO12 imm:$imm))>;
+def : Pat<(immSExt12:$in), (ADDI ZERO, imm:$in)>;
+def : Pat<(immLow12Zero:$in), (LUI (HI20 imm:$in))>;
+def : Pat<(simm32:$in), (ORI (LUI (HI20 imm:$in)), (LO12 imm:$in))>,
+      Requires<[IsRV32]>;
 
 // Addr for Frame
-def : Pat<(XLenVT addr_fi:$simm12),
-          (ADDI ZERO, imm:$simm12)>;
+def : Pat<(add (i32 addr_fi:$rs), simm12:$simm12),
+          (ADDI (i32 addr_fi:$rs), simm12:$simm12)>;
+def : Pat<(IsOrAdd (i32 addr_fi:$rs), simm12:$simm12),
+          (ADDI (i32 addr_fi:$rs), simm12:$simm12)>;
 
 // hi/lo relocs
 def : Pat<(MYRISCVXHi tglobaladdr:$in), (LUI tglobaladdr:$in)>;
@@ -431,17 +429,19 @@ def : WrapperPat<texternalsym, ORI, GPR>;
 
 // Memory Acccess
 multiclass LoadPattern<PatFrag LoadOp, MYRISCVXInst Inst> {
-  def : Pat<(XLenVT (LoadOp GPR:$rs1))                          , (Inst GPR:$rs1, 0)           >;
-  def : Pat<(XLenVT (LoadOp addr_fi:$rs1))                      , (Inst addr_fi:$rs1, 0)       >;
-  def : Pat<(XLenVT (LoadOp (add GPR:$rs1, simm12:$simm12)))    , (Inst GPR:$rs1, $simm12)     >;
-  def : Pat<(XLenVT (LoadOp (add addr_fi:$rs1, simm12:$simm12))), (Inst addr_fi:$rs1, $simm12) >;
+  def : Pat<(LoadOp GPR:$rs1)                              , (Inst GPR:$rs1, 0)           >;
+  def : Pat<(LoadOp addr_fi:$rs1)                          , (Inst addr_fi:$rs1, 0)       >;
+  def : Pat<(LoadOp (add GPR:$rs1, simm12:$simm12))        , (Inst GPR:$rs1, $simm12)     >;
+  def : Pat<(LoadOp (add addr_fi:$rs1, simm12:$simm12))    , (Inst addr_fi:$rs1, $simm12) >;
+  def : Pat<(LoadOp (IsOrAdd addr_fi:$rs1, simm12:$simm12)), (Inst addr_fi:$rs1, $simm12) >;
 }
 
 multiclass StorePattern<PatFrag StoreOp, MYRISCVXInst Inst> {
-  def : Pat<(StoreOp GPR:$rs2, GPR:$rs1)                          , (Inst GPR:$rs2, GPR:$rs1, 0)                         >;
-  def : Pat<(StoreOp GPR:$rs2, addr_fi:$rs1)                      , (Inst GPR:$rs2, addr_fi:$rs1, 0)                     >;
-  def : Pat<(StoreOp GPR:$rs2, (add GPR:$rs1, simm12:$simm12))    , (Inst GPR:$rs2, GPR:$rs1, simm12:$simm12)            >;
-  def : Pat<(StoreOp GPR:$rs2, (add addr_fi:$rs1, simm12:$simm12)), (Inst GPR:$rs2, addr_fi:$rs1, simm12:$simm12)        >;
+  def : Pat<(StoreOp GPR:$rs2, GPR:$rs1)                              , (Inst GPR:$rs2, GPR:$rs1, 0)                         >;
+  def : Pat<(StoreOp GPR:$rs2, addr_fi:$rs1)                          , (Inst GPR:$rs2, addr_fi:$rs1, 0)                     >;
+  def : Pat<(StoreOp GPR:$rs2, (add GPR:$rs1, simm12:$simm12))        , (Inst GPR:$rs2, GPR:$rs1, simm12:$simm12)            >;
+  def : Pat<(StoreOp GPR:$rs2, (add addr_fi:$rs1, simm12:$simm12))    , (Inst GPR:$rs2, addr_fi:$rs1, simm12:$simm12)        >;
+  def : Pat<(StoreOp GPR:$rs2, (IsOrAdd addr_fi:$rs1, simm12:$simm12)), (Inst GPR:$rs2, addr_fi:$rs1, simm12:$simm12)        >;
 }
 
 defm : LoadPattern<sextloadi8  , LB>;
