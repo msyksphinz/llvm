@@ -151,16 +151,7 @@ namespace llvm {
     // computing a symbol's address in non-PIC mode:
     //
     // (add %hi(sym), %lo(sym))
-    template<class NodeTy>
-    SDValue getAddrNonPIC(NodeTy *N, EVT Ty, SelectionDAG &DAG) const {
-      SDLoc DL(N);
-      SDValue Hi = getTargetNode(N, Ty, DAG, MYRISCVXII::MO_ABS_HI);
-      SDValue Lo = getTargetNode(N, Ty, DAG, MYRISCVXII::MO_ABS_LO);
-      return DAG.getNode(ISD::ADD, DL, Ty,
-                         DAG.getNode(MYRISCVXISD::Hi, DL, Ty, Hi),
-                         DAG.getNode(MYRISCVXISD::Lo, DL, Ty, Lo));
-    }
-
+    SDValue getAddrNonPIC(GlobalAddressSDNode *N, const GlobalValue *GV, EVT Ty, SelectionDAG &DAG) const;
 
    protected:
 
@@ -236,6 +227,13 @@ namespace llvm {
                          const SmallVectorImpl<ISD::InputArg> &Ins,
                          const SDLoc &dl, SelectionDAG &DAG,
                          SmallVectorImpl<SDValue> &InVals) const override;
+
+    void copyByValRegs(
+        SDValue Chain, const SDLoc &DL, std::vector<SDValue> &OutChains,
+        SelectionDAG &DAG, const ISD::ArgFlagsTy &Flags,
+        SmallVectorImpl<SDValue> &InVals, const Argument *FuncArg,
+        unsigned FirstReg, unsigned LastReg, const CCValAssign &VA,
+        CCState &State) const;
 
     SDValue LowerReturn(SDValue Chain,
                         CallingConv::ID CallConv, bool IsVarArg,

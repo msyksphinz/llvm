@@ -125,7 +125,7 @@ class ArithLogicR<bits<7> opcode, bits<3> funct3, bits<7>funct7,
 
 // Hi and Lo nodes are used to handle global addresses. Used on
 // MYRISCVXISelLowering to lower stuff like GlobalAddress, ExternalSymbol
-// static model. (nothing to do with MYRISCVX Registers Hi and Lo)
+// static model.
 def MYRISCVXHi    : SDNode<"MYRISCVXISD::Hi", SDTIntUnaryOp>;
 def MYRISCVXLo    : SDNode<"MYRISCVXISD::Lo", SDTIntUnaryOp>;
 def MYRISCVXGPRel : SDNode<"MYRISCVXISD::GPRel", SDTIntUnaryOp>;

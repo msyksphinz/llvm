@@ -152,10 +152,29 @@ MYRISCVXTargetLowering::LowerFormalArguments (SDValue Chain,
       CurArgIdx = Ins[i].getOrigArgIndex();
     }
     EVT ValVT = VA.getValVT();
-    // ISD::ArgFlagsTy Flags = Ins[i].Flags;
+    ISD::ArgFlagsTy Flags = Ins[i].Flags;
     bool IsRegLoc = VA.isRegLoc();
 
     //@byval pass {
+    if (Flags.isByVal()) {
+      assert(Ins[i].isOrigArg() && "Byval arguments cannot be implicit");
+      unsigned FirstByValReg, LastByValReg;
+      unsigned ByValIdx = CCInfo.getInRegsParamsProcessed();
+      CCInfo.getInRegsParamInfo(ByValIdx, FirstByValReg, LastByValReg);
+
+      assert(Flags.getByValSize() &&
+             "ByVal args of size 0 should have been ignored by front-end.");
+      assert(ByValIdx < CCInfo.getInRegsParamsCount());
+
+      LLVM_DEBUG(dbgs() << "LowerFormalArguments ByValIdx = " << ByValIdx <<
+                 ", FirstByValRegs = " << FirstByValReg <<
+                 ", LastByValRegs = " << LastByValReg << '\n');
+
+      copyByValRegs(Chain, DL, OutChains, DAG, Flags, InVals, &*FuncArg,
+                    FirstByValReg, LastByValReg, VA, CCInfo);
+      CCInfo.nextInRegsParam();
+      continue;
+    }
     //@byval pass }
 
     // Arguments stored on registers
@@ -243,6 +262,66 @@ MYRISCVXTargetLowering::LowerFormalArguments (SDValue Chain,
 // @LowerFormalArguments }
 
 
+void MYRISCVXTargetLowering::copyByValRegs(
+    SDValue Chain, const SDLoc &DL, std::vector<SDValue> &OutChains,
+    SelectionDAG &DAG, const ISD::ArgFlagsTy &Flags,
+    SmallVectorImpl<SDValue> &InVals, const Argument *FuncArg,
+    unsigned FirstReg, unsigned LastReg, const CCValAssign &VA,
+    CCState &State) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  unsigned GPRSizeInBytes = Subtarget.getGPRSizeInBytes();
+  unsigned NumRegs = LastReg - FirstReg;
+  unsigned RegAreaSize = NumRegs * GPRSizeInBytes;
+  unsigned FrameObjSize = std::max(Flags.getByValSize(), RegAreaSize);
+  int FrameObjOffset;
+  ArrayRef<MCPhysReg> ByValArgRegs = ABI.GetByValArgRegs();
+
+  if (RegAreaSize)
+    FrameObjOffset =
+        (int)ABI.GetCalleeAllocdArgSizeInBytes(State.getCallingConv()) -
+        (int)((ByValArgRegs.size() - FirstReg) * GPRSizeInBytes);
+  else
+    FrameObjOffset = VA.getLocMemOffset();
+
+  LLVM_DEBUG(dbgs() << "copyByValRegs : RegAreaSize = " << RegAreaSize << '\n');
+  LLVM_DEBUG(dbgs() << "copyByValRegs : FrameObjOffset = " << FrameObjOffset << '\n');
+
+  // Create frame object.
+  EVT PtrTy = getPointerTy(DAG.getDataLayout());
+  // Make the fixed object stored to mutable so that the load instructions
+  // referencing it have their memory dependencies added.
+  // Set the frame object as isAliased which clears the underlying objects
+  // vector in ScheduleDAGInstrs::buildSchedGraph() resulting in addition of all
+  // stores as dependencies for loads referencing this fixed object.
+  int FI = MFI.CreateFixedObject(FrameObjSize, FrameObjOffset, false, true);
+  SDValue FIN = DAG.getFrameIndex(FI, PtrTy);
+  InVals.push_back(FIN);
+
+  LLVM_DEBUG(dbgs() << "copyByValRegs : NumRegs = " << NumRegs << '\n');
+
+  if (!NumRegs)
+    return;
+
+  // Copy arg registers.
+  MVT RegTy = MVT::getIntegerVT(GPRSizeInBytes * 8);
+  const TargetRegisterClass *RC = getRegClassFor(RegTy);
+
+  for (unsigned I = 0; I < NumRegs; ++I) {
+    unsigned ArgReg = ByValArgRegs[FirstReg + I];
+    unsigned VReg = addLiveIn(MF, ArgReg, RC);
+    unsigned Offset = I * GPRSizeInBytes;
+    SDValue StorePtr = DAG.getNode(ISD::ADD, DL, PtrTy, FIN,
+                                   DAG.getConstant(Offset, DL, PtrTy));
+    SDValue Store = DAG.getStore(Chain, DL, DAG.getRegister(VReg, RegTy),
+                                 StorePtr, MachinePointerInfo(FuncArg, Offset));
+    OutChains.push_back(Store);
+
+    LLVM_DEBUG(dbgs() << "copyByValRegs : Store(" << I << ") = " << "VReg = " << VReg << ", Offset = " << Offset << '\n');
+
+  }
+}
+
 
 //===----------------------------------------------------------------------===//
 //@              Return Value Calling Convention Implementation
@@ -316,7 +395,7 @@ SDValue MYRISCVXTargetLowering::lowerGlobalAddress(SDValue Op,
 
   if (!isPositionIndependent()) {
     //@ %hi/%lo relocation
-    return getAddrNonPIC(N, Ty, DAG);
+    return getAddrNonPIC(N, GV, Ty, DAG);
   }
 
   if (GV->hasInternalLinkage() || (GV->hasLocalLinkage() && !isa<Function>(GV)))
@@ -327,6 +406,32 @@ SDValue MYRISCVXTargetLowering::lowerGlobalAddress(SDValue Op,
       DAG.getEntryNode(),
       MachinePointerInfo::getGOT(DAG.getMachineFunction()));
 }
+
+
+//@getAddrNonPIC
+// This method creates the following nodes, which are necessary for
+// computing a symbol's address in non-PIC mode:
+//
+// (add %hi(sym), %lo(sym))
+SDValue MYRISCVXTargetLowering::getAddrNonPIC(GlobalAddressSDNode *N,
+                                              const GlobalValue *GV,
+                                              EVT Ty,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(N);
+  int64_t Offset = N->getOffset();
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  SDValue GAHi = DAG.getTargetGlobalAddress(GV, DL, Ty, 0, MYRISCVXII::MO_ABS_HI);
+  SDValue GALo = DAG.getTargetGlobalAddress(GV, DL, Ty, 0, MYRISCVXII::MO_ABS_LO);
+  SDValue MNHi = SDValue(DAG.getMachineNode(MYRISCVX::LUI, DL, Ty, GAHi), 0);
+  SDValue MNLo =
+      SDValue(DAG.getMachineNode(MYRISCVX::ADDI, DL, Ty, MNHi, GALo), 0);
+  if (Offset != 0)
+    return DAG.getNode(ISD::ADD, DL, Ty, MNLo,
+                       DAG.getConstant(Offset, DL, XLenVT));
+  return MNLo;
+}
+
 
 SDValue MYRISCVXTargetLowering::
 lowerSELECT(SDValue Op, SelectionDAG &DAG) const
@@ -618,6 +723,124 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   return LowerCallResult(Chain, InFlag, CallConv, IsVarArg,
                          Ins, DL, DAG, InVals, CLI.Callee.getNode(), CLI.RetTy);
 
+}
+
+
+/// isEligibleForTailCallOptimization - Check whether the call is eligible
+/// for tail call optimization.
+/// Note: This is modelled after ARM's IsEligibleForTailCallOptimization.
+bool MYRISCVXTargetLowering::
+isEligibleForTailCallOptimization(
+    CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
+    const SmallVector<CCValAssign, 16> &ArgLocs) const {
+  auto &Outs = CLI.Outs;
+
+  // Byval parameters hand the function a pointer directly into the stack area
+  // we want to reuse during a tail call. Working around this *is* possible
+  // but less efficient and uglier in LowerCall.
+  for (auto &Arg : Outs)
+    if (Arg.Flags.isByVal())
+      return false;
+
+  return true;
+}
+
+
+// Copy byVal arg to registers and stack.
+void MYRISCVXTargetLowering::
+passByValArg(SDValue Chain, const SDLoc &DL,
+             std::deque< std::pair<unsigned, SDValue> > &RegsToPass,
+             SmallVectorImpl<SDValue> &MemOpChains, SDValue StackPtr,
+             MachineFrameInfo &MFI, SelectionDAG &DAG, SDValue Arg,
+             const CCState &CC, unsigned FirstReg, unsigned LastReg,
+             const ISD::ArgFlagsTy &Flags,
+             const CCValAssign &VA) const {
+  unsigned ByValSizeInBytes = Flags.getByValSize();
+  unsigned OffsetInBytes = 0; // From beginning of struct
+  unsigned RegSizeInBytes = Subtarget.getGPRSizeInBytes();
+  unsigned Alignment = std::min(Flags.getByValAlign(), RegSizeInBytes);
+  EVT PtrTy = getPointerTy(DAG.getDataLayout()),
+      RegTy = MVT::getIntegerVT(RegSizeInBytes * 8);
+  unsigned NumRegs = LastReg - FirstReg;
+
+  if (NumRegs) {
+    const ArrayRef<MCPhysReg> ArgRegs = ABI.GetByValArgRegs();
+    bool LeftoverBytes = (NumRegs * RegSizeInBytes > ByValSizeInBytes);
+    unsigned I = 0;
+
+    // Copy words to registers.
+    for (; I < NumRegs - LeftoverBytes;
+         ++I, OffsetInBytes += RegSizeInBytes) {
+      SDValue LoadPtr = DAG.getNode(ISD::ADD, DL, PtrTy, Arg,
+                                    DAG.getConstant(OffsetInBytes, DL, PtrTy));
+      SDValue LoadVal = DAG.getLoad(RegTy, DL, Chain, LoadPtr,
+                                    MachinePointerInfo());
+      MemOpChains.push_back(LoadVal.getValue(1));
+      unsigned ArgReg = ArgRegs[FirstReg + I];
+      RegsToPass.push_back(std::make_pair(ArgReg, LoadVal));
+    }
+
+    // Return if the struct has been fully copied.
+    if (ByValSizeInBytes == OffsetInBytes)
+      return;
+
+    // Copy the remainder of the byval argument with sub-word loads and shifts.
+    if (LeftoverBytes) {
+      assert((ByValSizeInBytes > OffsetInBytes) &&
+             (ByValSizeInBytes < OffsetInBytes + RegSizeInBytes) &&
+             "Size of the remainder should be smaller than RegSizeInBytes.");
+      SDValue Val;
+
+      for (unsigned LoadSizeInBytes = RegSizeInBytes / 2, TotalBytesLoaded = 0;
+           OffsetInBytes < ByValSizeInBytes; LoadSizeInBytes /= 2) {
+        unsigned RemainingSizeInBytes = ByValSizeInBytes - OffsetInBytes;
+
+        if (RemainingSizeInBytes < LoadSizeInBytes)
+          continue;
+
+        // Load subword.
+        SDValue LoadPtr = DAG.getNode(ISD::ADD, DL, PtrTy, Arg,
+                                      DAG.getConstant(OffsetInBytes, DL, PtrTy));
+        SDValue LoadVal = DAG.getExtLoad(
+            ISD::ZEXTLOAD, DL, RegTy, Chain, LoadPtr, MachinePointerInfo(),
+            MVT::getIntegerVT(LoadSizeInBytes * 8), Alignment);
+        MemOpChains.push_back(LoadVal.getValue(1));
+
+        // Shift the loaded value.
+        unsigned Shamt;
+
+        Shamt = TotalBytesLoaded * 8;
+        SDValue Shift = DAG.getNode(ISD::SHL, DL, RegTy, LoadVal,
+                                    DAG.getConstant(Shamt, DL, MVT::i32));
+
+        if (Val.getNode())
+          Val = DAG.getNode(ISD::OR, DL, RegTy, Val, Shift);
+        else
+          Val = Shift;
+
+        OffsetInBytes += LoadSizeInBytes;
+        TotalBytesLoaded += LoadSizeInBytes;
+        Alignment = std::min(Alignment, LoadSizeInBytes);
+      }
+
+      unsigned ArgReg = ArgRegs[FirstReg + I];
+      RegsToPass.push_back(std::make_pair(ArgReg, Val));
+      return;
+    }
+  }
+
+  // Copy remainder of byval arg to it with memcpy.
+  unsigned MemCpySize = ByValSizeInBytes - OffsetInBytes;
+  SDValue Src = DAG.getNode(ISD::ADD, DL, PtrTy, Arg,
+                            DAG.getConstant(OffsetInBytes, DL, PtrTy));
+  SDValue Dst = DAG.getNode(ISD::ADD, DL, PtrTy, StackPtr,
+                            DAG.getIntPtrConstant(VA.getLocMemOffset(), DL));
+  Chain = DAG.getMemcpy(Chain, DL, Dst, Src,
+                        DAG.getConstant(MemCpySize, DL, PtrTy),
+                        Alignment, /*isVolatile=*/false, /*AlwaysInline=*/false,
+                        /*isTailCall=*/false,
+                        MachinePointerInfo(), MachinePointerInfo());
+  MemOpChains.push_back(Chain);
 }
 
 
