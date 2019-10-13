@@ -255,6 +255,15 @@ namespace llvm {
                         const SmallVectorImpl<SDValue> &OutVals,
                         const SDLoc &dl, SelectionDAG &DAG) const override;
 
+    SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
+
+    /// writeVarArgRegs - Write variable function arguments passed in registers
+    /// to the stack. Also create a stack frame object for the first variable
+    /// argument.
+    void writeVarArgRegs(std::vector<SDValue> &OutChains, SDValue Chain,
+                         const SDLoc &DL, SelectionDAG &DAG,
+                         CCState &State) const;
+
     static unsigned getBranchOpcodeForIntCondCode (ISD::CondCode CC);
 
     MachineBasicBlock *
