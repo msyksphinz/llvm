@@ -27,6 +27,8 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "RISCV-reg-info"
+
 RISCVRegisterInfo::RISCVRegisterInfo(unsigned HwMode)
     : RISCVGenRegisterInfo(RISCV::X1, /*DwarfFlavour*/0, /*EHFlavor*/0,
                            /*PC*/0, HwMode) {}
@@ -81,6 +83,9 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int Offset =
       getFrameLowering(MF)->getFrameIndexReference(MF, FrameIndex, FrameReg) +
       MI.getOperand(FIOperandNum + 1).getImm();
+
+  LLVM_DEBUG(errs() << "\nFunction : " << MF.getFunction().getName() << "\n";
+             errs() << "<--------->\n" << MI);
 
   if (!isInt<32>(Offset)) {
     report_fatal_error(

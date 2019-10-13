@@ -84,6 +84,7 @@ MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
   setOperationAction(ISD::SELECT,    XLenVT,     Custom);
   setOperationAction(ISD::SELECT_CC, XLenVT,     Expand);
 
+
   // Effectively disable jump table generation.
   setMinimumJumpTableEntries(INT_MAX);
 }
@@ -320,6 +321,54 @@ void MYRISCVXTargetLowering::copyByValRegs(
     LLVM_DEBUG(dbgs() << "copyByValRegs : Store(" << I << ") = " << "VReg = " << VReg << ", Offset = " << Offset << '\n');
 
   }
+}
+
+
+void MYRISCVXTargetLowering::HandleByVal(CCState *State, unsigned &Size,
+                                         unsigned Align) const
+{
+  const TargetFrameLowering *TFL = Subtarget.getFrameLowering();
+
+  assert(Size && "Byval argument's size shouldn't be 0.");
+
+  Align = std::min(Align, TFL->getStackAlignment());
+
+  unsigned FirstReg = 0;
+  unsigned NumRegs = 0;
+
+  if (State->getCallingConv() != CallingConv::Fast) {
+    unsigned RegSizeInBytes = Subtarget.getGPRSizeInBytes();
+    ArrayRef<MCPhysReg> IntArgRegs = ABI.GetByValArgRegs();
+    // FIXME: The O32 case actually describes no shadow registers.
+    const MCPhysReg *ShadowRegs = IntArgRegs.data();
+
+    // We used to check the size as well but we can't do that anymore since
+    // CCState::HandleByVal() rounds up the size after calling this function.
+    assert(!(Align % RegSizeInBytes) &&
+           "Byval argument's alignment should be a multiple of"
+           "RegSizeInBytes.");
+
+    FirstReg = State->getFirstUnallocated(IntArgRegs);
+
+    // If Align > RegSizeInBytes, the first arg register must be even.
+    // FIXME: This condition happens to do the right thing but it's not the
+    //        right way to test it. We want to check that the stack frame offset
+    //        of the register is aligned.
+    if ((Align > RegSizeInBytes) && (FirstReg % 2)) {
+      State->AllocateReg(IntArgRegs[FirstReg], ShadowRegs[FirstReg]);
+      ++FirstReg;
+    }
+
+    // Mark the registers allocated.
+    Size = alignTo(Size, RegSizeInBytes);
+    for (unsigned I = FirstReg; Size > 0 && (I < IntArgRegs.size());
+         Size -= RegSizeInBytes, ++I, ++NumRegs) {
+      LLVM_DEBUG(dbgs() << "Size = " << Size << ", I = " << I << ", NumRegs = " << NumRegs << '\n');
+      State->AllocateReg(IntArgRegs[I], ShadowRegs[I]);
+    }
+  }
+
+  State->addInRegsParamInfo(FirstReg, FirstReg + NumRegs);
 }
 
 
@@ -579,7 +628,7 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool IsVarArg                         = CLI.IsVarArg;
 
   MachineFunction &MF = DAG.getMachineFunction();
-  // MachineFrameInfo &MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
   MYRISCVXFunctionInfo *FuncInfo = MF.getInfo<MYRISCVXFunctionInfo>();
   bool IsPIC = isPositionIndependent();
@@ -590,6 +639,10 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(),
                  ArgLocs, *DAG.getContext());
   CCInfo.AnalyzeCallOperands (Outs, CC_MYRISCVX);
+
+  // Check if it's really possible to do a tail call.
+  if (IsTailCall)
+    IsTailCall = isEligibleForTailCallOptimization(CCInfo, CLI, MF, ArgLocs);
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NextStackOffset = CCInfo.getNextStackOffset();
@@ -622,7 +675,7 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     SDValue Arg = OutVals[i];
     CCValAssign &VA = ArgLocs[i];
     MVT LocVT = VA.getLocVT();
-    // ISD::ArgFlagsTy Flags = Outs[i].Flags;
+    ISD::ArgFlagsTy Flags = Outs[i].Flags;
 
     // Promote the value if needed.
     switch (VA.getLocInfo()) {
@@ -646,6 +699,26 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
       continue;
     }
+
+    //@ByVal Arg {
+    if (Flags.isByVal()) {
+      unsigned FirstByValReg, LastByValReg;
+      unsigned ByValIdx = CCInfo.getInRegsParamsProcessed();
+
+      LLVM_DEBUG(dbgs() << "ByValIdx = " << ByValIdx << " , ByValRegs.size() = " << CCInfo.getInRegsParamsCount() << '\n');
+      CCInfo.getInRegsParamInfo(ByValIdx, FirstByValReg, LastByValReg);
+
+      assert(Flags.getByValSize() &&
+             "ByVal args of size 0 should have been ignored by front-end.");
+      assert(ByValIdx < CCInfo.getInRegsParamsCount());
+      assert(!IsTailCall &&
+             "Do not tail-call optimize if there is a byval argument.");
+      passByValArg(Chain, DL, RegsToPass, MemOpChains, StackPtr, MFI, DAG, Arg,
+                   CCInfo, FirstByValReg, LastByValReg, Flags, VA);
+      CCInfo.nextInRegsParam();
+      continue;
+    }
+    //@ByVal Arg }
 
     // Register can't get to this point...
     assert(VA.isMemLoc());

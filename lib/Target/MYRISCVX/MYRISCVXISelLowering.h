@@ -196,6 +196,17 @@ namespace llvm {
     SDValue
     LowerCall(TargetLowering::CallLoweringInfo &CLI,
               SmallVectorImpl<SDValue> &InVals) const override;
+    bool isEligibleForTailCallOptimization(
+        CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
+        const SmallVector<CCValAssign, 16> &ArgLocs) const;
+
+    void passByValArg(SDValue Chain, const SDLoc &DL,
+                      std::deque< std::pair<unsigned, SDValue> > &RegsToPass,
+                      SmallVectorImpl<SDValue> &MemOpChains, SDValue StackPtr,
+                      MachineFrameInfo &MFI, SelectionDAG &DAG, SDValue Arg,
+                      const CCState &CC, unsigned FirstReg, unsigned LastReg,
+                      const ISD::ArgFlagsTy &Flags, const CCValAssign &VA) const;
+
     SDValue
     LowerCallResult(SDValue Chain, SDValue InFlag,
                     CallingConv::ID CallConv, bool IsVarArg,
@@ -234,6 +245,9 @@ namespace llvm {
         SmallVectorImpl<SDValue> &InVals, const Argument *FuncArg,
         unsigned FirstReg, unsigned LastReg, const CCValAssign &VA,
         CCState &State) const;
+
+    void HandleByVal(CCState *State, unsigned &Size,
+                     unsigned Align) const override;
 
     SDValue LowerReturn(SDValue Chain,
                         CallingConv::ID CallConv, bool IsVarArg,

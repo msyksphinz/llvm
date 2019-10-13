@@ -30,6 +30,10 @@ def CC_LP32 : CallingConv<[
   // Promote i8/i16 arguments to i32.
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
 
+  // Put ByVal arguments directly on the stack. Minimum size and alignment of a
+  // slot is 32-bit.
+  CCIfByVal<CCPassByVal<4, 4>>,
+
   // Integer arguments are passed in integer registers.
   CCIfType<[i32], CCAssignToReg<[A0, A1, A2, A3, A4, A5, A6, A7]>>,
 
@@ -41,6 +45,10 @@ def CC_LP32 : CallingConv<[
 def CC_STACK32 : CallingConv<[
   // Promote i8/i16 arguments to i32.
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+
+  // Put ByVal arguments directly on the stack. Minimum size and alignment of a
+  // slot is 32-bit.
+  CCIfByVal<CCPassByVal<4, 4>>,
 
   // Integer values get stored in stack slots that are 4 bytes in
   // size and 4-byte aligned.
@@ -55,6 +63,10 @@ def CC_LP64 : CallingConv<[
   // Promote i1/i8/i16 arguments to i32.
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
 
+  // Put ByVal arguments directly on the stack. Minimum size and alignment of a
+  // slot is 32-bit.
+  CCIfByVal<CCPassByVal<8, 8>>,
+
   // Integer arguments are passed in integer registers.
   CCIfType<[i32, i64], CCAssignToReg<[A0, A1, A2, A3, A4, A5, A6, A7]>>,
 
@@ -67,6 +79,10 @@ def CC_LP64 : CallingConv<[
 def CC_STACK64 : CallingConv<[
   // Promote i8/i16/i32 arguments to i64.
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+
+  // Put ByVal arguments directly on the stack. Minimum size and alignment of a
+  // slot is 32-bit.
+  CCIfByVal<CCPassByVal<8, 8>>,
 
   // Integer values get stored in stack slots that are 8 bytes in
   // size and 8-byte aligned.
