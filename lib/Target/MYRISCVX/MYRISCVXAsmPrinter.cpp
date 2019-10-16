@@ -52,8 +52,6 @@ bool MYRISCVXAsmPrinter::lowerOperand(const MachineOperand &MO, MCOperand &MCOp)
   return MCOp.isValid();
 }
 
-// Simple pseudo-instructions have their lowering (with expansion to real
-// instructions) auto-generated.
 #include "MYRISCVXGenMCPseudoLowering.inc"
 
 //@EmitInstruction {
@@ -78,6 +76,9 @@ void MYRISCVXAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   MachineBasicBlock::const_instr_iterator E = MI->getParent()->instr_end();
 
   do {
+    // Do any auto-generated pseudo lowerings.
+    if (emitPseudoExpansionLowering(*OutStreamer, &*I))
+      continue;
 
     if (I->isPseudo())
       llvm_unreachable("Pseudo opcode found in EmitInstruction()");
@@ -261,6 +262,7 @@ void MYRISCVXAsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
   // TODO: implement
   OS << "PrintDebugValueComment()";
 }
+
 
 // Force static initialization.
 extern "C" void LLVMInitializeMYRISCVXAsmPrinter() {

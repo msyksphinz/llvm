@@ -37,6 +37,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "MYRISCVX-lower"
 
+STATISTIC(NumTailCalls, "Number of tail calls");
+
 //@3_1 1 {
 const char *MYRISCVXTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch (Opcode) {
@@ -151,6 +153,8 @@ MYRISCVXTargetLowering::LowerFormalArguments (SDValue Chain,
       DAG.getMachineFunction().getFunction().arg_begin();
   // bool UseSoftFloat = Subtarget.abiUsesSoftFloat();
   CCInfo.AnalyzeFormalArguments (Ins, CC_MYRISCVX);
+  MYRISCVXFI->setFormalArgInfo(CCInfo.getNextStackOffset(),
+                               CCInfo.getInRegsParamsCount() > 0);
 
   // Used with vargs to acumulate store chains.
   std::vector<SDValue> OutChains;
@@ -657,12 +661,17 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                  ArgLocs, *DAG.getContext());
   CCInfo.AnalyzeCallOperands (Outs, CC_MYRISCVX);
 
-  // Check if it's really possible to do a tail call.
-  if (IsTailCall)
-    IsTailCall = isEligibleForTailCallOptimization(CCInfo, CLI, MF, ArgLocs);
-
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NextStackOffset = CCInfo.getNextStackOffset();
+
+  // Check if it's really possible to do a tail call.
+  if (IsTailCall)
+    IsTailCall = isEligibleForTailCallOptimization(CCInfo, NextStackOffset,
+                                                   *MF.getInfo<MYRISCVXFunctionInfo>());
+
+  if (IsTailCall) {
+    ++NumTailCalls;
+  }
 
   // Chain is the output chain of the last Load/Store or CopyToReg node.
   // ByValChain is the output chain of the last Memcpy node created for copying
@@ -683,7 +692,6 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // With EABI is it possible to have 16 args on registers.
   std::deque< std::pair<unsigned, SDValue> > RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
-  // MYRISCVXCC::byval_iterator ByValArg = MYRISCVXCCInfo.byval_begin();
 
   //@1 {
   // Walk the register/memloc assignments, inserting copies/loads.
@@ -796,8 +804,8 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
               CLI, Callee, Chain);
 
   //@TailCall 3 {
-  // if (IsTailCall)
-  //   return DAG.getNode(MYRISCVXISD::TailCall, DL, MVT::Other, Ops);
+  if (IsTailCall)
+    return DAG.getNode(MYRISCVXISD::TailCall, DL, MVT::Other, Ops);
   //@TailCall 3 }
 
   Chain = DAG.getNode(MYRISCVXISD::CALL, DL, NodeTys, Ops);
@@ -821,18 +829,16 @@ MYRISCVXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 /// Note: This is modelled after ARM's IsEligibleForTailCallOptimization.
 bool MYRISCVXTargetLowering::
 isEligibleForTailCallOptimization(
-    CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
-    const SmallVector<CCValAssign, 16> &ArgLocs) const {
-  auto &Outs = CLI.Outs;
+    CCState &CCInfo,
+    unsigned NextStackOffset, const MYRISCVXFunctionInfo& FI) const {
 
-  // Byval parameters hand the function a pointer directly into the stack area
-  // we want to reuse during a tail call. Working around this *is* possible
-  // but less efficient and uglier in LowerCall.
-  for (auto &Arg : Outs)
-    if (Arg.Flags.isByVal())
-      return false;
+  // Return false if either the callee or caller has a byval argument.
+  if (CCInfo.getInRegsParamsCount() > 0 || FI.hasByvalArg())
+    return false;
 
-  return true;
+  // Return true if the callee's argument area is no larger than the
+  // caller's.
+  return NextStackOffset <= FI.getIncomingArgSize();
 }
 
 

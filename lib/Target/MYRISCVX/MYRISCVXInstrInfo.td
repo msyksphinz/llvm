@@ -25,6 +25,10 @@ def SDT_MYRISCVXRet : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 def SDT_MYRISCVXCallSeqStart : SDCallSeqStart<[SDTCisVT<0, XLenVT>, SDTCisVT<1, XLenVT>]>;
 def SDT_MYRISCVXCallSeqEnd   : SDCallSeqEnd  <[SDTCisVT<0, XLenVT>, SDTCisVT<1, XLenVT>]>;
 
+// Tail call
+def MYRISCVXTailCall : SDNode<"MYRISCVXISD::TailCall", SDT_MYRISCVXCall,
+                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
 // Return
 def MYRISCVXRet : SDNode<"MYRISCVXISD::Ret", SDTNone,
                          [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
@@ -273,6 +277,18 @@ class SetCC_I<bits<7> opcode, bits<3> funct3,
 }
 
 
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 0,
+    hasExtraSrcRegAllocReq = 1 in {
+  class TailCall<Instruction JumpInst> :
+    MYRISCVXPseudo<(outs), (ins brtarget20:$target), "", []>,
+    PseudoInstExpansion<(JumpInst ZERO, brtarget20:$target)>;
+
+  class TailCallReg<Instruction JRInst, RegisterClass RC> :
+    MYRISCVXPseudo<(outs), (ins RC:$rs), "", [(MYRISCVXTailCall RC:$rs)]>,
+    PseudoInstExpansion<(JRInst ZERO, RC:$rs, 0)>;
+}
+
+
 //===----------------------------------------------------------------------===//
 // Instruction definition
 //===----------------------------------------------------------------------===//
@@ -375,6 +391,12 @@ let Defs = [SP], Uses = [SP], hasSideEffects = 1 in {
 let hasSideEffects = 0 in
 def CPRESTORE : MYRISCVXPseudo<(outs), (ins simm12:$loc, GPR:$gp),
                             ".cprestore\t$loc", []>;
+
+def TAILCALL : TailCall<JAL>;
+def TAILCALL_R : TailCallReg<JALR, GPR>;
+
+def : Pat<(MYRISCVXTailCall (iPTR tglobaladdr:$dst)), (TAILCALL tglobaladdr:$dst)>;
+def : Pat<(MYRISCVXTailCall (iPTR texternalsym:$dst)), (TAILCALL texternalsym:$dst)>;
 
 //===----------------------------------------------------------------------===//
 //  Arbitrary patterns that map to one or more instructions
@@ -528,8 +550,12 @@ let isCall = 1, Defs = [RA], isCodeGenOnly = 0 in
 def PseudoCALL : MYRISCVXPseudo<(outs), (ins simm20:$target), "", [(MYRISCVXCall simm20:$target)]>,
                  PseudoInstExpansion<(JAL RA, brtarget20:$target)>;
 
+let isCall = 1, Defs = [RA], isCodeGenOnly = 0 in
+def PseudoCALLReg : MYRISCVXPseudo<(outs), (ins GPR:$rs), "", [(MYRISCVXCall GPR:$rs)]>,
+                    PseudoInstExpansion<(JALR RA, GPR:$rs, 0)>;
+
 
 def : Pat<(MYRISCVXCall tglobaladdr:$func),  (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(MYRISCVXCall texternalsym:$func), (PseudoCALL texternalsym:$func)>;
-// def : Pat<(MYRISCVXCall (XLenVT tglobaladdr:$dst)),  (JALR RA, tglobaladdr:$dst)>;
-// def : Pat<(MYRISCVXCall (XLenVT texternalsym:$dst)), (JALR RA, texternalsym:$dst)>;
+def : Pat<(MYRISCVXCall tglobaladdr:$func),  (PseudoCALLReg tglobaladdr:$func)>;
+def : Pat<(MYRISCVXCall texternalsym:$func), (PseudoCALLReg texternalsym:$func)>;

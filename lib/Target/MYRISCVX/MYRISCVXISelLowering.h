@@ -197,8 +197,8 @@ namespace llvm {
     LowerCall(TargetLowering::CallLoweringInfo &CLI,
               SmallVectorImpl<SDValue> &InVals) const override;
     bool isEligibleForTailCallOptimization(
-        CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
-        const SmallVector<CCValAssign, 16> &ArgLocs) const;
+        CCState &CCInfo,
+        unsigned NextStackOffset, const MYRISCVXFunctionInfo& FI) const;
 
     void passByValArg(SDValue Chain, const SDLoc &DL,
                       std::deque< std::pair<unsigned, SDValue> > &RegsToPass,
