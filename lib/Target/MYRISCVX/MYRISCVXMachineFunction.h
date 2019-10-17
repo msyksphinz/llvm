@@ -33,7 +33,8 @@ class MYRISCVXFunctionInfo : public MachineFunctionInfo {
       : MF(MF),
         GlobalBaseReg(0),
         SRetReturnReg(0),
-        VarArgsFrameIndex(0)
+        VarArgsFrameIndex(0),
+        CallsEhReturn(false)
   {}
 
   ~MYRISCVXFunctionInfo();
@@ -63,6 +64,9 @@ class MYRISCVXFunctionInfo : public MachineFunctionInfo {
   unsigned getIncomingArgSize() const { return IncomingArgSize; }
   bool hasByvalArg() const { return HasByvalArg; }
 
+  bool callsEhReturn() const { return CallsEhReturn; }
+  void setCallsEhReturn() { CallsEhReturn = true; }
+
  private:
   virtual void anchor();
 
@@ -86,6 +90,9 @@ class MYRISCVXFunctionInfo : public MachineFunctionInfo {
 
   /// Size of incoming argument area.
   unsigned IncomingArgSize;
+
+  /// CallsEhReturn - Whether the function calls llvm.eh.return.
+  bool CallsEhReturn;
 };
 //@1 }
 
