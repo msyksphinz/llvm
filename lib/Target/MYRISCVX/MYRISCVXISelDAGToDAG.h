@@ -71,6 +71,10 @@ namespace llvm {
       return CurDAG->getTargetConstant(Imm, SDLoc(Node), Node->getValueType(0));
     }
 
+    bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                      unsigned ConstraintID,
+                                      std::vector<SDValue> &OutOps) override;
+
     void processFunctionAfterISel(MachineFunction &MF);
 
   };

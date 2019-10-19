@@ -118,3 +118,18 @@ FunctionPass *llvm::createMYRISCVXISelDag(MYRISCVXTargetMachine &TM,
                                           CodeGenOpt::Level OptLevel) {
   return new MYRISCVXDAGToDAGISel(TM, OptLevel);
 }
+
+
+bool MYRISCVXDAGToDAGISel::
+SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
+                             std::vector<SDValue> &OutOps) {
+  // All memory constraints can at least accept raw pointers.
+  switch(ConstraintID) {
+    default:
+      llvm_unreachable("Unexpected asm memory constraint");
+    case InlineAsm::Constraint_m:
+      OutOps.push_back(Op);
+      return false;
+  }
+  return true;
+}
