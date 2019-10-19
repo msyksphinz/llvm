@@ -38,6 +38,11 @@ include "MYRISCVXCallingConv.td"
 
 def MYRISCVXInstrInfo : InstrInfo;
 
+def MYRISCVXAsmParser : AsmParser {
+  let ShouldEmitMatchRegisterAltName = 1;
+  let AllowDuplicateRegisterNames = 1;
+}
+
 // Will generate MYRISCVXGenAsmWrite.inc included by MYRISCVXInstPrinter.cpp, contents
 //  as follows,
 // void MYRISCVXInstPrinter::printInstruction(const MCInst *MI, raw_ostream &O) {...}
@@ -45,4 +50,5 @@ def MYRISCVXInstrInfo : InstrInfo;
 def MYRISCVX : Target {
 // def MYRISCVXInstrInfo : InstrInfo as before.
   let InstructionSet = MYRISCVXInstrInfo;
+  let AssemblyParsers = [MYRISCVXAsmParser];
 }

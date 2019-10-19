@@ -551,16 +551,35 @@ multiclass BrcondPatsSlt<RegisterClass RC, Instruction BEQOp, Instruction BNEOp,
 
 defm : BrcondPatsSlt<GPR, BEQ, BNE, SLT, SLTU, SLTI, SLTIU, ZERO>;
 
-let isCall = 1, Defs = [RA], isCodeGenOnly = 0 in
-def PseudoCALL : MYRISCVXPseudo<(outs), (ins simm20:$target), "", [(MYRISCVXCall simm20:$target)]>,
-                 PseudoInstExpansion<(JAL RA, brtarget20:$target)>;
+// let isCall = 1, Defs = [RA], isTerminator = 1, isCodeGenOnly = 0 in {
+//   def PseudoCALL : MYRISCVXPseudo<(outs), (ins simm20:$target), "", [(MYRISCVXCall simm20:$target)]>,
+//                    PseudoInstExpansion<(JAL RA, brtarget20:$target)>;
+// }
+// let isCall = 1, Defs = [RA], isIndirectBranch = 1, isTerminator = 1, isCodeGenOnly = 0 in {
+//   def PseudoCALLReg : MYRISCVXPseudo<(outs), (ins GPR:$rs), "", [(MYRISCVXCall GPR:$rs)]>,
+//                       PseudoInstExpansion<(JALR RA, GPR:$rs, 0)>;
+// }
 
-let isCall = 1, Defs = [RA], isCodeGenOnly = 0 in
-def PseudoCALLReg : MYRISCVXPseudo<(outs), (ins GPR:$rs), "", [(MYRISCVXCall GPR:$rs)]>,
-                    PseudoInstExpansion<(JALR RA, GPR:$rs, 0)>;
-
+let isCall = 1, Defs = [RA], isTerminator = 1 in {
+  def PseudoCALL : MYRISCVXPseudo<(outs), (ins simm20:$target), "", [(MYRISCVXCall simm20:$target)]>,
+                   PseudoInstExpansion<(JAL RA, brtarget20:$target)>;
+}
+let isCall = 1, Defs = [RA], isIndirectBranch = 1, isTerminator = 1 in {
+  def PseudoCALLReg : MYRISCVXPseudo<(outs), (ins GPR:$rs), "", [(MYRISCVXCall GPR:$rs)]>,
+                      PseudoInstExpansion<(JALR RA, GPR:$rs, 0)>;
+}
 
 def : Pat<(MYRISCVXCall tglobaladdr:$func),  (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(MYRISCVXCall texternalsym:$func), (PseudoCALL texternalsym:$func)>;
 def : Pat<(MYRISCVXCall tglobaladdr:$func),  (PseudoCALLReg tglobaladdr:$func)>;
 def : Pat<(MYRISCVXCall texternalsym:$func), (PseudoCALLReg texternalsym:$func)>;
+
+class LoadImm32< string instr_asm, Operand Od, RegisterClass RC> :
+  MYRISCVXAsmPseudoInst<(outs RC:$rd), (ins Od:$imm32),
+                     !strconcat(instr_asm, "\t$rd, $imm32")> ;
+def LoadImm32Reg : LoadImm32<"li", shamt, GPR>;
+
+class LoadAddressImm<string instr_asm, Operand Od, RegisterClass RC> :
+  MYRISCVXAsmPseudoInst<(outs RC:$rd), (ins Od:$imm32),
+                     !strconcat(instr_asm, "\t$rd, $imm32")> ;
+def LoadAddr32Imm : LoadAddressImm<"la", shamt, GPR>;
