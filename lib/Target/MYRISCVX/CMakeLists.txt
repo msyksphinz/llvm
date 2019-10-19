@@ -15,6 +15,7 @@ tablegen(LLVM MYRISCVXGenCodeEmitter.inc   -gen-emitter)
 tablegen(LLVM MYRISCVXGenMCCodeEmitter.inc -gen-emitter)
 
 tablegen(LLVM MYRISCVXGenAsmWriter.inc -gen-asm-writer)
+tablegen(LLVM MYRISCVXGenDisassemblerTables.inc -gen-disassembler)
 
 # MYRISCVXCommonTableGen must be defined
 add_public_tablegen_target(MYRISCVXCommonTableGen)
@@ -39,3 +40,4 @@ add_llvm_target(MYRISCVXCodeGen
 add_subdirectory(TargetInfo)
 add_subdirectory(MCTargetDesc)
 add_subdirectory(InstPrinter)
+add_subdirectory(Disassembler)

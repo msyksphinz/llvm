@@ -66,8 +66,13 @@ def HI20 : SDNodeXForm<imm, [{
 }]>;
 
 // Signed Operand
-def simm12 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<12>(Imm);}]>;
-def simm20 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<20>(Imm);}]>;
+def simm12 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<12>(Imm);}]> {
+  let DecoderMethod = "decodeSImmOperand<12>";
+}
+def simm20 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<20>(Imm);}]> {
+  let DecoderMethod = "decodeSImmOperand<20>";
+}
+
 // Unsigned Operand
 def uimm12 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isUInt<12>(Imm);}]>;
 
