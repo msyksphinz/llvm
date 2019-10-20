@@ -304,6 +304,17 @@ namespace llvm {
                                Type *Ty, unsigned AS,
                                Instruction *I = nullptr) const override;
 
+    /// 例外アドレスが格納されるレジスタを指定する。今回はA0レジスタ
+    unsigned
+    getExceptionPointerRegister(const Constant *PersonalityFn) const override {
+      return MYRISCVX::A0;
+    }
+    /// 例外要因が格納されるレジスタを指定する。今回はA1レジスタ
+    unsigned
+    getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
+      return MYRISCVX::A1;
+    }
+
   };
 }
 
