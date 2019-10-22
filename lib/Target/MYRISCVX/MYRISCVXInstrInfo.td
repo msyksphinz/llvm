@@ -117,6 +117,10 @@ def brtarget12    : Operand<OtherVT> {
 // since load and store instructions from stack used it.
 def addr_fi : ComplexPattern<iPTR, 1, "SelectAddrFI", [frameindex], []>;
 
+def PtrRC : Operand<iPTR> {
+  let MIOperandInfo = (ops ptr_rc);
+  let DecoderMethod = "DecodeCPURegsRegisterClass";
+}
 
 //===----------------------------------------------------------------------===//
 // Instructions specific format
@@ -224,6 +228,18 @@ class JumpLink<bits<7> opcode, string opstr, DAGOperand opnd> :
 def MYRISCVXWrapper    : SDNode<"MYRISCVXISD::Wrapper", SDTIntBinOp>;
 
 def RelocPIC : Predicate<"TM.getRelocationModel() == Reloc::PIC_">;
+
+// Atomic instructions with 2 source operands (ATOMIC_SWAP & ATOMIC_LOAD_*).
+class Atomic2Ops<bits<7> opcode, bits<3> funct3, bits<7>funct7,
+                 string instr_asm, PatFrag Op, RegisterClass RC> :
+  MYRISCVX_R<opcode, funct3, funct7, (outs RC:$rd), (ins RC:$rs1, RC:$rs2),
+             !strconcat(instr_asm, "\t$rd, $rs2, (${rs1})"),
+             [(set RC:$rd, (Op RC:$rs1, RC:$rs2))], IILoad>;
+
+// Atomic Compare & Swap.
+class AtomicCmpSwap<PatFrag Op, RegisterClass RC> :
+  MYRISCVXPseudo<(outs RC:$rd), (ins PtrRC:$ptr, RC:$cmp, RC:$swap), "",
+                  [(set RC:$rd, (Op iPTR:$ptr, RC:$cmp, RC:$swap))]>;
 
 //===----------------------------------------------------------------------===//
 // Pattern fragment for load/store
@@ -402,6 +418,28 @@ def TAILCALL_R : TailCallReg<JALR, GPR>;
 
 def : Pat<(MYRISCVXTailCall (iPTR tglobaladdr:$dst)), (TAILCALL tglobaladdr:$dst)>;
 def : Pat<(MYRISCVXTailCall (iPTR texternalsym:$dst)), (TAILCALL texternalsym:$dst)>;
+
+def ATOMIC_LOAD_ADD_I32  : Atomic2Ops<0b0101111, 0b010, 0b0000000, "amoadd.w" , atomic_load_add_32 , GPR>;
+def ATOMIC_LOAD_AND_I32  : Atomic2Ops<0b0101111, 0b010, 0b0110000, "amoand.w" , atomic_load_and_32 , GPR>;
+def ATOMIC_LOAD_OR_I32   : Atomic2Ops<0b0101111, 0b010, 0b0100000, "amoor.w"  , atomic_load_or_32  , GPR>;
+def ATOMIC_LOAD_XOR_I32  : Atomic2Ops<0b0101111, 0b010, 0b0010000, "amoxor.w" , atomic_load_xor_32 , GPR>;
+
+def ATOMIC_SWAP_I32      : Atomic2Ops<0b0101111, 0b010, 0b0000100, "amoswap.w", atomic_swap_32     , GPR>;
+
+def : Pat<(atomic_load_sub_32 GPR:$addr, GPR:$incr),
+          (ATOMIC_LOAD_ADD_I32 GPR:$addr, (SUB ZERO, GPR:$incr))>;
+
+let Predicates = [IsRV64] in {
+  def ATOMIC_LOAD_ADD_I64  : Atomic2Ops<0b0101111, 0b011, 0b0000000, "amoadd.d" , atomic_load_add_64 , GPR>;
+  def ATOMIC_LOAD_AND_I64  : Atomic2Ops<0b0101111, 0b011, 0b0110000, "amoand.d" , atomic_load_and_64 , GPR>;
+  def ATOMIC_LOAD_OR_I64   : Atomic2Ops<0b0101111, 0b011, 0b0100000, "amoor.d"  , atomic_load_or_64  , GPR>;
+  def ATOMIC_LOAD_XOR_I64  : Atomic2Ops<0b0101111, 0b011, 0b0010000, "amoxor.d" , atomic_load_xor_64 , GPR>;
+
+  def ATOMIC_SWAP_I64      : Atomic2Ops<0b0101111, 0b011, 0b0000100, "amoswap.d", atomic_swap_64     , GPR>;
+
+  def : Pat<(atomic_load_sub_64 GPR:$addr, GPR:$incr),
+            (ATOMIC_LOAD_ADD_I64 GPR:$addr, (SUB ZERO, GPR:$incr))>;
+}
 
 //===----------------------------------------------------------------------===//
 //  Arbitrary patterns that map to one or more instructions

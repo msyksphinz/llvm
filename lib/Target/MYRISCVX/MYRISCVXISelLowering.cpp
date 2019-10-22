@@ -109,6 +109,22 @@ MYRISCVXTargetLowering::MYRISCVXTargetLowering(const MYRISCVXTargetMachine &TM,
   setOperationAction(ISD::BSWAP, MVT::i32, Expand);
   setOperationAction(ISD::BSWAP, MVT::i64, Expand);
 
+  for (auto VT : {MVT::i1, MVT::i8, MVT::i16})
+    setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Expand);
+
+  // Atomic Operations
+  setOperationAction(ISD::ATOMIC_LOAD,       MVT::i32,    Expand);
+  setOperationAction(ISD::ATOMIC_LOAD,       MVT::i64,    Expand);
+  setOperationAction(ISD::ATOMIC_STORE,      MVT::i32,    Expand);
+  setOperationAction(ISD::ATOMIC_STORE,      MVT::i64,    Expand);
+
+  setOperationAction(ISD::ATOMIC_FENCE,       MVT::Other, Custom);
+
+  setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i32, Expand);
+  setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i64, Expand);
+  setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i32, Expand);
+  setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i64, Expand);
+
   // Effectively disable jump table generation.
   setMinimumJumpTableEntries(INT_MAX);
 }

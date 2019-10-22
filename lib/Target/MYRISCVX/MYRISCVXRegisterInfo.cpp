@@ -40,6 +40,13 @@ MYRISCVXRegisterInfo::intRegClass(unsigned Size) const {
 }
 
 
+const TargetRegisterClass *
+MYRISCVXRegisterInfo::getPointerRegClass(const MachineFunction &MF,
+                                         unsigned Kind) const {
+  return &MYRISCVX::GPRRegClass;
+}
+
+
 //===----------------------------------------------------------------------===//
 // Callee Saved Registers methods
 //===----------------------------------------------------------------------===//
